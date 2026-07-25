@@ -63,7 +63,9 @@ npm run dev                    # abre http://localhost:3000
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
-   - `NEXT_PUBLIC_APP_URL` → la URL final, ej. `https://invifty-studio.vercel.app` (o tu dominio `studio.invifty.com`)
+   - `NEXT_PUBLIC_APP_URL` → la URL final, ej. `https://invifty-studio.vercel.app` (o tu dominio `studio.invifty.com`).
+     Si la olvidas, el sistema detecta solo el dominio de Vercel; defínela igualmente para que
+     los enlaces usen siempre tu dominio definitivo.
 5. **Deploy**. Al terminar, entra a `https://tu-url/login` con el usuario creado en el paso 1.3.
 
 > Consejo: agrega un dominio propio (ej. `studio.invifty.com`) en Vercel → Settings → Domains, y actualiza `NEXT_PUBLIC_APP_URL` para que los links de formularios usen ese dominio.

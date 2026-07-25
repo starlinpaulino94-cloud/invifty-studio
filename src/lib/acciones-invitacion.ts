@@ -6,6 +6,7 @@ import { crearClienteServidor } from "./supabase/servidor";
 import { derivarDatosInvitacion, slugificar } from "./invitacion";
 import { VIGENCIA_MESES } from "./planes";
 import { DatosInvitacion, Plan, TipoEvento } from "./tipos";
+import { urlBase as resolverUrlBase } from "./url";
 
 /**
  * FASE 2 — Acciones del generador de invitaciones (solo panel).
@@ -109,7 +110,7 @@ export async function publicarInvitacion(invitacionId: string) {
 
   // Actualizar el pedido: URL entregada + estado entregada + vencimiento
   const pedido = invitacion.pedidos;
-  const urlBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const urlBase = resolverUrlBase();
   const cambios: Record<string, unknown> = {
     url_entregada: `${urlBase}/i/${invitacion.slug}`,
   };

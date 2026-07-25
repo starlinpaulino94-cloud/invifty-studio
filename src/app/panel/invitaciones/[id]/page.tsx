@@ -4,6 +4,7 @@ import { crearClienteServidor } from "@/lib/supabase/servidor";
 import EditorInvitacion from "@/components/panel/EditorInvitacion";
 import { PLANES, TIPOS_EVENTO } from "@/lib/planes";
 import { Cliente, DatosInvitacion, Invitacion, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { urlBase as resolverUrlBase } from "@/lib/url";
 import { ArrowLeft, Link2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function PaginaEditorInvitacion({
 
   const invitacion = data as Invitacion & { pedidos: Pedido & { clientes: Cliente } };
   const pedido = invitacion.pedidos;
-  const urlBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const urlBase = resolverUrlBase();
   const urlPublica = `${urlBase}/i/${invitacion.slug}`;
 
   return (

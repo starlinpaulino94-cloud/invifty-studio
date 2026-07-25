@@ -10,6 +10,7 @@ import {
 import { construirFormulario } from "@/config/formularios";
 import { formatearValor, textoDeBloque } from "@/lib/respuestas";
 import { Cliente, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { urlBase as resolverUrlBase } from "@/lib/url";
 import {
   SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonEliminarPago,
 } from "@/components/panel/Interactivos";
@@ -58,7 +59,7 @@ export default async function FichaPedido({
   const abonado = pagos.reduce((s, p) => s + Number(p.monto), 0);
   const saldo = Number(pedido.precio) - abonado;
 
-  const urlBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const urlBase = resolverUrlBase();
   const urlFormulario = formulario ? `${urlBase}/f/${formulario.token}` : "";
   const mensaje = formulario
     ? mensajeWhatsAppFormulario(cliente.nombre, pedido.plan as Plan, urlFormulario)

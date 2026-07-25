@@ -1,5 +1,6 @@
 import { PLANES, TIPOS_EVENTO, formatoFecha } from "./planes";
 import { Plan, TipoEvento } from "./tipos";
+import { urlBase as resolverUrlBase } from "./url";
 
 /**
  * NOTIFICACIONES POR EMAIL (Resend)
@@ -37,7 +38,7 @@ export async function notificarFormularioCompletado(datos: DatosNotificacion): P
   if (!apiKey || destinatarios.length === 0) return;
 
   const remitente = process.env.NOTIFICACIONES_REMITENTE ?? "Invifty Studio <onboarding@resend.dev>";
-  const urlBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const urlBase = resolverUrlBase();
   const urlFicha = `${urlBase}/panel/pedidos/${datos.pedidoId}`;
 
   const evento = TIPOS_EVENTO[datos.tipoEvento];
