@@ -3,6 +3,7 @@ import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { construirFormulario } from "@/config/formularios";
 import { LIMITE_FOTOS } from "@/lib/planes";
 import { Plan, TipoEvento } from "@/lib/tipos";
+import { notificarFormularioCompletado } from "@/lib/notificaciones";
 
 /**
  * API pública del formulario del cliente, autenticada por el token único
@@ -116,6 +117,16 @@ export async function POST(
       .update({ estado: "formulario_completado" })
       .eq("id", pedido.id);
   }
+
+  // Aviso por email al equipo (se activa con RESEND_API_KEY; nunca rompe el flujo)
+  await notificarFormularioCompletado({
+    nombreCliente: pedido.clientes?.nombre ?? "Cliente",
+    telefonoCliente: pedido.clientes?.telefono ?? "",
+    tipoEvento: pedido.tipo_evento as TipoEvento,
+    plan: pedido.plan as Plan,
+    fechaEvento: pedido.fecha_evento,
+    pedidoId: pedido.id,
+  });
 
   return NextResponse.json({ ok: true });
 }

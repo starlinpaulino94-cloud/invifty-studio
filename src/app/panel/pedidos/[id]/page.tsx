@@ -13,7 +13,7 @@ import {
   SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonEliminarPago,
 } from "@/components/panel/Interactivos";
 import {
-  ArrowLeft, Phone, Mail, Link2, StickyNote, Wallet, Image as ImageIcon, Download, Sparkles,
+  ArrowLeft, Phone, Mail, Link2, StickyNote, Wallet, Image as ImageIcon, Download, Sparkles, FileText,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -80,12 +80,21 @@ export default async function FichaPedido({
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <Link
-        href="/panel"
-        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 font-medium"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" /> Volver al tablero
-      </Link>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Link
+          href="/panel"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 font-medium"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Volver al tablero
+        </Link>
+        <Link
+          href={`/panel/pedidos/${id}/exportar`}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 hover:border-gray-900 px-4 py-2 rounded-xl transition-colors"
+        >
+          <FileText className="w-3.5 h-3.5 text-[#D4AF37]" />
+          Exportar brief (PDF)
+        </Link>
+      </div>
 
       {/* Banner de pedido recién creado */}
       {nuevo && formulario && (

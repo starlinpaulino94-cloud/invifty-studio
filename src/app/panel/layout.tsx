@@ -26,7 +26,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col lg:flex-row">
       {/* Barra lateral / superior */}
-      <aside className="lg:w-60 bg-[#0D0D0F] text-white flex lg:flex-col shrink-0 lg:min-h-dvh sticky top-0 z-30">
+      <aside className="lg:w-60 bg-[#0D0D0F] text-white flex lg:flex-col shrink-0 lg:min-h-dvh sticky top-0 z-30 print:hidden">
         <div className="hidden lg:block px-6 py-7">
           <span className="font-serif text-xl tracking-[0.25em] uppercase block">Invifty</span>
           <span className="text-[9px] uppercase tracking-[0.35em] text-[#D4AF37] font-semibold">
@@ -59,7 +59,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       </aside>
 
       {/* Contenido */}
-      <main className="flex-1 p-5 sm:p-8 max-w-7xl w-full mx-auto">{children}</main>
+      <main className="flex-1 p-5 sm:p-8 max-w-7xl w-full mx-auto print:p-0 print:max-w-none">{children}</main>
     </div>
   );
 }

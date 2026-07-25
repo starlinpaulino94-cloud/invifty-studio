@@ -92,7 +92,29 @@ npm run dev                    # abre http://localhost:3000
 
 **Nota sobre vigencias:** este sistema está configurado con 3 meses para Esencial/Popular/Premium y 12 para Luxury (instrucción interna). La página pública anuncia 3/6/9/12 — cuando definan la política final, ajusta `VIGENCIA_MESES` en `src/lib/planes.ts`.
 
-## 6. Seguridad
+## 6. Funciones adicionales
+
+### Exportar el brief de diseño (PDF)
+
+En la ficha de cada pedido hay un botón **"Exportar brief (PDF)"** que abre un
+documento limpio con todos los datos: cliente, plan, pagos, respuestas por
+sección y fotos. Desde ahí, **Imprimir / Guardar como PDF** usa el diálogo del
+navegador — perfecto para pasárselo al diseñador o archivarlo.
+
+### Aviso por email cuando un cliente completa su formulario
+
+1. Crea una cuenta gratis en [resend.com](https://resend.com) (3,000 emails/mes gratis).
+2. Copia tu API key en la variable `RESEND_API_KEY` (en `.env.local` y en Vercel).
+3. Pon tu correo (o varios, separados por coma) en `NOTIFICACIONES_EMAIL`.
+4. Listo: cada vez que un cliente termine su formulario, te llega un email con
+   el resumen y el botón directo a la ficha del pedido.
+
+> Nota: sin dominio verificado, Resend solo permite enviarte a ti mismo (el
+> correo de tu cuenta Resend) usando el remitente `onboarding@resend.dev`.
+> Para avisar a todo el equipo con remitente propio, verifica tu dominio en
+> Resend → Domains y define `NOTIFICACIONES_REMITENTE="Invifty Studio <studio@invifty.com>"`.
+
+## 7. Seguridad
 
 - Las tablas tienen **RLS activado**: solo usuarios autenticados (el equipo) pueden leerlas/escribirlas.
 - El formulario público **nunca toca Supabase directamente**: pasa por rutas API del servidor que validan el token único del pedido y usan la `service_role` key solo en el backend.
