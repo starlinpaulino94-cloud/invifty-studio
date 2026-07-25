@@ -245,6 +245,18 @@ Al generar la invitación, el sistema **elige plantilla, paleta y tipografía**
 según el estilo que el cliente pidió en su formulario; el equipo lo ajusta
 todo desde el editor.
 
+### "Lo que pidió el cliente" (notas del equipo)
+
+Hay respuestas del formulario que el sistema no puede convertir solo en
+invitación: el ambiente musical (el audio lo sube el equipo), las referencias de
+diseño del plan Luxury, el recordatorio que se enviará días antes, el dominio
+deseado. Todas quedan recogidas en un panel **"Lo que pidió el cliente"** arriba
+del editor de la invitación.
+
+Ese panel **nunca se publica**: va en el campo `notasEquipo`, separado de las
+`notas` que sí ven los invitados (parqueo, niños, acceso con QR…). Así activar
+la sección de avisos para invitados no publica por error una instrucción interna.
+
 **Para añadir una plantilla nueva:** duplica un archivo de
 `src/components/invitacion/plantillas/`, regístralo en
 `src/config/plantillas.ts` y añádelo al `switch` de

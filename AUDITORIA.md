@@ -29,7 +29,7 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 | 2 | Sin vista previa al compartir por WhatsApp | 🟠 Alto | 1 día | ✅ Resuelto |
 | 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ✅ Resuelto |
 | 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ✅ Resuelto (requiere correr la migración) |
-| 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Paletas resueltas · resto pendiente |
+| 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Resuelto |
 | 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ⏳ Pendiente |
 | 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ⏳ Pendiente |
 
@@ -303,7 +303,7 @@ como respaldo en vez de fingir que todo salió bien.
 
 ---
 
-## 5. 🟠 El sistema descarta decisiones del cliente en silencio
+## 5. ✅ El sistema descarta decisiones del cliente en silencio — RESUELTO
 
 Aquí hay varios hallazgos concretos que comparten la misma raíz.
 
@@ -399,8 +399,50 @@ secciones que ya están construidas.
   diciendo qué pidió el cliente, para que el equipo la ajuste antes de publicar.
   Nada se descarta en silencio.
 
-Pendiente de esta sección: 5.4 (respuestas sin uso, incluida la música) y 5.5
-(padrinos, hashtag y monograma).
+### ✅ Lo implementado (5.4 y 5.5)
+
+**Preguntas nuevas (5.5).** Bodas, cumpleaños/15 años y "otro" tienen ahora un
+bloque **Padrinos y corte de honor** (`personas_especiales`, lista de rol +
+nombre) que llena la sección `BloquePadrinos` —construida desde hace tiempo y
+hasta ahora siempre vacía fuera de eventos corporativos— y una pregunta de
+**hashtag** en el bloque de fotos. Ambas se activan solas si el cliente las
+responde y se quedan apagadas si las salta.
+
+**El monograma se dejó fuera a propósito.** Se deriva del título y funciona bien
+("Camila & Lucas" → "C & L"); preguntarle al cliente por su "monograma" es
+jerga que confunde más de lo que aporta. El equipo puede fijarlo en el editor
+cuando haga falta.
+
+**Respuestas que ya no se pierden (5.4).** Se añadió `notasEquipo` a la
+invitación: un canal separado de `notas` que **nunca se publica** y que el
+editor muestra arriba del todo en un panel "Lo que pidió el cliente". Antes las
+notas internas se mezclaban con los avisos para invitados, así que activar la
+sección de avisos habría publicado la canción que pidió la pareja.
+
+| Respuesta | Antes | Ahora |
+|---|---|---|
+| `ambiente_musical` | No se usaba para nada | Nota con el ambiente en palabras y activa el efecto de música, para que el editor lo pida |
+| `cancion_propia` | Nota mezclada con avisos públicos | Va en la misma nota de música, en el canal interno |
+| `preferencias_diseno` | Solo en el brief | Nota "Cómo la imagina el cliente", visible mientras se diseña |
+| `mensaje_recordatorio` | No llegaba | Nota "Recordatorio para enviar días antes" (es acción del equipo, no contenido) |
+| `dominio_deseado` | No llegaba | Nota para el equipo |
+| `datos_registro` | No llegaba | Nota con los campos pedidos, en palabras |
+| `tipo_evento_corp` | No influía en nada | Elige plantilla: conferencia→Moderna, gala→Editorial, aniversario→Déco, lanzamiento→Cinema |
+
+Verificado ejecutando el mapper real con respuestas de una boda y de un evento
+corporativo: la boda sale con su paleta `vino_nude`, hashtag, dos padrinos (la
+fila vacía se descarta), música activada y cuatro notas internas, con la lista
+de avisos públicos vacía. El corporativo elige Cinema por ser un lanzamiento y
+deja constancia de los colores de marca, mientras el aviso del QR sí se queda
+en las notas públicas, que es donde corresponde.
+
+**Sigue pendiente, y es decisión comercial, no técnica:** el formulario promete
+dos cosas que el sistema no sabe entregar — el **video de portada** del plan
+Luxury ("se verá en bucle en la portada") y el **dominio propio** (§6.4). Hoy
+ambos quedan anotados para el equipo, pero no existe el mecanismo. Hay que
+implementarlos o ajustar lo que se promete. Tampoco se implementaron los
+**campos configurables de RSVP** que sugiere `datos_registro`: exigen ampliar la
+tabla `confirmaciones` y el formulario del invitado, y es una función aparte.
 
 ---
 

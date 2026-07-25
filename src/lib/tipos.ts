@@ -130,6 +130,12 @@ export interface DatosInvitacion {
   padrinos?: { rol: string; nombre: string }[];
   /** Avisos para los invitados: parqueo, niños, hospedaje, etc. */
   notas?: { titulo: string; texto: string }[];
+  /**
+   * Lo que pidió el cliente en su formulario y el equipo tiene que aplicar
+   * a mano (canción, ambiente musical, referencias de diseño…).
+   * NUNCA se publica: solo se ve en el editor del panel.
+   */
+  notasEquipo?: { titulo: string; texto: string }[];
   /** Efectos de la experiencia */
   efectos?: {
     sobre: boolean;      // apertura tipo sobre lacrado

@@ -260,6 +260,25 @@ const BLOQUES_BODA: Bloque[] = [
     ],
   },
   {
+    id: "personas",
+    titulo: "Padrinos y corte de honor",
+    desdePlan: "popular",
+    descripcion: "Las personas que los acompañan en el altar tienen su propia sección.",
+    preguntas: [
+      {
+        id: "personas_especiales",
+        tipo: "lista",
+        titulo: "¿A quiénes quieren nombrar en la invitación?",
+        subtitulo: "Padrinos, madrinas, damas de honor, padrinos de velación… Agrega los que quieras. Si prefieres no incluir esta sección, continúa sin llenar nada.",
+        campos: [
+          { id: "rol", etiqueta: "Rol", placeholder: "Ej. Padrino de anillos" },
+          { id: "nombre", etiqueta: "Nombre", placeholder: "Ej. Luis Herrera" },
+        ],
+        textoAgregar: "Agregar persona",
+      },
+    ],
+  },
+  {
     id: "fotos",
     titulo: "Sus fotos",
     desdePlan: "popular",
@@ -270,6 +289,13 @@ const BLOQUES_BODA: Bloque[] = [
         tipo: "fotos",
         titulo: "Suban sus fotos favoritas",
         subtitulo: "Recomendamos fotos en buena resolución, verticales u horizontales. La primera será la portada.",
+      },
+      {
+        id: "hashtag",
+        tipo: "texto",
+        titulo: "¿Tienen un hashtag para la boda?",
+        subtitulo: "Aparecerá al final de la invitación, para que los invitados etiqueten sus fotos. Si no tienen, continúa.",
+        placeholder: "Ej. #CamilaYLucas2026",
       },
     ],
   },
@@ -469,6 +495,25 @@ const BLOQUES_CUMPLEANOS: Bloque[] = [
     ],
   },
   {
+    id: "personas",
+    titulo: "Corte de honor",
+    desdePlan: "popular",
+    descripcion: "Si hay corte de honor, padrinos o personas especiales, tienen su propia sección.",
+    preguntas: [
+      {
+        id: "personas_especiales",
+        tipo: "lista",
+        titulo: "¿A quiénes quieres nombrar en la invitación?",
+        subtitulo: "Chambelanes, damas, padrinos, madrinas… Agrega los que quieras. Si prefieres no incluir esta sección, continúa sin llenar nada.",
+        campos: [
+          { id: "rol", etiqueta: "Rol", placeholder: "Ej. Chambelán de honor" },
+          { id: "nombre", etiqueta: "Nombre", placeholder: "Ej. Diego Martínez" },
+        ],
+        textoAgregar: "Agregar persona",
+      },
+    ],
+  },
+  {
     id: "fotos",
     titulo: "Fotos",
     desdePlan: "popular",
@@ -478,6 +523,13 @@ const BLOQUES_CUMPLEANOS: Bloque[] = [
         tipo: "fotos",
         titulo: "Sube las fotos para la invitación",
         subtitulo: "La primera será la portada. Fotos recientes y en buena calidad lucen mejor.",
+      },
+      {
+        id: "hashtag",
+        tipo: "texto",
+        titulo: "¿Tienes un hashtag para la fiesta?",
+        subtitulo: "Aparecerá al final de la invitación, para que tus invitados etiqueten sus fotos. Si no tienes, continúa.",
+        placeholder: "Ej. #Los15DeValeria",
       },
     ],
   },
@@ -858,6 +910,24 @@ const BLOQUES_OTRO: Bloque[] = [
     ],
   },
   {
+    id: "personas",
+    titulo: "Personas especiales",
+    desdePlan: "popular",
+    preguntas: [
+      {
+        id: "personas_especiales",
+        tipo: "lista",
+        titulo: "¿Hay personas que quieras nombrar en la invitación?",
+        subtitulo: "Padrinos, madrinas, homenajeados… Si no aplica, continúa sin llenar nada.",
+        campos: [
+          { id: "rol", etiqueta: "Rol", placeholder: "Ej. Madrina" },
+          { id: "nombre", etiqueta: "Nombre", placeholder: "Ej. Rosa Jiménez" },
+        ],
+        textoAgregar: "Agregar persona",
+      },
+    ],
+  },
+  {
     id: "fotos",
     titulo: "Fotos",
     desdePlan: "popular",
@@ -866,6 +936,13 @@ const BLOQUES_OTRO: Bloque[] = [
         id: "fotos_evento",
         tipo: "fotos",
         titulo: "Sube las fotos para la invitación",
+      },
+      {
+        id: "hashtag",
+        tipo: "texto",
+        titulo: "¿Tienes un hashtag para el evento?",
+        subtitulo: "Aparecerá al final de la invitación. Si no tienes, continúa.",
+        placeholder: "Ej. #BautizoDeSofia",
       },
     ],
   },

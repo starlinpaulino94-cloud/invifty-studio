@@ -9,6 +9,7 @@ import {
 } from "@/lib/acciones-invitacion";
 import {
   Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
+  ClipboardList,
 } from "lucide-react";
 
 const input =
@@ -34,6 +35,7 @@ export default function EditorInvitacion({
     ...datosIniciales,
     padrinos: datosIniciales.padrinos ?? [],
     notas: datosIniciales.notas ?? [],
+    notasEquipo: datosIniciales.notasEquipo ?? [],
     efectos: { ...EFECTOS_POR_DEFECTO, ...(datosIniciales.efectos ?? {}) },
     secciones: {
       padrinos: false,
@@ -152,6 +154,29 @@ export default function EditorInvitacion({
         >
           {mensaje.texto}
         </p>
+      )}
+
+      {/* ---------- LO QUE PIDIÓ EL CLIENTE ----------
+          Respuestas del formulario que el sistema no puede aplicar solo.
+          No se publican: son instrucciones para el equipo. */}
+      {(datos.notasEquipo?.length ?? 0) > 0 && (
+        <div className="bg-[#FFFBF0] border border-[#E8D9A8] rounded-2xl p-5">
+          <h3 className="text-sm font-bold text-[#8A6D1F] flex items-center gap-2 mb-1">
+            <ClipboardList className="w-4 h-4" />
+            Lo que pidió el cliente
+          </h3>
+          <p className="text-xs text-[#A08A4F] mb-4">
+            Esto no se publica. Son los detalles que hay que aplicar a mano antes de publicar.
+          </p>
+          <ul className="space-y-3">
+            {datos.notasEquipo!.map((nota, i) => (
+              <li key={i} className="border-l-2 border-[#D4AF37] pl-3">
+                <p className="text-xs font-semibold text-gray-800">{nota.titulo}</p>
+                <p className="text-sm text-gray-600 whitespace-pre-line mt-0.5">{nota.texto}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/* ---------- DISEÑO ---------- */}
