@@ -32,11 +32,12 @@ export async function generarInvitacion(pedidoId: string) {
   if (!pedido) throw new Error("Pedido no encontrado");
 
   const respuestas = (pedido.formularios?.[0]?.respuestas ?? {}) as Record<string, unknown>;
-  const datos = derivarDatosInvitacion(
+  const { datos, plantilla } = derivarDatosInvitacion(
     pedido.tipo_evento as TipoEvento,
     respuestas,
     pedido.clientes?.telefono ?? "",
-    pedido.fecha_evento
+    pedido.fecha_evento,
+    pedido.plan as Plan
   );
 
   // Slug único a partir del título
@@ -54,7 +55,7 @@ export async function generarInvitacion(pedidoId: string) {
 
   const { data: nueva, error } = await supabase
     .from("invitaciones")
-    .insert({ pedido_id: pedidoId, slug, datos })
+    .insert({ pedido_id: pedidoId, slug, datos, plantilla })
     .select("id")
     .single();
   if (error) throw new Error(`No se pudo generar la invitación: ${error.message}`);

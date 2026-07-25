@@ -82,7 +82,7 @@ export interface DatosInvitacion {
   horaEvento: string;        // HH:MM
   lugares: { nombre: string; detalle: string }[];
   dressCode: string;
-  paleta: string;            // id de paleta (ver PALETAS_INVITACION)
+  paleta: string;            // id de paleta (ver config/diseno.ts)
   historia: string;
   cronograma: { hora: string; actividad: string }[];
   regalos: { titulo: string; detalle: string }[];
@@ -97,8 +97,37 @@ export interface DatosInvitacion {
     cronograma: boolean;
     regalos: boolean;
     rsvp: boolean;
+    padrinos?: boolean;
+    notas?: boolean;
+  };
+
+  /* ---------- Detalle premium (todo opcional: las invitaciones
+     creadas antes siguen funcionando con valores por defecto) ---------- */
+
+  /** Pareja tipográfica (ver config/diseno.ts) */
+  tipografia?: string;
+  /** Iniciales del monograma; si se omite se derivan del título */
+  monograma?: string;
+  /** Etiqueta social del evento, ej. "#CamilaYLucas2026" */
+  hashtag?: string;
+  /** Despedida al final de la invitación */
+  mensajeFinal?: string;
+  /** Enlace directo a un audio (mp3) para la música de fondo */
+  musicaUrl?: string;
+  /** Corte de honor, padrinos, damas, ponentes… */
+  padrinos?: { rol: string; nombre: string }[];
+  /** Avisos para los invitados: parqueo, niños, hospedaje, etc. */
+  notas?: { titulo: string; texto: string }[];
+  /** Efectos de la experiencia */
+  efectos?: {
+    sobre: boolean;      // apertura tipo sobre lacrado
+    textura: boolean;    // grano de papel + viñeta
+    musica: boolean;     // reproductor flotante
   };
 }
+
+/** Valores por defecto de los campos nuevos (compatibilidad hacia atrás). */
+export const EFECTOS_POR_DEFECTO = { sobre: true, textura: true, musica: false };
 
 export interface Invitacion {
   id: string;

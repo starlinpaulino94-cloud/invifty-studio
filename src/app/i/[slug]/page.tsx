@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
-import PlantillaClasica from "@/components/invitacion/PlantillaClasica";
+import Renderizador from "@/components/invitacion/Renderizador";
 import { DatosInvitacion } from "@/lib/tipos";
+import { urlFuentes } from "@/config/diseno";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function PaginaInvitacion({
   const pedidoId = invitacion.pedido_id as string;
   const { data: archivos } = await admin.storage
     .from("fotos-pedidos")
-    .list(pedidoId, { limit: 30 });
+    .list(pedidoId, { limit: 60 });
 
   const fotos = await Promise.all(
     (archivos ?? [])
@@ -79,11 +80,21 @@ export default async function PaginaInvitacion({
       })
   );
 
+  const datos = invitacion.datos as DatosInvitacion;
+
   return (
-    <PlantillaClasica
-      datos={invitacion.datos as DatosInvitacion}
-      fotos={fotos}
-      esBorrador={esBorrador}
-    />
+    <>
+      {/* Solo se cargan las familias tipográficas que esta invitación usa */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="stylesheet" href={urlFuentes(datos.tipografia)} />
+
+      <Renderizador
+        plantilla={invitacion.plantilla as string}
+        datos={datos}
+        fotos={fotos}
+        esBorrador={esBorrador}
+      />
+    </>
   );
 }

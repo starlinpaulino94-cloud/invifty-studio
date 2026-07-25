@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { cerrarSesion } from "@/lib/acciones";
 import {
-  LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut,
+  LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut, Palette,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 const NAV = [
   { href: "/panel", etiqueta: "Tablero", Icono: LayoutDashboard },
   { href: "/panel/pedidos/nuevo", etiqueta: "Crear pedido", Icono: PlusCircle },
+  { href: "/panel/plantillas", etiqueta: "Plantillas", Icono: Palette },
   { href: "/panel/clientes", etiqueta: "Clientes", Icono: Users },
   { href: "/panel/vencimientos", etiqueta: "Vencimientos", Icono: CalendarClock },
   { href: "/panel/metricas", etiqueta: "Métricas", Icono: BarChart3 },

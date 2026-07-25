@@ -140,11 +140,44 @@ vestimenta, historia, programa del día, galería (las fotos que subió el
 cliente), mesa de regalos con botón de copiar, y confirmación de asistencia
 que llega por WhatsApp directo al anfitrión.
 
-**Plantillas**: la primera plantilla es "Clásica"
-(`src/components/invitacion/PlantillaClasica.tsx`), que se adapta a cualquier
-evento mediante 6 paletas de color (`PALETAS_INVITACION` en
-`src/lib/invitacion.ts`). Para añadir una plantilla nueva, duplica ese
-componente y regístrala en la página pública.
+### El sistema de diseño
+
+Las invitaciones no salen de una sola plantilla con colores intercambiables:
+hay un catálogo real, visible en **Panel → Plantillas** (cada una se puede
+abrir en vivo con datos de ejemplo, también sirve para enseñárselo al cliente).
+
+| Pieza | Cuántas | Dónde se edita |
+|---|---|---|
+| Plantillas (estructura y ornamentos) | 5 | `src/config/plantillas.ts` + `src/components/invitacion/plantillas/` |
+| Paletas de color | 12 | `src/config/diseno.ts` |
+| Parejas tipográficas | 6 | `src/config/diseno.ts` |
+
+**Las 5 plantillas:** Editorial Luxe (bodas de gala), Botánica (aire libre,
+baby showers), Moderna (minimalista, corporativo), Art Déco (15 años, galas)
+y Tropical Caribe (playa). Cada una tiene su propia portada, sus propios
+ornamentos vectoriales y su propio ritmo — no son variaciones de color.
+
+**Detalles que elevan la experiencia:**
+
+- **Sobre lacrado**: el invitado ve un sobre cerrado con el monograma y lo
+  toca para abrirlo. Es el primer momento "wow".
+- **Aparición al desplazar**: cada bloque entra con un fundido suave.
+- **Textura de papel** y viñeta: le quitan el aspecto plano de pantalla.
+- **Música de fondo** con botón flotante (sube el audio y pega el enlace).
+- **Galería con visor** a pantalla completa, navegable con flechas.
+- **Cuenta regresiva** en tres estilos según la plantilla.
+- **Secciones opcionales**: historia, personas especiales (padrinos, corte de
+  honor, ponentes), programa del día, mesa de regalos con botón de copiar,
+  avisos para invitados, RSVP por WhatsApp, hashtag y mensaje de cierre.
+
+Al generar la invitación, el sistema **elige plantilla, paleta y tipografía**
+según el estilo que el cliente pidió en su formulario; el equipo lo ajusta
+todo desde el editor.
+
+**Para añadir una plantilla nueva:** duplica un archivo de
+`src/components/invitacion/plantillas/`, regístralo en
+`src/config/plantillas.ts` y añádelo al `switch` de
+`src/components/invitacion/Renderizador.tsx`.
 
 ## 8. Seguridad
 

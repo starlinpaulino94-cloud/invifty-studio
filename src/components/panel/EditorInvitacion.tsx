@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { DatosInvitacion, EstadoInvitacion } from "@/lib/tipos";
-import { PALETAS_INVITACION } from "@/lib/invitacion";
+import { DatosInvitacion, EstadoInvitacion, EFECTOS_POR_DEFECTO } from "@/lib/tipos";
+import { PALETAS, TIPOGRAFIAS } from "@/config/diseno";
+import { PLANTILLAS } from "@/config/plantillas";
 import {
   guardarInvitacion, publicarInvitacion, despublicarInvitacion,
 } from "@/lib/acciones-invitacion";
 import {
-  Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff,
+  Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
 } from "lucide-react";
 
 const input =
@@ -29,22 +30,52 @@ export default function EditorInvitacion({
   estado: EstadoInvitacion;
   urlPublica: string;
 }) {
-  const [datos, setDatos] = useState<DatosInvitacion>(datosIniciales);
+  const [datos, setDatos] = useState<DatosInvitacion>({
+    ...datosIniciales,
+    padrinos: datosIniciales.padrinos ?? [],
+    notas: datosIniciales.notas ?? [],
+    efectos: { ...EFECTOS_POR_DEFECTO, ...(datosIniciales.efectos ?? {}) },
+    secciones: {
+      padrinos: false,
+      notas: false,
+      ...datosIniciales.secciones,
+    },
+  });
   const [slug, setSlug] = useState(slugInicial);
-  const [plantilla] = useState(plantillaInicial);
+  const [plantilla, setPlantilla] = useState(
+    plantillaInicial === "clasica" ? "editorial" : plantillaInicial
+  );
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [guardando, startGuardar] = useTransition();
   const [publicando, startPublicar] = useTransition();
 
   const set = <K extends keyof DatosInvitacion>(campo: K, valor: DatosInvitacion[K]) =>
-    setDatos({ ...datos, [campo]: valor });
+    setDatos((d) => ({ ...d, [campo]: valor }));
+
+  const setSeccion = (clave: keyof DatosInvitacion["secciones"], valor: boolean) =>
+    setDatos((d) => ({ ...d, secciones: { ...d.secciones, [clave]: valor } }));
+
+  const setEfecto = (clave: "sobre" | "textura" | "musica", valor: boolean) =>
+    setDatos((d) => ({
+      ...d,
+      efectos: { ...EFECTOS_POR_DEFECTO, ...(d.efectos ?? {}), [clave]: valor },
+    }));
+
+  /** Al cambiar de plantilla se sugieren su paleta y tipografía. */
+  const cambiarPlantilla = (id: string) => {
+    setPlantilla(id);
+    const meta = PLANTILLAS.find((p) => p.id === id);
+    if (meta) {
+      setDatos((d) => ({ ...d, paleta: meta.paletaSugerida, tipografia: meta.tipografiaSugerida }));
+    }
+  };
 
   const guardar = () =>
     startGuardar(async () => {
       const res = await guardarInvitacion(invitacionId, datos, slug, plantilla);
       setMensaje(
         res.ok
-          ? { tipo: "ok", texto: "Cambios guardados. Revisa la vista previa." }
+          ? { tipo: "ok", texto: "Cambios guardados. Abre la vista previa para verlos." }
           : { tipo: "error", texto: res.error ?? "Error al guardar" }
       );
       setTimeout(() => setMensaje(null), 4000);
@@ -61,6 +92,7 @@ export default function EditorInvitacion({
     });
 
   const despublicar = () => startPublicar(() => despublicarInvitacion(invitacionId));
+  const efectos = { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}) };
 
   return (
     <div className="space-y-6">
@@ -122,7 +154,131 @@ export default function EditorInvitacion({
         </p>
       )}
 
-      {/* Portada */}
+      {/* ---------- DISEÑO ---------- */}
+      <Tarjeta titulo="Plantilla" subtitulo="Cada una tiene su propia portada, ornamentos y ritmo.">
+        <div className="grid sm:grid-cols-2 gap-3">
+          {PLANTILLAS.map((p) => {
+            const activa = plantilla === p.id;
+            const pal = PALETAS[p.paletaSugerida];
+            return (
+              <button
+                key={p.id}
+                onClick={() => cambiarPlantilla(p.id)}
+                className={`text-left rounded-2xl border p-4 transition-all ${
+                  activa
+                    ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/25 bg-[#D4AF37]/5"
+                    : "border-gray-200 hover:border-gray-400"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Miniatura de la paleta sugerida */}
+                  <span
+                    className="w-12 h-16 rounded-lg shrink-0 flex flex-col items-center justify-center gap-1 border"
+                    style={{ backgroundColor: pal.fondo, borderColor: pal.acento }}
+                  >
+                    <span className="w-6 h-px" style={{ backgroundColor: pal.acento }} />
+                    <span className="text-[9px]" style={{ color: pal.acento }}>Aa</span>
+                    <span className="w-4 h-px" style={{ backgroundColor: pal.acento }} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-900">{p.nombre}</span>
+                    <span className="block text-[11px] text-gray-500 leading-snug mt-0.5">{p.descripcion}</span>
+                    <span className="block text-[10px] text-[#B08D2A] mt-1.5">{p.ideal}</span>
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Tarjeta>
+
+      <Tarjeta titulo="Paleta de colores">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+          {Object.entries(PALETAS).map(([id, p]) => (
+            <button
+              key={id}
+              onClick={() => set("paleta", id)}
+              className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all ${
+                datos.paleta === id
+                  ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/25"
+                  : "border-gray-200 hover:border-gray-400"
+              }`}
+            >
+              <span className="flex shrink-0">
+                {[p.fondo, p.acento, p.tarjeta].map((c, i) => (
+                  <span
+                    key={i}
+                    className="w-5 h-8 border border-gray-200"
+                    style={{ backgroundColor: c, marginLeft: i ? -6 : 0, borderRadius: 4 }}
+                  />
+                ))}
+              </span>
+              <span className="text-[11px] font-medium text-gray-700 leading-tight">{p.nombre}</span>
+            </button>
+          ))}
+        </div>
+      </Tarjeta>
+
+      <Tarjeta titulo="Tipografía">
+        <div className="grid sm:grid-cols-2 gap-2.5">
+          {Object.entries(TIPOGRAFIAS).map(([id, t]) => (
+            <button
+              key={id}
+              onClick={() => set("tipografia", id)}
+              className={`text-left rounded-xl border px-4 py-3 transition-all ${
+                (datos.tipografia ?? "clasica_real") === id
+                  ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/25 bg-[#D4AF37]/5"
+                  : "border-gray-200 hover:border-gray-400"
+              }`}
+            >
+              <span className="block text-sm font-semibold text-gray-900">{t.nombre}</span>
+              <span className="block text-[11px] text-gray-500 mt-0.5">{t.descripcion}</span>
+            </button>
+          ))}
+        </div>
+      </Tarjeta>
+
+      <Tarjeta titulo="Experiencia de apertura">
+        <div className="space-y-3">
+          <Interruptor
+            icono={<Mail className="w-4 h-4 text-[#D4AF37]" />}
+            titulo="Sobre lacrado"
+            detalle="El invitado ve un sobre cerrado con el monograma y lo toca para abrir la invitación."
+            activo={efectos.sobre}
+            onChange={(v) => setEfecto("sobre", v)}
+          />
+          <Interruptor
+            icono={<Sparkles className="w-4 h-4 text-[#D4AF37]" />}
+            titulo="Textura de papel"
+            detalle="Grano sutil y viñeta que dan sensación de pieza impresa."
+            activo={efectos.textura}
+            onChange={(v) => setEfecto("textura", v)}
+          />
+          <Interruptor
+            icono={<Music className="w-4 h-4 text-[#D4AF37]" />}
+            titulo="Música de fondo"
+            detalle="Botón flotante para activar el sonido. Requiere el enlace del audio."
+            activo={efectos.musica}
+            onChange={(v) => setEfecto("musica", v)}
+          />
+          {efectos.musica && (
+            <div className="pl-1">
+              <label className={label}>Enlace directo al audio (.mp3)</label>
+              <input
+                value={datos.musicaUrl ?? ""}
+                onChange={(e) => set("musicaUrl", e.target.value)}
+                className={input}
+                placeholder="https://…/cancion.mp3"
+              />
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Sube el archivo a Supabase Storage (o a cualquier hosting) y pega aquí el enlace directo.
+              </p>
+            </div>
+          )}
+        </div>
+      </Tarjeta>
+
+      {/* ---------- CONTENIDO ---------- */}
       <Tarjeta titulo="Portada">
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
@@ -131,10 +287,24 @@ export default function EditorInvitacion({
           </div>
           <div>
             <label className={label}>Subtítulo</label>
-            <input value={datos.subtitulo} onChange={(e) => set("subtitulo", e.target.value)} className={input} />
+            <input
+              value={datos.subtitulo}
+              onChange={(e) => set("subtitulo", e.target.value)}
+              className={input}
+              placeholder="Ej. Nos casamos"
+            />
           </div>
           <div>
-            <label className={label}>Frase o versículo</label>
+            <label className={label}>Monograma (iniciales)</label>
+            <input
+              value={datos.monograma ?? ""}
+              onChange={(e) => set("monograma", e.target.value)}
+              className={input}
+              placeholder="Se calcula solo: C & L"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={label}>Frase o versículo de portada</label>
             <input value={datos.frase} onChange={(e) => set("frase", e.target.value)} className={input} />
           </div>
           <div>
@@ -152,31 +322,6 @@ export default function EditorInvitacion({
         </div>
       </Tarjeta>
 
-      {/* Paleta */}
-      <Tarjeta titulo="Paleta de colores">
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(PALETAS_INVITACION).map(([id, p]) => (
-            <button
-              key={id}
-              onClick={() => set("paleta", id)}
-              className={`flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium transition-all ${
-                datos.paleta === id
-                  ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/30 bg-[#D4AF37]/5"
-                  : "border-gray-200 hover:border-gray-400"
-              }`}
-            >
-              <span className="flex gap-1">
-                {[p.fondo, p.acento, p.tarjeta].map((c) => (
-                  <span key={c} className="w-4 h-4 rounded-full border border-gray-200" style={{ backgroundColor: c }} />
-                ))}
-              </span>
-              {p.nombre}
-            </button>
-          ))}
-        </div>
-      </Tarjeta>
-
-      {/* Lugares */}
       <Tarjeta titulo="Lugares">
         <ListaEditable
           items={datos.lugares}
@@ -193,10 +338,12 @@ export default function EditorInvitacion({
         </div>
       </Tarjeta>
 
-      {/* Historia */}
-      <Tarjeta titulo="Historia" toggle={{ activo: datos.secciones.historia, onChange: (v) => set("secciones", { ...datos.secciones, historia: v }) }}>
+      <Tarjeta
+        titulo="Historia"
+        toggle={{ activo: datos.secciones.historia, onChange: (v) => setSeccion("historia", v) }}
+      >
         <textarea
-          rows={4}
+          rows={5}
           value={datos.historia}
           onChange={(e) => set("historia", e.target.value)}
           className={`${input} resize-none`}
@@ -204,8 +351,10 @@ export default function EditorInvitacion({
         />
       </Tarjeta>
 
-      {/* Cronograma */}
-      <Tarjeta titulo="Programa del día" toggle={{ activo: datos.secciones.cronograma, onChange: (v) => set("secciones", { ...datos.secciones, cronograma: v }) }}>
+      <Tarjeta
+        titulo="Programa del día"
+        toggle={{ activo: datos.secciones.cronograma, onChange: (v) => setSeccion("cronograma", v) }}
+      >
         <ListaEditable
           items={datos.cronograma}
           onChange={(v) => set("cronograma", v as DatosInvitacion["cronograma"])}
@@ -217,8 +366,26 @@ export default function EditorInvitacion({
         />
       </Tarjeta>
 
-      {/* Regalos */}
-      <Tarjeta titulo="Mesa de regalos" toggle={{ activo: datos.secciones.regalos, onChange: (v) => set("secciones", { ...datos.secciones, regalos: v }) }}>
+      <Tarjeta
+        titulo="Personas especiales"
+        subtitulo="Padrinos, corte de honor, damas, ponentes…"
+        toggle={{ activo: !!datos.secciones.padrinos, onChange: (v) => setSeccion("padrinos", v) }}
+      >
+        <ListaEditable
+          items={datos.padrinos ?? []}
+          onChange={(v) => set("padrinos", v as DatosInvitacion["padrinos"])}
+          campos={[
+            { id: "rol", placeholder: "Ej. Padrinos de anillos" },
+            { id: "nombre", placeholder: "Nombres" },
+          ]}
+          textoAgregar="Agregar persona"
+        />
+      </Tarjeta>
+
+      <Tarjeta
+        titulo="Mesa de regalos"
+        toggle={{ activo: datos.secciones.regalos, onChange: (v) => setSeccion("regalos", v) }}
+      >
         <ListaEditable
           items={datos.regalos}
           onChange={(v) => set("regalos", v as DatosInvitacion["regalos"])}
@@ -230,16 +397,36 @@ export default function EditorInvitacion({
         />
       </Tarjeta>
 
-      {/* Galería */}
-      <Tarjeta titulo="Galería de fotos" toggle={{ activo: datos.secciones.galeria, onChange: (v) => set("secciones", { ...datos.secciones, galeria: v }) }}>
+      <Tarjeta
+        titulo="Detalles a tener en cuenta"
+        subtitulo="Parqueo, hospedaje, si es solo adultos, indicaciones especiales…"
+        toggle={{ activo: !!datos.secciones.notas, onChange: (v) => setSeccion("notas", v) }}
+      >
+        <ListaEditable
+          items={datos.notas ?? []}
+          onChange={(v) => set("notas", v as DatosInvitacion["notas"])}
+          campos={[
+            { id: "titulo", placeholder: "Ej. Parqueo" },
+            { id: "texto", placeholder: "Ej. Valet parking disponible sin costo" },
+          ]}
+          textoAgregar="Agregar detalle"
+        />
+      </Tarjeta>
+
+      <Tarjeta
+        titulo="Galería de fotos"
+        toggle={{ activo: datos.secciones.galeria, onChange: (v) => setSeccion("galeria", v) }}
+      >
         <p className="text-xs text-gray-400">
           Usa las fotos que el cliente subió en su formulario (la primera es la portada).
           Para cambiarlas, gestiónalas desde la ficha del pedido.
         </p>
       </Tarjeta>
 
-      {/* RSVP */}
-      <Tarjeta titulo="Confirmación de asistencia (RSVP)" toggle={{ activo: datos.secciones.rsvp, onChange: (v) => set("secciones", { ...datos.secciones, rsvp: v }) }}>
+      <Tarjeta
+        titulo="Confirmación de asistencia (RSVP)"
+        toggle={{ activo: datos.secciones.rsvp, onChange: (v) => setSeccion("rsvp", v) }}
+      >
         <div className="grid sm:grid-cols-3 gap-4">
           <div>
             <label className={label}>WhatsApp que recibe confirmaciones</label>
@@ -272,6 +459,29 @@ export default function EditorInvitacion({
           </div>
         </div>
       </Tarjeta>
+
+      <Tarjeta titulo="Cierre">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className={label}>Mensaje final</label>
+            <input
+              value={datos.mensajeFinal ?? ""}
+              onChange={(e) => set("mensajeFinal", e.target.value)}
+              className={input}
+              placeholder="Nos hará muy felices contar contigo"
+            />
+          </div>
+          <div>
+            <label className={label}>Hashtag del evento</label>
+            <input
+              value={datos.hashtag ?? ""}
+              onChange={(e) => set("hashtag", e.target.value)}
+              className={input}
+              placeholder="#CamilaYLucas2026"
+            />
+          </div>
+        </div>
+      </Tarjeta>
     </div>
   );
 }
@@ -280,31 +490,71 @@ export default function EditorInvitacion({
 
 function Tarjeta({
   titulo,
+  subtitulo,
   toggle,
   children,
 }: {
   titulo: string;
+  subtitulo?: string;
   toggle?: { activo: boolean; onChange: (v: boolean) => void };
   children: React.ReactNode;
 }) {
   return (
     <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-serif text-lg text-gray-900">{titulo}</h2>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h2 className="font-serif text-lg text-gray-900">{titulo}</h2>
+          {subtitulo && <p className="text-[11px] text-gray-400 mt-0.5">{subtitulo}</p>}
+        </div>
         {toggle && (
-          <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+          <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer shrink-0">
             <input
               type="checkbox"
               checked={toggle.activo}
               onChange={(e) => toggle.onChange(e.target.checked)}
               className="accent-[#D4AF37] w-4 h-4"
             />
-            Mostrar sección
+            Mostrar
           </label>
         )}
       </div>
       <div className={toggle && !toggle.activo ? "opacity-40 pointer-events-none" : ""}>{children}</div>
     </section>
+  );
+}
+
+function Interruptor({
+  icono,
+  titulo,
+  detalle,
+  activo,
+  onChange,
+}: {
+  icono: React.ReactNode;
+  titulo: string;
+  detalle: string;
+  activo: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <label
+      className={`flex items-start gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${
+        activo ? "border-[#D4AF37] bg-[#D4AF37]/5" : "border-gray-200 hover:border-gray-300"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={activo}
+        onChange={(e) => onChange(e.target.checked)}
+        className="accent-[#D4AF37] w-4 h-4 mt-0.5"
+      />
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+          {icono} {titulo}
+        </span>
+        <span className="block text-[11px] text-gray-500 mt-0.5 leading-snug">{detalle}</span>
+      </span>
+    </label>
   );
 }
 
