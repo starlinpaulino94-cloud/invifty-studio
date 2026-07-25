@@ -103,9 +103,9 @@ export function CampoSeleccion({
             >
               {op.colores ? (
                 <span className="flex gap-1 mt-1 shrink-0">
-                  {op.colores.map((c) => (
+                  {op.colores.map((c, i) => (
                     <span
-                      key={c}
+                      key={`${c}-${i}`}
                       className="w-5 h-5 rounded-full border border-white/20"
                       style={{ backgroundColor: c }}
                     />

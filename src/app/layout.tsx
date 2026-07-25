@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { urlBase } from "@/lib/url";
 
 export const metadata: Metadata = {
+  // Base para resolver a URL absoluta las imágenes de vista previa de las
+  // invitaciones. WhatsApp y Facebook solo aceptan URLs absolutas.
+  metadataBase: new URL(urlBase()),
   title: "Invifty Studio",
   description: "Sistema interno de operaciones de Invifty — invitaciones digitales premium.",
   robots: { index: false, follow: false },

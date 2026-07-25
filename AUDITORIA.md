@@ -23,15 +23,15 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 
 **Prioridades en orden:**
 
-| # | Tema | Impacto | Esfuerzo |
-|---|---|---|---|
-| 1 | Clave secreta de Supabase filtrada en Git | 🔴 Crítico | 1 h |
-| 2 | Sin vista previa al compartir por WhatsApp | 🟠 Alto | 1 día |
-| 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días |
-| 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días |
-| 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día |
-| 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día |
-| 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días |
+| # | Tema | Impacto | Esfuerzo | Estado |
+|---|---|---|---|---|
+| 1 | Clave secreta de Supabase filtrada en Git | 🔴 Crítico | 1 h | ⏳ Pendiente (requiere rotar la clave en Supabase) |
+| 2 | Sin vista previa al compartir por WhatsApp | 🟠 Alto | 1 día | ✅ Resuelto |
+| 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ⏳ Pendiente |
+| 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ⏳ Pendiente |
+| 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Paletas resueltas · resto pendiente |
+| 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ⏳ Pendiente |
+| 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ⏳ Pendiente |
 
 ---
 
@@ -104,7 +104,7 @@ forzándolo. La protección existía y se saltó.
 
 ---
 
-## 2. 🟠 La invitación no tiene vista previa al compartirla
+## 2. ✅ La invitación no tiene vista previa al compartirla — RESUELTO
 
 **Este es el mayor punto de calidad percibida, y el más barato de arreglar.**
 
@@ -139,6 +139,29 @@ Costo: un día. Impacto: lo ven todos los invitados de todos los clientes.
 Nota relacionada: falta también `themeColor` (la barra del navegador móvil sale
 blanca genérica sobre una invitación de fondo negro) y `apple-mobile-web-app-title`
 para cuando el invitado la guarda en su pantalla de inicio.
+
+### ✅ Lo implementado
+
+- **`src/app/i/[slug]/opengraph-image.tsx`** — tarjeta 1200×630 generada por
+  invitación con `next/og`, dibujada con la **paleta real** de cada una: marco
+  doble, monograma, antetítulo, nombre y fecha. El título encoge por tramos para
+  que los nombres largos no desborden ni pisen la firma.
+- **Privacidad:** el endpoint lo consultan robots sin sesión, así que solo las
+  invitaciones **publicadas** muestran datos. Borradores y slugs inexistentes
+  devuelven una tarjeta neutra de Invifty. La tarjeta nunca incluye la dirección
+  del evento ni el WhatsApp del anfitrión.
+- **`generateMetadata`** con `openGraph` (título, descripción con la fecha en
+  palabras, `siteName`, `locale: es_DO`, `url`) y `twitter: summary_large_image`.
+  Se mantiene `noindex` a propósito: no afecta a la vista previa, porque WhatsApp
+  y Facebook leen los tags igual.
+- **`generateViewport`** con `themeColor` tomado del fondo de la paleta.
+- **`metadataBase`** en el layout raíz, necesario para que las URLs de imagen
+  salgan absolutas (WhatsApp rechaza las relativas).
+
+Verificado renderizando la tarjeta en local con tres casos: nombre corto con
+acentos sobre paleta clara, nombre largo a dos líneas sobre paleta oscura, y
+evento corporativo. El caso de dos líneas destapó una colisión entre la fecha y
+la firma que se corrigió reservando el espacio inferior.
 
 ---
 
@@ -285,6 +308,26 @@ si alguien del equipo se acuerda de subir un audio a mano.
 
 Añadir estas tres preguntas al formulario es media hora de trabajo y llena tres
 secciones que ya están construidas.
+
+### ✅ Lo implementado (5.1, 5.2 y 5.3)
+
+- **`vino_nude` ya es una paleta real** en `config/diseno.ts`. Se añadió en vez de
+  quitar la opción, porque los clientes que ya la eligieron tienen ese valor
+  guardado en sus respuestas: así se arregla también hacia atrás.
+- **Las opciones del formulario se construyen desde `PALETAS`**
+  (`opcionesPaleta()` en `config/formularios.ts`): nombre y muestras salen de la
+  paleta que se va a aplicar. Es imposible volver a ofrecer una paleta inexistente
+  o mostrar un color que no coincide — el problema no puede reaparecer.
+- **Catálogos por tipo de evento** en vez de las mismas 6 para todos: 12 para
+  bodas, 12 para cumpleaños y 15 años, 8 corporativas y 12 suaves para el resto.
+- **`colores_marca` deja de perderse:** cuando el cliente pide los colores de su
+  marca (o llega una respuesta antigua sin equivalente), `derivarDatosInvitacion`
+  aplica la paleta de la plantilla **y deja una nota interna** en la invitación
+  diciendo qué pidió el cliente, para que el equipo la ajuste antes de publicar.
+  Nada se descarta en silencio.
+
+Pendiente de esta sección: 5.4 (respuestas sin uso, incluida la música) y 5.5
+(padrinos, hashtag y monograma).
 
 ---
 

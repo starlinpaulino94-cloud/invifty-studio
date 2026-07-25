@@ -1,5 +1,5 @@
 import { DatosInvitacion, Plan, TipoEvento } from "./tipos";
-import { PALETAS, PALETA_POR_DEFECTO } from "@/config/diseno";
+import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida } from "@/config/diseno";
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
 
 /**
@@ -21,8 +21,17 @@ function lista(r: Record<string, unknown>, id: string): Record<string, string>[]
   return Array.isArray(v) ? (v as Record<string, string>[]) : [];
 }
 
-function paletaValida(id: string, respaldo: string): string {
-  return PALETAS[id] ? id : respaldo;
+/**
+ * Etiqueta legible de una respuesta de paleta que el sistema no puede aplicar
+ * tal cual (ej. "Los colores de nuestra marca", o una paleta de una versión
+ * anterior del formulario). Se usa para avisar al equipo en vez de descartarla.
+ */
+const PALETAS_SIN_EQUIVALENTE: Record<string, string> = {
+  colores_marca: "Los colores de su marca (tomarlos del logo que subió)",
+};
+
+function etiquetaPaletaPedida(id: string): string {
+  return PALETAS_SIN_EQUIVALENTE[id] ?? `"${id}"`;
 }
 
 /** Convierte texto a slug de URL: "Camila & Lucas" → "camila-y-lucas" */
@@ -117,6 +126,12 @@ export function derivarDatosInvitacion(
 
   const rsvpRaw = (r["config_rsvp"] ?? {}) as { fecha_limite?: string; acompanantes?: string };
 
+  // La paleta que pidió el cliente. Si el sistema no sabe aplicarla tal cual
+  // (colores de marca, respuesta antigua), se usa la de la plantilla PERO se
+  // deja constancia para el equipo: nunca se descarta en silencio.
+  const paletaPedida = texto(r, "paleta_colores");
+  const paletaAplicable = esPaletaValida(paletaPedida);
+
   const datos: DatosInvitacion = {
     titulo: "",
     subtitulo: "",
@@ -125,7 +140,7 @@ export function derivarDatosInvitacion(
     horaEvento: "",
     lugares: [],
     dressCode: texto(r, "dress_code"),
-    paleta: paletaValida(texto(r, "paleta_colores"), meta.paletaSugerida),
+    paleta: paletaAplicable ? paletaPedida : meta.paletaSugerida,
     tipografia: meta.tipografiaSugerida,
     historia: "",
     cronograma: lista(r, "hitos_dia")
@@ -215,6 +230,17 @@ export function derivarDatosInvitacion(
       const lugar = texto(r, "lugar_fiesta");
       if (lugar) datos.lugares.push({ nombre: "El Lugar", detalle: lugar });
     }
+  }
+
+  // Si la paleta pedida no se puede aplicar tal cual, el equipo se entera.
+  if (paletaPedida && !paletaAplicable) {
+    datos.notas!.push({
+      titulo: "Paleta pedida por el cliente (interno)",
+      texto:
+        `El cliente eligió ${etiquetaPaletaPedida(paletaPedida)}. Se aplicó ` +
+        `"${PALETAS[meta.paletaSugerida]?.nombre ?? meta.paletaSugerida}" como base: ` +
+        `ajústala en el editor antes de publicar.`,
+    });
   }
 
   // La canción indicada por el cliente queda anotada para que el equipo
