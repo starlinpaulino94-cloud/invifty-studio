@@ -91,6 +91,66 @@ export const PALETAS: Record<string, Paleta> = {
     fondo: "#FAFAFA", tarjeta: "#FFFFFF", acento: "#1A1A1A", acentoClaro: "#5A5A5A",
     texto: "#111111", textoSuave: "#767676", oscura: false,
   },
+  champan_perla: {
+    nombre: "Champán & Perla",
+    fondo: "#FBF7F1", tarjeta: "#FFFFFF", acento: "#C2A878", acentoClaro: "#DFCCA6",
+    texto: "#33302B", textoSuave: "#8B8377", oscura: false,
+  },
+  onix_oro_rosa: {
+    nombre: "Ónix & Oro Rosa",
+    fondo: "#131113", tarjeta: "#1E1A1E", acento: "#E0A899", acentoClaro: "#F2CDC2",
+    texto: "#F7F2F0", textoSuave: "#AFA19C", oscura: true,
+  },
+  bosque_crema: {
+    nombre: "Bosque & Crema",
+    fondo: "#16281F", tarjeta: "#1E3428", acento: "#D8CBB0", acentoClaro: "#EDE4D2",
+    texto: "#F2F5EF", textoSuave: "#9DAF9F", oscura: true,
+  },
+  mostaza_tierra: {
+    nombre: "Mostaza & Tierra",
+    fondo: "#FBF4E4", tarjeta: "#FFFDF7", acento: "#C08A2E", acentoClaro: "#E0B565",
+    texto: "#3D3222", textoSuave: "#91836A", oscura: false,
+  },
+  malva_perla: {
+    nombre: "Malva & Perla",
+    fondo: "#F7F3F4", tarjeta: "#FFFFFF", acento: "#A47C87", acentoClaro: "#C9AAB2",
+    texto: "#33292C", textoSuave: "#8D8085", oscura: false,
+  },
+  turquesa_arena: {
+    nombre: "Turquesa & Arena",
+    fondo: "#F2F8F7", tarjeta: "#FFFFFF", acento: "#2E9C97", acentoClaro: "#7FC9C4",
+    texto: "#21332F", textoSuave: "#7A8C89", oscura: false,
+  },
+  cobre_noche: {
+    nombre: "Cobre & Noche",
+    fondo: "#14100E", tarjeta: "#1F1815", acento: "#C97B4A", acentoClaro: "#E6A87B",
+    texto: "#F5EFE9", textoSuave: "#A9998D", oscura: true,
+  },
+  azul_rey_oro: {
+    nombre: "Azul Rey & Oro",
+    fondo: "#0A1B3D", tarjeta: "#122751", acento: "#D9B45B", acentoClaro: "#F0D796",
+    texto: "#F1F4FA", textoSuave: "#93A3C0", oscura: true,
+  },
+  durazno_crema: {
+    nombre: "Durazno & Crema",
+    fondo: "#FFF6F1", tarjeta: "#FFFFFF", acento: "#E39A72", acentoClaro: "#F5C4A8",
+    texto: "#3B2C24", textoSuave: "#9B8477", oscura: false,
+  },
+  grafito_plata: {
+    nombre: "Grafito & Plata",
+    fondo: "#1A1A1C", tarjeta: "#252528", acento: "#C3C7CC", acentoClaro: "#E4E7EA",
+    texto: "#F2F3F4", textoSuave: "#9A9DA3", oscura: true,
+  },
+  menta_blanco: {
+    nombre: "Menta & Blanco",
+    fondo: "#F3FAF6", tarjeta: "#FFFFFF", acento: "#5FA98A", acentoClaro: "#9CCDB6",
+    texto: "#22332B", textoSuave: "#7E8F86", oscura: false,
+  },
+  lila_dorado: {
+    nombre: "Lila & Dorado",
+    fondo: "#F7F4FA", tarjeta: "#FFFFFF", acento: "#B08FBF", acentoClaro: "#D3BFDD",
+    texto: "#322A38", textoSuave: "#8B8291", oscura: false,
+  },
 };
 
 export const PALETA_POR_DEFECTO = "dorado_negro";
@@ -176,6 +236,42 @@ export const TIPOGRAFIAS: Record<string, Tipografia> = {
     cuerpo: "'Josefin Sans', system-ui, sans-serif",
     script: "'Monsieur La Doulaise', cursive",
     familias: ["Poiret+One", "Josefin+Sans:wght@200;300;400;500;600", "Monsieur+La+Doulaise"],
+  },
+  celeste: {
+    nombre: "Celeste",
+    descripcion: "Serif etérea y ligera, con caligrafía fina. Ideal para noches estrelladas.",
+    display: "'Cormorant Garamond', Georgia, serif",
+    cuerpo: "'Raleway', system-ui, sans-serif",
+    script: "'Petit Formal Script', cursive",
+    familias: [
+      "Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300",
+      "Raleway:wght@200;300;400;500;600",
+      "Petit+Formal+Script",
+    ],
+  },
+  boho: {
+    nombre: "Boho",
+    descripcion: "Serif con carácter setentero y trazo espontáneo. Cálida y libre.",
+    display: "'Yeseva One', Georgia, serif",
+    cuerpo: "'Nunito Sans', system-ui, sans-serif",
+    script: "'Caveat', cursive",
+    familias: ["Yeseva+One", "Nunito+Sans:wght@300;400;600;700", "Caveat:wght@400;600"],
+  },
+  cinema: {
+    nombre: "Cinema",
+    descripcion: "Condensada y rotunda, como un cartel de cine. Impacto inmediato.",
+    display: "'Anton', Impact, sans-serif",
+    cuerpo: "'Inter', system-ui, sans-serif",
+    script: "'Style Script', cursive",
+    familias: ["Anton", "Inter:wght@200;300;400;500;600", "Style+Script"],
+  },
+  delicada: {
+    nombre: "Delicada",
+    descripcion: "Sans elegante de trazo fino con remate caligráfico. Serena y limpia.",
+    display: "'Tenor Sans', system-ui, sans-serif",
+    cuerpo: "'Mulish', system-ui, sans-serif",
+    script: "'Petit Formal Script', cursive",
+    familias: ["Tenor+Sans", "Mulish:wght@200;300;400;500;600", "Petit+Formal+Script"],
   },
 };
 

@@ -128,6 +128,59 @@ export function DivisorPalma({ className = "" }: Props) {
   );
 }
 
+/** Estrella de ocho puntas con línea a cada lado. */
+export function DivisorEstrella({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 240 26" fill="none" className={`w-52 h-7 ${className}`} aria-hidden>
+      <path d="M6 13h94M140 13h94" stroke="currentColor" strokeWidth=".9" opacity=".45" />
+      <path d="M120 1l3 9 9 3-9 3-3 9-3-9-9-3 9-3z" fill="currentColor" />
+      <path d="M104 13l-4-2 4-2M136 13l4-2-4-2" stroke="currentColor" strokeWidth=".9" opacity=".7" />
+      <circle cx="104" cy="13" r="1.4" fill="currentColor" opacity=".8" />
+      <circle cx="136" cy="13" r="1.4" fill="currentColor" opacity=".8" />
+    </svg>
+  );
+}
+
+/** Onda continua de estilo retro. */
+export function DivisorOnda({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 240 20" fill="none" className={`w-52 h-5 ${className}`} aria-hidden>
+      <path
+        d="M4 10c10-9 20-9 30 0s20 9 30 0 20-9 30 0 20 9 30 0 20-9 30 0 20 9 30 0 20-9 30 0"
+        stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Pincelada de acuarela. */
+export function DivisorPincel({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 240 22" fill="none" className={`w-52 h-6 ${className}`} aria-hidden>
+      <path
+        d="M18 13c30-7 58-9 84-6 24 3 46 6 70 2 16-3 30-6 42-2"
+        stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" opacity=".75"
+      />
+      <path
+        d="M32 17c34-5 60-6 84-4 22 2 44 4 66 1"
+        stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity=".4"
+      />
+      <circle cx="196" cy="9" r="2" fill="currentColor" opacity=".5" />
+    </svg>
+  );
+}
+
+/** Barra sobria para composiciones cinematográficas. */
+export function DivisorBarra({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 200 6" fill="none" className={`w-32 h-1.5 ${className}`} aria-hidden>
+      <rect x="0" y="2" width="64" height="2" fill="currentColor" />
+      <rect x="72" y="2" width="16" height="2" fill="currentColor" opacity=".6" />
+      <rect x="96" y="2" width="8" height="2" fill="currentColor" opacity=".35" />
+    </svg>
+  );
+}
+
 /** Devuelve el divisor que corresponde a cada plantilla. */
 export function Divisor({ variante, className }: { variante: string; className?: string }) {
   switch (variante) {
@@ -139,6 +192,16 @@ export function Divisor({ variante, className }: { variante: string; className?:
       return <DivisorDeco className={className} />;
     case "tropical":
       return <DivisorPalma className={className} />;
+    case "celestial":
+      return <DivisorEstrella className={className} />;
+    case "boho":
+      return <DivisorOnda className={className} />;
+    case "acuarela":
+      return <DivisorPincel className={className} />;
+    case "cinema":
+      return <DivisorBarra className={className} />;
+    case "arco":
+      return <DivisorMinimo className={className} />;
     default:
       return <DivisorFiligrana className={className} />;
   }
@@ -213,4 +276,98 @@ export function inicialesDe(titulo: string): string {
       .join(" & ");
   }
   return (titulo.trim()[0] ?? "I").toUpperCase();
+}
+
+/* ---------- Piezas de plantilla ---------- */
+
+/** Cielo estrellado determinista (mismas posiciones en servidor y navegador). */
+export function CieloEstrellado({ cantidad = 70 }: { cantidad?: number }) {
+  // Secuencia pseudoaleatoria fija: evita desajustes de hidratación.
+  const estrellas = Array.from({ length: cantidad }, (_, i) => {
+    const a = Math.sin(i * 12.9898) * 43758.5453;
+    const b = Math.sin(i * 78.233) * 12345.6789;
+    const c = Math.sin(i * 4.1414) * 5678.1234;
+    return {
+      x: ((a - Math.floor(a)) * 100).toFixed(2),
+      y: ((b - Math.floor(b)) * 100).toFixed(2),
+      r: (0.5 + (c - Math.floor(c)) * 1.4).toFixed(2),
+      o: (0.25 + (c - Math.floor(c)) * 0.7).toFixed(2),
+    };
+  });
+
+  return (
+    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100" aria-hidden>
+      {estrellas.map((e, i) => (
+        <circle key={i} cx={e.x} cy={e.y} r={Number(e.r) / 4} fill="currentColor" opacity={e.o} />
+      ))}
+    </svg>
+  );
+}
+
+/** Luna creciente con halo. */
+export function Luna({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 100 100" fill="none" className={`w-20 h-20 ${className}`} aria-hidden>
+      <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth=".6" opacity=".25" />
+      <path
+        d="M62 22a32 32 0 100 56 38 38 0 010-56z"
+        fill="currentColor" opacity=".9"
+      />
+      <circle cx="78" cy="30" r="1.8" fill="currentColor" opacity=".7" />
+      <circle cx="24" cy="72" r="1.4" fill="currentColor" opacity=".55" />
+    </svg>
+  );
+}
+
+/** Arco superior: enmarca la fotografía de portada (tendencia actual). */
+export function ArcoDecorativo({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 200 300" fill="none" preserveAspectRatio="none" className={`w-full h-full ${className}`} aria-hidden>
+      <path
+        d="M6 300V106C6 51 48 6 100 6s94 45 94 100v194"
+        stroke="currentColor" strokeWidth="1.2" opacity=".75"
+      />
+      <path
+        d="M16 300V108C16 58 54 17 100 17s84 41 84 91v192"
+        stroke="currentColor" strokeWidth=".6" opacity=".35"
+      />
+    </svg>
+  );
+}
+
+/** Sol retro de rayos escalonados (Boho). */
+export function SolRetro({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 200 110" fill="none" className={`w-full h-auto ${className}`} aria-hidden>
+      <circle cx="100" cy="100" r="26" fill="currentColor" opacity=".85" />
+      {[34, 44, 54, 64].map((r, i) => (
+        <path
+          key={r}
+          d={`M${100 - r} 100a${r} ${r} 0 0 1 ${r * 2} 0`}
+          stroke="currentColor"
+          strokeWidth={5 - i}
+          opacity={0.55 - i * 0.1}
+        />
+      ))}
+    </svg>
+  );
+}
+
+/** Manchas suaves de acuarela para fondos. */
+export function ManchasAcuarela() {
+  return (
+    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice" viewBox="0 0 400 700" aria-hidden>
+      <defs>
+        <filter id="acuarela-blur" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="42" />
+        </filter>
+      </defs>
+      <g filter="url(#acuarela-blur)" fill="currentColor">
+        <ellipse cx="80" cy="120" rx="130" ry="105" opacity=".30" />
+        <ellipse cx="330" cy="250" rx="150" ry="120" opacity=".22" />
+        <ellipse cx="140" cy="520" rx="165" ry="130" opacity=".26" />
+        <ellipse cx="340" cy="640" rx="120" ry="100" opacity=".18" />
+      </g>
+    </svg>
+  );
 }

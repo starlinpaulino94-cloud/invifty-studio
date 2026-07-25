@@ -66,6 +66,51 @@ export const PLANTILLAS: PlantillaMeta[] = [
     paletaSugerida: "coral_palma",
     tipografiaSugerida: "calida",
   },
+  {
+    id: "arco",
+    nombre: "Arco",
+    descripcion:
+      "La fotografía recortada dentro de un arco perfilado, con el nombre sereno debajo. La forma más pedida hoy en papelería de bodas.",
+    ideal: "Bodas modernas · Bautizos · Compromisos",
+    paletaSugerida: "malva_perla",
+    tipografiaSugerida: "delicada",
+  },
+  {
+    id: "celestial",
+    nombre: "Celestial",
+    descripcion:
+      "Cielo estrellado, luna creciente y monograma entre constelaciones. Mágica y envolvente.",
+    ideal: "Bodas de noche · 15 años · Galas",
+    paletaSugerida: "azul_rey_oro",
+    tipografiaSugerida: "celeste",
+  },
+  {
+    id: "acuarela",
+    nombre: "Acuarela",
+    descripcion:
+      "Aguadas de color difuminadas y retrato en óvalo. Dulce, artesanal y muy cálida.",
+    ideal: "Baby showers · Bautizos · Primeras comuniones",
+    paletaSugerida: "durazno_crema",
+    tipografiaSugerida: "romantica",
+  },
+  {
+    id: "cinema",
+    nombre: "Cinema",
+    descripcion:
+      "Fotografía a sangre con bandas de cine, título condensado enorme y ficha técnica a modo de créditos.",
+    ideal: "Lanzamientos · Cumpleaños de adulto · Bodas de destino",
+    paletaSugerida: "grafito_plata",
+    tipografiaSugerida: "cinema",
+  },
+  {
+    id: "boho",
+    nombre: "Boho Retro",
+    descripcion:
+      "Sol de rayos setenteros, arcos y ondas en tonos tierra. Desenfadada y con carácter.",
+    ideal: "Bodas boho · Fiestas al aire libre · Despedidas",
+    paletaSugerida: "mostaza_tierra",
+    tipografiaSugerida: "boho",
+  },
 ];
 
 export const PLANTILLA_POR_DEFECTO = "editorial";

@@ -115,6 +115,66 @@ export function datosMuestra(plantillaId: string): DatosInvitacion {
         mensajeFinal: "Será un honor contar con su presencia",
         secciones: { ...base.secciones, historia: false, regalos: false },
       };
+    case "acuarela":
+      return {
+        ...base,
+        titulo: "Mateo",
+        subtitulo: "¡Ya viene en camino!",
+        frase: "Un pequeño milagro está por llegar",
+        historia:
+          "Después de tanto esperarte, contamos los días para tenerte en brazos. Queremos celebrar tu llegada con las personas que más te van a querer.",
+        dressCode: "libre",
+        lugares: [{ nombre: "El baby shower", detalle: "Terraza Casa de Campo, La Romana" }],
+        padrinos: [{ rol: "Futuros papás", nombre: "Ana & Miguel" }],
+        cronograma: [
+          { hora: "15:00", actividad: "Recepción y merienda" },
+          { hora: "16:00", actividad: "Juegos y dinámicas" },
+          { hora: "17:30", actividad: "Apertura de regalos" },
+        ],
+        hashtag: "#BienvenidoMateo",
+        mensajeFinal: "Gracias por acompañarnos en esta etapa tan especial",
+      };
+    case "cinema":
+      return {
+        ...base,
+        titulo: "L'Élite",
+        subtitulo: "Gran apertura",
+        frase: "Una nueva era del lujo abre sus puertas en Piantini.",
+        historia: "",
+        dressCode: "formal",
+        lugares: [{ nombre: "La boutique", detalle: "Torre Empresarial Piantini, Santo Domingo" }],
+        regalos: [],
+        padrinos: [{ rol: "Anfitriona", nombre: "Marié Belliard" }],
+        hashtag: "#LEliteOpening",
+        mensajeFinal: "Te esperamos en la inauguración",
+        secciones: { ...base.secciones, historia: false, regalos: false },
+      };
+    case "boho":
+      return {
+        ...base,
+        frase: "Bajo el sol, entre flores y buena música",
+        dressCode: "libre",
+        lugares: [{ nombre: "La celebración", detalle: "Finca Los Almendros, Jarabacoa" }],
+        notas: [
+          { titulo: "Al aire libre", texto: "La fiesta es en el jardín: te sugerimos calzado cómodo." },
+          { titulo: "Transporte", texto: "Habrá bus de cortesía desde Santo Domingo a las 2:00 p. m." },
+        ],
+        hashtag: "#CamilaYLucasEnJarabacoa",
+      };
+    case "celestial":
+      return {
+        ...base,
+        frase: "Escrito en las estrellas mucho antes de conocernos",
+        historia:
+          "Dicen que hay encuentros que ya estaban escritos. El nuestro ocurrió una noche de verano, mirando el mismo cielo bajo el que hoy nos daremos el sí.",
+        cronograma: [
+          { hora: "19:00", actividad: "Ceremonia bajo las estrellas" },
+          { hora: "20:30", actividad: "Cóctel de bienvenida" },
+          { hora: "22:00", actividad: "Cena y brindis" },
+          { hora: "00:00", actividad: "Fiesta hasta el amanecer" },
+        ],
+        horaEvento: "19:00",
+      };
     case "tropical":
       return {
         ...base,
@@ -145,6 +205,11 @@ export function fotosMuestra(plantillaId: string) {
     moderna: "#b9b9b9",
     deco: "#b99a5e",
     tropical: "#f0a97f",
+    arco: "#c6a7ae",
+    celestial: "#8fa4c8",
+    acuarela: "#f2b795",
+    cinema: "#a8a8ac",
+    boho: "#d6a765",
   };
   const tono = tonos[plantillaMeta(plantillaId).id] ?? "#c9b184";
   return [0, 1, 2, 3, 4, 5].map((i) => ({
