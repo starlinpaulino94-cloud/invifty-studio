@@ -27,7 +27,7 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 |---|---|---|---|---|
 | 1 | Clave secreta de Supabase filtrada en Git | 🔴 Crítico | 1 h | ⏳ Pendiente (requiere rotar la clave en Supabase) |
 | 2 | Sin vista previa al compartir por WhatsApp | 🟠 Alto | 1 día | ✅ Resuelto |
-| 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ⏳ Pendiente |
+| 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ✅ Resuelto |
 | 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ✅ Resuelto (requiere correr la migración) |
 | 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Paletas resueltas · resto pendiente |
 | 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ⏳ Pendiente |
@@ -165,7 +165,7 @@ la firma que se corrigió reservando el espacio inferior.
 
 ---
 
-## 3. 🟠 Las invitaciones pesan demasiado en datos móviles
+## 3. ✅ Las invitaciones pesan demasiado en datos móviles — RESUELTO
 
 Las fotos se sirven **crudas, tal como el cliente las subió**, con `<img>` normal:
 
@@ -197,6 +197,50 @@ al 32% de opacidad detrás del texto.
 **Detalle relacionado:** las URLs firmadas duran 1 hora (`page.tsx:78`). Un invitado
 que deje la invitación abierta en una pestaña y vuelva por la tarde verá las fotos
 rotas hasta recargar.
+
+### ✅ Lo implementado
+
+Se eligió el camino 1 (derivados al subir) en vez de `next/image`, por dos razones:
+las fotos de la galería en mosaico no tienen dimensiones conocidas de antemano —que
+`next/image` necesita— y reducir los bytes en origen ahorra también tráfico de
+salida de Supabase, no solo del navegador del invitado.
+
+- **`src/lib/imagenes.ts`** — al subir se generan dos versiones en WebP: `web`
+  (lado mayor 1600 px, calidad 82) para la portada y el visor, y `min` (600 px,
+  calidad 72) para la cuadrícula. El original **no se toca**: el equipo de diseño
+  lo sigue descargando entero desde la ficha.
+- **`src/lib/fotos.ts`** — un solo sitio donde vive cómo se nombran y se listan
+  los archivos, en vez de repetir el filtrado en seis lugares. Los derivados van
+  en la subcarpeta `<pedido>/derivados/`, así el listado del cliente y el conteo
+  del límite del plan siguen viendo solo lo que él subió.
+- **Compatible hacia atrás:** las fotos sin derivados se sirven desde el original,
+  igual que antes. Nada se rompe.
+- **`scripts/generar-derivados.mts`** — procesa de una vez las fotos ya subidas,
+  para que las invitaciones ya entregadas también carguen rápido. Es repetible y
+  no modifica originales.
+- **Firmas de 24 horas** en lugar de 1: se acabó el problema de las fotos rotas al
+  volver a una pestaña abierta.
+- La vista previa del formulario y la cuadrícula del panel también pasan a usar la
+  miniatura — abrir una ficha con 40 fotos ya no descarga 200 MB al equipo.
+- De paso, la ruta de fotos deja de aceptar rutas con subcarpetas o `..`: antes
+  bastaba con que la ruta empezara por el id del pedido.
+
+**Medido** con una foto sintética de 4032×3024 y 4.9 MB, pasada por el módulo real:
+
+| | Peso | Reducción |
+|---|---|---|
+| Original | 4.90 MB | — |
+| `web` (1600 px) | 151 KB | 33× |
+| `min` (600 px) | 12 KB | 404× |
+
+Una galería de 15 fotos pasa de **73 MB a 0.2 MB** de miniaturas, más la que el
+invitado abra a tamaño completo. Ojo: la imagen de prueba es sintética y comprime
+mejor que una fotografía real con mucho detalle; en fotos reales la miniatura
+rondará las decenas de KB, no 12. El orden de magnitud sí se sostiene.
+
+Verificados además tres casos que romperían una invitación a la vista: una foto
+vertical con orientación EXIF sigue vertical, una imagen ya pequeña no se agranda,
+y un archivo corrupto devuelve `null` sin cortar la subida.
 
 ---
 

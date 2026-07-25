@@ -12,6 +12,7 @@ import { formatearValor, textoDeBloque } from "@/lib/respuestas";
 import { Cliente, Confirmacion, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import Confirmaciones from "@/components/panel/Confirmaciones";
 import { urlBase as resolverUrlBase } from "@/lib/url";
+import { BUCKET, HORAS_FIRMA, listarArchivos, rutaOriginal, urlsDeFoto } from "@/lib/fotos";
 import {
   SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonEliminarPago,
 } from "@/components/panel/Interactivos";
@@ -80,18 +81,27 @@ export default async function FichaPedido({
   const bloques = construirFormulario(pedido.tipo_evento as TipoEvento, pedido.plan as Plan);
   const respuestas = (formulario?.respuestas ?? {}) as Record<string, unknown>;
 
-  // Fotos subidas (URLs firmadas por 1 hora)
+  // Archivos subidos. La descarga apunta siempre al ORIGINAL (es lo que
+  // necesita el equipo de diseño); la vista previa usa la miniatura, para
+  // no cargar 200 MB de fotos al abrir la ficha.
   const admin = crearClienteAdmin();
-  const { data: archivos } = await admin.storage.from("fotos-pedidos").list(pedido.id, { limit: 200 });
+  const archivos = await listarArchivos(admin, pedido.id, 200);
   const fotos = await Promise.all(
-    (archivos ?? []).map(async (a) => {
-      const { data: firmada } = await admin.storage
-        .from("fotos-pedidos")
-        .createSignedUrl(`${pedido.id}/${a.name}`, 3600, { download: a.name });
-      const { data: vista } = await admin.storage
-        .from("fotos-pedidos")
-        .createSignedUrl(`${pedido.id}/${a.name}`, 3600);
-      return { nombre: a.name, descarga: firmada?.signedUrl, vista: vista?.signedUrl };
+    archivos.map(async (a) => {
+      const [{ data: firmada }, urls] = await Promise.all([
+        admin.storage
+          .from(BUCKET)
+          .createSignedUrl(rutaOriginal(pedido.id, a.nombre), HORAS_FIRMA * 3600, {
+            download: a.nombre,
+          }),
+        urlsDeFoto(admin, pedido.id, a),
+      ]);
+      return {
+        nombre: a.nombre,
+        esVideo: a.esVideo,
+        descarga: firmada?.signedUrl,
+        vista: urls.urlMiniatura,
+      };
     })
   );
 
@@ -301,11 +311,17 @@ export default async function FichaPedido({
                 className="group relative aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
                 title={`Descargar ${foto.nombre}`}
               >
-                {foto.nombre.startsWith("video-") ? (
+                {foto.esVideo ? (
                   <video src={foto.vista} className="w-full h-full object-cover" muted />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={foto.vista} alt={foto.nombre} className="w-full h-full object-cover" />
+                  <img
+                    src={foto.vista}
+                    alt={foto.nombre}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
                 )}
                 <span className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <Download className="w-5 h-5 text-white" />

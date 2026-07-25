@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { fechaLarga } from "./Marco";
 import { useInvitacion } from "./Contexto";
+import { FotoInvitacion } from "@/lib/tipos";
 
 /* ============================================================
    CUENTA REGRESIVA
@@ -259,7 +260,7 @@ export function Galeria({
   fotos,
   disposicion = "mosaico",
 }: {
-  fotos: { nombre: string; url?: string }[];
+  fotos: FotoInvitacion[];
   disposicion?: "mosaico" | "rejilla" | "tira";
 }) {
   const [abierta, setAbierta] = useState<number | null>(null);
@@ -312,11 +313,14 @@ export function Galeria({
             style={{ border: "1px solid var(--inv-linea)" }}
             aria-label={`Ampliar foto ${i + 1}`}
           >
+            {/* La cuadrícula usa la miniatura; la foto grande solo se
+                descarga al abrir el visor. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={foto.url}
+              src={foto.urlMiniatura ?? foto.url}
               alt=""
               loading="lazy"
+              decoding="async"
               className={`w-full transition-transform duration-700 hover:scale-105 ${
                 disposicion === "mosaico" ? "h-auto" : "h-full object-cover"
               }`}

@@ -7,6 +7,7 @@ import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
 import { DatosInvitacion } from "@/lib/tipos";
 import { urlFuentes, paleta } from "@/config/diseno";
 import { fechaLarga } from "@/lib/fechas";
+import { listarArchivos, urlsDeFoto } from "@/lib/fotos";
 import { urlBase } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
@@ -116,22 +117,15 @@ export default async function PaginaInvitacion({
     if (!user) notFound();
   }
 
-  // Fotos del pedido con URLs firmadas (frescas en cada visita)
+  // Fotos del pedido con URLs firmadas (frescas en cada visita).
+  // Se sirven las versiones ligeras: la miniatura en la cuadrícula de la
+  // galería y la versión web en la portada y el visor a pantalla completa.
   const admin = crearClienteAdmin();
   const pedidoId = invitacion.pedido_id as string;
-  const { data: archivos } = await admin.storage
-    .from("fotos-pedidos")
-    .list(pedidoId, { limit: 60 });
+  const archivos = await listarArchivos(admin, pedidoId, 60);
 
   const fotos = await Promise.all(
-    (archivos ?? [])
-      .filter((a) => !a.name.startsWith("video-"))
-      .map(async (a) => {
-        const { data } = await admin.storage
-          .from("fotos-pedidos")
-          .createSignedUrl(`${pedidoId}/${a.name}`, 3600);
-        return { nombre: a.name, url: data?.signedUrl };
-      })
+    archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedidoId, a))
   );
 
   const datos = invitacion.datos as DatosInvitacion;

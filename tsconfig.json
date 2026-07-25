@@ -7,6 +7,9 @@
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
+    // Los scripts de mantenimiento se ejecutan con node --experimental-strip-types,
+    // que exige la extensión .ts en los imports.
+    "allowImportingTsExtensions": true,
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,

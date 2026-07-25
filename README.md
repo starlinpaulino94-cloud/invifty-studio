@@ -180,6 +180,35 @@ en Excel.
 - La confirmación se envía a `/api/invitacion/<slug>/rsvp`, que valida todo en
   el servidor. Los invitados nunca tocan la base de datos directamente.
 
+### Fotos ligeras
+
+Los clientes suben las fotos tal como salen del celular (3-6 MB cada una). Al
+subirlas, el sistema genera automáticamente dos versiones en WebP:
+
+| Versión | Tamaño | Dónde se usa |
+|---|---|---|
+| Original | tal cual | Descarga del equipo de diseño (nunca se toca) |
+| `web` | lado mayor 1600 px | Portada y visor a pantalla completa |
+| `min` | lado mayor 600 px | Cuadrícula de la galería y vistas previas |
+
+Los derivados viven en `<pedido>/derivados/` dentro del mismo bucket, así que no
+aparecen en el listado del cliente ni cuentan para el límite de fotos del plan.
+Se respeta la orientación EXIF (las fotos verticales no salen acostadas) y las
+imágenes pequeñas no se agrandan.
+
+Si la conversión falla (un formato que el servidor no sabe leer), la foto se
+guarda igual y se sirve desde el original: la subida del cliente nunca se rompe.
+
+**Fotos subidas antes de esta mejora:** siguen funcionando desde el original, pero
+no se benefician. Para procesarlas una sola vez:
+
+```bash
+node --experimental-strip-types --env-file=.env.local scripts/generar-derivados.mts
+```
+
+Es seguro repetirlo: salta las que ya están hechas y nunca modifica el original.
+Requiere Node 22.6 o superior.
+
 ### El sistema de diseño
 
 Las invitaciones no salen de una sola plantilla con colores intercambiables:

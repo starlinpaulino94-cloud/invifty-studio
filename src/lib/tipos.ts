@@ -71,6 +71,18 @@ export interface FotoSubida {
   url?: string;
 }
 
+/**
+ * Foto ya lista para mostrarse en una invitación, con sus dos tamaños:
+ * `url` es la versión a pantalla completa y `urlMiniatura` la de la
+ * cuadrícula. En fotos subidas antes de las versiones ligeras, ambas
+ * apuntan al mismo original.
+ */
+export interface FotoInvitacion {
+  nombre: string;
+  url?: string;
+  urlMiniatura?: string;
+}
+
 export type EstadoInvitacion = "borrador" | "publicada";
 
 /** Contenido editable de una invitación generada (columna datos, JSONB). */
