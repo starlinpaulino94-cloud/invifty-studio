@@ -23,7 +23,8 @@ Dos caras:
 1. En el menú lateral: **SQL Editor** → **New query**.
 2. Abre el archivo [`supabase/schema.sql`](./supabase/schema.sql) de este repo, copia TODO su contenido, pégalo y presiona **Run**.
    - **¿Ya habías ejecutado el schema antes de la Fase 2?** Entonces ejecuta solo [`supabase/migracion-fase2-invitaciones.sql`](./supabase/migracion-fase2-invitaciones.sql), que agrega la tabla `invitaciones`.
-3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos` y `formularios`, y en **Storage** que existe el bucket `fotos-pedidos`.
+   - **¿Ya lo habías ejecutado antes de las confirmaciones (RSVP)?** Ejecuta también [`supabase/migracion-rsvp-confirmaciones.sql`](./supabase/migracion-rsvp-confirmaciones.sql), que agrega la tabla `confirmaciones`. Sin ella, las confirmaciones de los invitados no se guardan.
+3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones` y `confirmaciones`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
 ### 1.3 Crear el primer usuario del panel
 
@@ -155,7 +156,29 @@ La invitación pública incluye: portada con foto y cuenta regresiva en vivo,
 botón de Google Calendar, lugares con enlaces a Google Maps y Waze, código de
 vestimenta, historia, programa del día, galería (las fotos que subió el
 cliente), mesa de regalos con botón de copiar, y confirmación de asistencia
-que llega por WhatsApp directo al anfitrión.
+que queda registrada en el sistema.
+
+### Confirmaciones de asistencia (RSVP)
+
+Cuando un invitado confirma, su respuesta **queda guardada** y aparece en la
+ficha del pedido: total de personas, quiénes confirmaron, quiénes no podrán ir
+y las notas que dejaron. Desde ahí el equipo puede **copiar el resumen** para
+mandárselo al anfitrión por WhatsApp, o **exportar la lista** a CSV para abrirla
+en Excel.
+
+- Después de guardar, al invitado se le ofrece **avisar también por WhatsApp**.
+  Es un paso opcional: aunque no lo pulse, su confirmación ya está registrada.
+  (Antes era al revés — solo se abría WhatsApp y no se guardaba nada, así que
+  quien no llegaba a enviar el mensaje se perdía sin rastro.)
+- Si un invitado confirma dos veces con el mismo nombre, **se actualiza su
+  respuesta** en lugar de duplicarla, para que el total de personas sea real.
+  Los nombres se comparan sin acentos ni mayúsculas ("José Pérez" y
+  "jose perez" son la misma persona).
+- Solo las invitaciones **publicadas** aceptan confirmaciones. En la vista
+  previa del equipo el formulario funciona pero no guarda nada, para no
+  ensuciar la lista del cliente con pruebas.
+- La confirmación se envía a `/api/invitacion/<slug>/rsvp`, que valida todo en
+  el servidor. Los invitados nunca tocan la base de datos directamente.
 
 ### El sistema de diseño
 

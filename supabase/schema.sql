@@ -129,3 +129,40 @@ create policy "equipo acceso total invitaciones" on public.invitaciones
   for all to authenticated using (true) with check (true);
 -- El público NO accede a la tabla: la página /i/<slug> se sirve desde el
 -- servidor con la clave secreta y solo muestra invitaciones publicadas.
+
+-- ---------- CONFIRMACIONES DE ASISTENCIA (RSVP) ----------
+-- La confirmación del invitado queda guardada aquí, además de abrirse en
+-- WhatsApp: así el anfitrión tiene una lista real con su conteo.
+create table public.confirmaciones (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,
+  -- Nombre en minúsculas y sin espacios sobrantes: sirve para reconocer
+  -- que un invitado está corrigiendo su respuesta en vez de duplicarla.
+  nombre_normalizado text not null,
+  asiste        boolean not null,
+  -- Personas que asistirán en total, incluyendo al invitado.
+  -- 0 cuando la respuesta es "no podré ir", para poder sumar la columna.
+  cantidad      integer not null default 1 check (cantidad >= 0 and cantidad <= 20),
+  nota          text,
+  creado_en     timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+create index confirmaciones_invitacion_idx
+  on public.confirmaciones (invitacion_id, creado_en desc);
+
+-- Una fila por invitado: si vuelve a confirmar, se actualiza su respuesta.
+create unique index confirmaciones_invitado_idx
+  on public.confirmaciones (invitacion_id, nombre_normalizado);
+
+create trigger confirmaciones_tocar before update on public.confirmaciones
+  for each row execute function public.tocar_actualizado_en();
+
+alter table public.confirmaciones enable row level security;
+
+create policy "equipo acceso total confirmaciones" on public.confirmaciones
+  for all to authenticated using (true) with check (true);
+-- Los invitados NO tocan la tabla: confirman por la ruta
+-- /api/invitacion/<slug>/rsvp, que valida en el servidor que la
+-- invitación existe y está publicada antes de guardar nada.

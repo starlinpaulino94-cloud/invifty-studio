@@ -28,7 +28,7 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 | 1 | Clave secreta de Supabase filtrada en Git | 🔴 Crítico | 1 h | ⏳ Pendiente (requiere rotar la clave en Supabase) |
 | 2 | Sin vista previa al compartir por WhatsApp | 🟠 Alto | 1 día | ✅ Resuelto |
 | 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ⏳ Pendiente |
-| 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ⏳ Pendiente |
+| 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ✅ Resuelto (requiere correr la migración) |
 | 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Paletas resueltas · resto pendiente |
 | 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ⏳ Pendiente |
 | 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ⏳ Pendiente |
@@ -200,7 +200,7 @@ rotas hasta recargar.
 
 ---
 
-## 4. 🟠 Las confirmaciones de asistencia se pierden
+## 4. ✅ Las confirmaciones de asistencia se pierden — RESUELTO
 
 `src/components/invitacion/base/Piezas.tsx:398-417`: el invitado llena un formulario
 precioso (nombre, asiste sí/no, cuántas personas, nota) y el sistema **arma un mensaje
@@ -227,6 +227,35 @@ nota, creado_en), un POST desde el formulario, y una sección en el panel con el
 conteo, la lista y exportación a Excel. Seguir abriendo WhatsApp después de guardar
 —como confirmación adicional, no como único canal— para no perder el gesto que ya
 funciona. Es lo que convierte la confirmación en un dato que el cliente puede usar.
+
+### ✅ Lo implementado
+
+- **Tabla `confirmaciones`** con RLS (`supabase/migracion-rsvp-confirmaciones.sql`,
+  y también dentro de `schema.sql` para instalaciones nuevas). **Hay que correr la
+  migración en Supabase** para que la función quede activa.
+- **`POST /api/invitacion/[slug]/rsvp`** — endpoint público que valida en el
+  servidor: la invitación debe existir y estar **publicada**, la sección de RSVP
+  activa, el nombre tener contenido, la cantidad quedar entre 1 y 20, y hay un tope
+  de 1.500 confirmaciones por invitación como freno a abusos. Los invitados nunca
+  tocan la base de datos directamente.
+- **Una fila por invitado:** si alguien confirma dos veces, se actualiza su
+  respuesta en vez de duplicarla, comparando el nombre sin acentos ni mayúsculas.
+  El total de personas que ve el anfitrión es real. Índice único como red de
+  seguridad ante dos envíos simultáneos.
+- **Panel → ficha del pedido:** tarjeta con el total de personas, cuántos
+  confirmaron, cuántos no podrán ir, la lista con sus notas, un botón para
+  **copiar el resumen** (listo para mandárselo al anfitrión por WhatsApp) y otro
+  para **exportar a CSV** con BOM, para que Excel respete los acentos.
+- **La vista previa del equipo no guarda nada**, para no ensuciar la lista del
+  cliente con confirmaciones de prueba.
+
+**Cambio de flujo deliberado.** Antes el botón abría WhatsApp y daba las gracias
+sin guardar nada. Ahora primero se guarda y después se ofrece avisar por WhatsApp
+como enlace aparte. No es solo por honestidad del mensaje: encadenar un
+`window.open` después de un `await` hace que los navegadores móviles lo bloqueen
+por no venir de un gesto directo. Con un `<a>` que el invitado pulsa, el aviso
+nunca se bloquea — y si el guardado falla, la pantalla lo dice y ofrece WhatsApp
+como respaldo en vez de fingir que todo salió bien.
 
 ---
 

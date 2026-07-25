@@ -129,6 +129,20 @@ export interface DatosInvitacion {
 /** Valores por defecto de los campos nuevos (compatibilidad hacia atrás). */
 export const EFECTOS_POR_DEFECTO = { sobre: true, textura: true, musica: false };
 
+/** Confirmación de asistencia enviada por un invitado desde la invitación. */
+export interface Confirmacion {
+  id: string;
+  invitacion_id: string;
+  nombre: string;
+  nombre_normalizado: string;
+  asiste: boolean;
+  /** Personas en total, incluyendo al invitado. 0 si no asiste. */
+  cantidad: number;
+  nota: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
 export interface Invitacion {
   id: string;
   pedido_id: string;

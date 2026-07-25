@@ -9,7 +9,8 @@ import {
 } from "@/lib/planes";
 import { construirFormulario } from "@/config/formularios";
 import { formatearValor, textoDeBloque } from "@/lib/respuestas";
-import { Cliente, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { Cliente, Confirmacion, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import Confirmaciones from "@/components/panel/Confirmaciones";
 import { urlBase as resolverUrlBase } from "@/lib/url";
 import {
   SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonEliminarPago,
@@ -45,6 +46,16 @@ export default async function FichaPedido({
     .eq("pedido_id", id)
     .maybeSingle();
   const invitacion = invitacionData as Pick<Invitacion, "id" | "slug" | "estado"> | null;
+
+  // Confirmaciones de asistencia que enviaron los invitados
+  const { data: confirmacionesData } = invitacion
+    ? await supabase
+        .from("confirmaciones")
+        .select("*")
+        .eq("invitacion_id", invitacion.id)
+        .order("creado_en", { ascending: false })
+    : { data: null };
+  const confirmaciones = (confirmacionesData ?? []) as Confirmacion[];
 
   const pedido = data as Pedido & {
     clientes: Cliente;
@@ -234,6 +245,11 @@ export default async function FichaPedido({
           )}
         </div>
       </div>
+
+      {/* Confirmaciones de asistencia (solo tiene sentido una vez publicada) */}
+      {invitacion?.estado === "publicada" && (
+        <Confirmaciones confirmaciones={confirmaciones} nombreEvento={cliente.nombre} />
+      )}
 
       {/* Respuestas */}
       {formulario && Object.keys(respuestas).length > 0 && (

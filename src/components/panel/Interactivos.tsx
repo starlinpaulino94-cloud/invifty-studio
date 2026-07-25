@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { cambiarEstado, marcarFormularioEnviado, eliminarPago } from "@/lib/acciones";
 import { ESTADOS, colorEstado, nombreEstado } from "@/lib/planes";
 import { EstadoPedido } from "@/lib/tipos";
-import { Check, Copy, Loader2, MessageCircle, Trash2 } from "lucide-react";
+import { Check, Copy, Download, Loader2, MessageCircle, Trash2 } from "lucide-react";
 
 /* ---------- Selector de estado (un clic) ---------- */
 
@@ -130,6 +130,51 @@ export function BotonMensajeWhatsApp({
         Abrir chat de WhatsApp
       </a>
     </div>
+  );
+}
+
+/* ---------- Exportar confirmaciones a CSV (se abre en Excel) ---------- */
+
+export function BotonExportarConfirmaciones({
+  filas,
+  nombreArchivo,
+}: {
+  filas: { nombre: string; asiste: boolean; cantidad: number; nota: string | null; creado_en: string }[];
+  nombreArchivo: string;
+}) {
+  const descargar = () => {
+    const escapar = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const lineas = [
+      ["Nombre", "Asiste", "Personas", "Nota", "Confirmado el"].join(","),
+      ...filas.map((f) =>
+        [
+          escapar(f.nombre),
+          f.asiste ? "Sí" : "No",
+          String(f.cantidad),
+          escapar(f.nota ?? ""),
+          escapar(new Date(f.creado_en).toLocaleString("es-DO")),
+        ].join(",")
+      ),
+    ].join("\r\n");
+
+    // El BOM hace que Excel respete los acentos al abrir el archivo.
+    const blob = new Blob(["﻿" + lineas], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${nombreArchivo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <button
+      onClick={descargar}
+      className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border bg-white border-gray-200 text-gray-600 hover:border-gray-400 transition-colors"
+    >
+      <Download className="w-3.5 h-3.5" />
+      Exportar lista
+    </button>
   );
 }
 

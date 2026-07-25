@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import Renderizador from "@/components/invitacion/Renderizador";
+import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
 import { DatosInvitacion } from "@/lib/tipos";
 import { urlFuentes, paleta } from "@/config/diseno";
 import { fechaLarga } from "@/lib/fechas";
@@ -142,12 +143,14 @@ export default async function PaginaInvitacion({
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="stylesheet" href={urlFuentes(datos.tipografia)} />
 
-      <Renderizador
-        plantilla={invitacion.plantilla as string}
-        datos={datos}
-        fotos={fotos}
-        esBorrador={esBorrador}
-      />
+      <ProveedorInvitacion slug={slug} esBorrador={esBorrador}>
+        <Renderizador
+          plantilla={invitacion.plantilla as string}
+          datos={datos}
+          fotos={fotos}
+          esBorrador={esBorrador}
+        />
+      </ProveedorInvitacion>
     </>
   );
 }
