@@ -70,3 +70,44 @@ export interface FotoSubida {
   ruta: string;
   url?: string;
 }
+
+export type EstadoInvitacion = "borrador" | "publicada";
+
+/** Contenido editable de una invitación generada (columna datos, JSONB). */
+export interface DatosInvitacion {
+  titulo: string;            // "Camila & Lucas" / "Mis 15 Años — Valeria"
+  subtitulo: string;         // "¡Nos casamos!" / "Te invitamos a celebrar"
+  frase: string;             // frase o versículo de portada
+  fechaEvento: string;       // YYYY-MM-DD
+  horaEvento: string;        // HH:MM
+  lugares: { nombre: string; detalle: string }[];
+  dressCode: string;
+  paleta: string;            // id de paleta (ver PALETAS_INVITACION)
+  historia: string;
+  cronograma: { hora: string; actividad: string }[];
+  regalos: { titulo: string; detalle: string }[];
+  rsvp: {
+    whatsapp: string;        // número que recibe las confirmaciones
+    fechaLimite: string;
+    acompanantes: boolean;
+  };
+  secciones: {
+    historia: boolean;
+    galeria: boolean;
+    cronograma: boolean;
+    regalos: boolean;
+    rsvp: boolean;
+  };
+}
+
+export interface Invitacion {
+  id: string;
+  pedido_id: string;
+  slug: string;
+  plantilla: string;
+  datos: DatosInvitacion;
+  estado: EstadoInvitacion;
+  publicada_en: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}

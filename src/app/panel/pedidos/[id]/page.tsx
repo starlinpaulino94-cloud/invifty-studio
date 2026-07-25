@@ -3,17 +3,18 @@ import { notFound } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { registrarPago, guardarFicha } from "@/lib/acciones";
+import { generarInvitacion } from "@/lib/acciones-invitacion";
 import {
   PLANES, EXTRAS, TIPOS_EVENTO, formatoDOP, formatoFecha, mensajeWhatsAppFormulario,
 } from "@/lib/planes";
 import { construirFormulario } from "@/config/formularios";
 import { formatearValor, textoDeBloque } from "@/lib/respuestas";
-import { Cliente, Formulario, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { Cliente, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import {
   SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonEliminarPago,
 } from "@/components/panel/Interactivos";
 import {
-  ArrowLeft, Phone, Mail, Link2, StickyNote, Wallet, Image as ImageIcon, Download, Sparkles, FileText,
+  ArrowLeft, Phone, Mail, Link2, StickyNote, Wallet, Image as ImageIcon, Download, Sparkles, FileText, Wand2, PenLine,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,13 @@ export default async function FichaPedido({
     .single();
 
   if (!data) notFound();
+
+  const { data: invitacionData } = await supabase
+    .from("invitaciones")
+    .select("id, slug, estado")
+    .eq("pedido_id", id)
+    .maybeSingle();
+  const invitacion = invitacionData as Pick<Invitacion, "id" | "slug" | "estado"> | null;
 
   const pedido = data as Pedido & {
     clientes: Cliente;
@@ -182,6 +190,49 @@ export default async function FichaPedido({
           <BotonMensajeWhatsApp pedidoId={pedido.id} mensaje={mensaje} telefono={cliente.telefono} />
         </div>
       )}
+
+      {/* Invitación (Fase 2) */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="font-serif text-lg text-gray-900 flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-[#D4AF37]" /> Invitación
+            </h2>
+            <p className="text-xs text-gray-400 mt-1">
+              {invitacion
+                ? invitacion.estado === "publicada"
+                  ? "Publicada y visible para los invitados."
+                  : "En borrador — solo el equipo puede verla."
+                : "Genera la invitación a partir de las respuestas del formulario y ajústala antes de publicar."}
+            </p>
+            {invitacion && (
+              <p className="text-xs text-gray-400 mt-1 break-all">
+                {`${urlBase}/i/${invitacion.slug}`}
+              </p>
+            )}
+          </div>
+
+          {invitacion ? (
+            <Link
+              href={`/panel/invitaciones/${invitacion.id}`}
+              className="inline-flex items-center gap-2 bg-[#0D0D0F] text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors"
+            >
+              <PenLine className="w-4 h-4 text-[#D4AF37]" />
+              {invitacion.estado === "publicada" ? "Editar invitación" : "Continuar edición"}
+            </Link>
+          ) : (
+            <form action={generarInvitacion.bind(null, pedido.id)}>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-2 bg-[#D4AF37] hover:bg-[#F2D06B] text-black text-xs font-bold px-5 py-2.5 rounded-xl transition-colors active:scale-95"
+              >
+                <Wand2 className="w-4 h-4" />
+                Generar invitación
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
 
       {/* Respuestas */}
       {formulario && Object.keys(respuestas).length > 0 && (

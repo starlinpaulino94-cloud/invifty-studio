@@ -22,6 +22,7 @@ Dos caras:
 
 1. En el menú lateral: **SQL Editor** → **New query**.
 2. Abre el archivo [`supabase/schema.sql`](./supabase/schema.sql) de este repo, copia TODO su contenido, pégalo y presiona **Run**.
+   - **¿Ya habías ejecutado el schema antes de la Fase 2?** Entonces ejecuta solo [`supabase/migracion-fase2-invitaciones.sql`](./supabase/migracion-fase2-invitaciones.sql), que agrega la tabla `invitaciones`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos` y `formularios`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
 ### 1.3 Crear el primer usuario del panel
@@ -114,7 +115,36 @@ navegador — perfecto para pasárselo al diseñador o archivarlo.
 > Para avisar a todo el equipo con remitente propio, verifica tu dominio en
 > Resend → Domains y define `NOTIFICACIONES_REMITENTE="Invifty Studio <studio@invifty.com>"`.
 
-## 7. Seguridad
+## 7. Fase 2 — Generador de invitaciones
+
+El ciclo completo ya vive en el Studio:
+
+1. **Generar**: en la ficha del pedido (con el formulario completado), clic en
+   **"Generar invitación"**. El sistema convierte las respuestas en una
+   invitación en borrador: título, fecha, lugares, paleta, historia,
+   cronograma, regalos y RSVP quedan pre-llenados automáticamente.
+2. **Ajustar**: se abre el editor, donde el equipo pule textos, cambia la
+   paleta, activa/desactiva secciones y define la dirección web (slug).
+   El botón **"Vista previa"** muestra la invitación real — los borradores
+   solo son visibles para el equipo con sesión iniciada.
+3. **Publicar**: un clic y la invitación queda pública en `tu-dominio/i/<slug>`,
+   lista para que el cliente la comparta por WhatsApp. Al publicar, el pedido
+   se marca automáticamente como **Entregada**, se guarda la URL en la ficha y
+   se calcula la fecha de vencimiento según el plan.
+
+La invitación pública incluye: portada con foto y cuenta regresiva en vivo,
+botón de Google Calendar, lugares con enlaces a Google Maps y Waze, código de
+vestimenta, historia, programa del día, galería (las fotos que subió el
+cliente), mesa de regalos con botón de copiar, y confirmación de asistencia
+que llega por WhatsApp directo al anfitrión.
+
+**Plantillas**: la primera plantilla es "Clásica"
+(`src/components/invitacion/PlantillaClasica.tsx`), que se adapta a cualquier
+evento mediante 6 paletas de color (`PALETAS_INVITACION` en
+`src/lib/invitacion.ts`). Para añadir una plantilla nueva, duplica ese
+componente y regístrala en la página pública.
+
+## 8. Seguridad
 
 - Las tablas tienen **RLS activado**: solo usuarios autenticados (el equipo) pueden leerlas/escribirlas.
 - El formulario público **nunca toca Supabase directamente**: pasa por rutas API del servidor que validan el token único del pedido y usan la `service_role` key solo en el backend.
