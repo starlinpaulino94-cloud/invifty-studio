@@ -104,6 +104,23 @@ documento limpio con todos los datos: cliente, plan, pagos, respuestas por
 sección y fotos. Desde ahí, **Imprimir / Guardar como PDF** usa el diálogo del
 navegador — perfecto para pasárselo al diseñador o archivarlo.
 
+### Dictado por voz en el formulario
+
+En los campos donde el cliente tiene que escribir aparece un botón
+**"Dictar respuesta"**: toca el micrófono, habla con naturalidad y su voz se
+va transcribiendo sola en el campo. Ahorra mucho tiempo sobre todo en la
+historia de la pareja y en los detalles largos.
+
+- Funciona en Chrome, Edge y Safari (iPhone iOS 14.5+), que cubre casi todo
+  el público que abre un enlace por WhatsApp. Si el navegador no lo soporta,
+  el botón no aparece y el cliente escribe con el teclado como siempre.
+- No cuesta nada ni requiere claves: usa el reconocimiento de voz del propio
+  navegador.
+- **Privacidad:** la transcripción la realiza el servicio de voz del navegador
+  (Google en Chrome, Apple en Safari), no un servidor de Invifty. El audio no
+  se almacena: solo se guarda el texto resultante. Conviene mencionarlo en la
+  política de privacidad de la web pública.
+
 ### Aviso por email cuando un cliente completa su formulario
 
 1. Crea una cuenta gratis en [resend.com](https://resend.com) (3,000 emails/mes gratis).

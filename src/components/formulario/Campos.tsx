@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Pregunta } from "@/config/formularios";
 import { Check, Plus, Trash2, Upload, Loader2, X, PencilLine } from "lucide-react";
+import BotonDictado from "./Dictado";
 
 /* ============================================================
    Campos del asistente — todos oscuros/dorados, pensados para celular
@@ -22,26 +23,37 @@ export function CampoTexto({
 }) {
   if (pregunta.tipo === "textarea") {
     return (
-      <textarea
+      <div>
+        <textarea
+          value={valor}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={pregunta.placeholder}
+          rows={5}
+          autoFocus
+          className={`${inputBase} resize-none leading-relaxed`}
+        />
+        {/* Dictado por voz: en textos largos es donde más tiempo ahorra */}
+        <BotonDictado valor={valor} onChange={onChange} etiqueta="Dictar respuesta" />
+      </div>
+    );
+  }
+
+  const tipo = pregunta.tipo === "fecha" ? "date" : pregunta.tipo === "hora" ? "time" : "text";
+  return (
+    <div>
+      <input
+        type={tipo}
         value={valor}
         onChange={(e) => onChange(e.target.value)}
         placeholder={pregunta.placeholder}
-        rows={5}
-        autoFocus
-        className={`${inputBase} resize-none leading-relaxed`}
+        autoFocus={tipo === "text"}
+        className={`${inputBase} [color-scheme:dark]`}
       />
-    );
-  }
-  const tipo = pregunta.tipo === "fecha" ? "date" : pregunta.tipo === "hora" ? "time" : "text";
-  return (
-    <input
-      type={tipo}
-      value={valor}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={pregunta.placeholder}
-      autoFocus={tipo === "text"}
-      className={`${inputBase} [color-scheme:dark]`}
-    />
+      {/* Las fechas y horas se eligen del calendario: ahí no aplica el dictado */}
+      {tipo === "text" && (
+        <BotonDictado valor={valor} onChange={onChange} etiqueta="Dictar" />
+      )}
+    </div>
   );
 }
 
@@ -136,14 +148,21 @@ export function CampoSeleccion({
       </div>
 
       {modoOtro && !multiple && (
-        <input
-          type="text"
-          autoFocus
-          value={esOtro || modoOtro ? valorSimple : ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Escríbelo aquí con tus palabras…"
-          className={inputBase}
-        />
+        <div>
+          <input
+            type="text"
+            autoFocus
+            value={esOtro || modoOtro ? valorSimple : ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Escríbelo aquí o díctalo con el micrófono…"
+            className={inputBase}
+          />
+          <BotonDictado
+            valor={typeof valor === "string" ? valor : ""}
+            onChange={(v) => onChange(v)}
+            etiqueta="Dictar"
+          />
+        </div>
       )}
     </div>
   );
