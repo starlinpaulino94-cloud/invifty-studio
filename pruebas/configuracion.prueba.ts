@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 /**
  * CONFIGURACIÓN DE DESPLIEGUE
@@ -110,4 +111,47 @@ test("simular y aplicar no se confunden", () => {
   // Un despiste aquí escribiría en la base de datos creyendo que solo mira.
   assert.doesNotMatch(paquete.scripts["vencimientos:simular"], /--aplicar/);
   assert.match(paquete.scripts["vencimientos:aplicar"], /--aplicar/);
+});
+
+/* ---------- Secretos fuera del repositorio ---------- */
+
+/**
+ * `.gitignore` NO desrastrea lo que ya está rastreado. Por eso `.env.local`
+ * llegó a subirse con la clave secreta de Supabase dentro y siguió ahí
+ * commit tras commit, aunque el patrón `.env*` estuviera puesto desde el
+ * principio. Esta prueba mira lo único que importa: qué archivos rastrea git
+ * de verdad.
+ */
+test("ningún archivo de variables de entorno está rastreado por git", () => {
+  const rastreados = execFileSync("git", ["ls-files"], {
+    cwd: raiz,
+    encoding: "utf8",
+  }).split("\n");
+
+  const secretos = rastreados.filter(
+    (f) => /(^|\/)\.env/.test(f) && !f.endsWith(".env.example")
+  );
+
+  assert.deepEqual(
+    secretos,
+    [],
+    `Estos archivos llevan credenciales y están en el repositorio: ${secretos.join(", ")}. ` +
+      `Sácalos con "git rm --cached <archivo>" y ROTA las claves que hubiera dentro: ` +
+      `siguen legibles en el historial.`
+  );
+});
+
+test(".env.example no lleva ningún valor rellenado", () => {
+  // Es la plantilla que se copia: si alguien pega ahí una clave de verdad,
+  // se sube sin que nadie lo note porque este sí está rastreado a propósito.
+  const lineas = readFileSync(path.join(raiz, ".env.example"), "utf8").split("\n");
+
+  for (const linea of lineas) {
+    const m = /^([A-Z_]+)=(.+)$/.exec(linea.trim());
+    if (!m) continue;
+    const [, clave, valor] = m;
+    // La URL local del sistema sí viene puesta: no es un secreto.
+    if (clave === "NEXT_PUBLIC_APP_URL") continue;
+    assert.fail(`.env.example trae un valor en ${clave}: "${valor}". Déjalo vacío.`);
+  }
 });

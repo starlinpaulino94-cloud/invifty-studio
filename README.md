@@ -571,3 +571,37 @@ la sección de avisos para invitados no publica por error una instrucción inter
 - Las tablas tienen **RLS activado**: solo usuarios autenticados (el equipo) pueden leerlas/escribirlas.
 - El formulario público **nunca toca Supabase directamente**: pasa por rutas API del servidor que validan el token único del pedido y usan la `service_role` key solo en el backend.
 - El bucket de fotos es **privado**; las vistas y descargas usan URLs firmadas temporales.
+- **Nunca subas un `.env`.** `.gitignore` tiene el patrón, pero *no desrastrea lo que
+  ya está rastreado*: por eso `.env.local` llegó a subirse con la clave secreta
+  dentro y siguió ahí commit tras commit. Hay una prueba que falla si vuelve a
+  pasar (`pruebas/configuracion.prueba.ts`).
+
+### Rotar la clave secreta de Supabase
+
+La clave secreta (`SUPABASE_SECRET_KEY`, antes `service_role`) **se salta el RLS
+por completo**: quien la tenga lee y escribe los datos de todos los clientes. Si
+alguna vez estuvo en el repositorio, en un chat o en una captura, hay que
+cambiarla — sacarla del repositorio no basta, porque el historial la conserva.
+
+**El orden importa.** Primero se crea la nueva y se despliega; solo después se
+revoca la vieja. Al revés, el sistema se queda sin acceso hasta el despliegue.
+
+1. **Supabase** → tu proyecto → *Project Settings* → *API Keys* → sección
+   *Secret keys* → **Create new secret key**. Cópiala; solo se ve una vez.
+2. **Vercel** → el proyecto → *Settings* → *Environment Variables* → edita
+   `SUPABASE_SECRET_KEY` y pega la nueva. (Si también tienes
+   `SUPABASE_SERVICE_ROLE_KEY`, cámbiala o bórrala: el código acepta las dos y
+   usa la primera que encuentre.)
+3. **Redespliega.** Las variables de entorno se leen al construir: sin
+   redesplegar, Vercel sigue usando la vieja. *Deployments* → el último → *Redeploy*.
+4. **Comprueba que todo sigue vivo** antes de romper nada: abre el panel, entra a
+   un pedido con fotos y ábrelas. Si cargan, la clave nueva funciona.
+5. **Ahora sí, revoca la vieja** en la misma pantalla de Supabase.
+6. **Tu `.env.local`**: pega la clave nueva ahí también, o los comandos de
+   terminal (`npm run fotos:ligeras`, `npm run vencimientos:*`) dejarán de entrar.
+
+**¿Y borrar la clave del historial de git?** Rotarla ya deja la vieja sin valor,
+que es lo que de verdad arregla el problema. Reescribir el historial
+(`git filter-repo`, BFG) es opcional: rompe todos los clones existentes y hay
+copias en caché que no siempre desaparecen. Si el repositorio es privado y la
+clave ya está rotada, no hace falta.
