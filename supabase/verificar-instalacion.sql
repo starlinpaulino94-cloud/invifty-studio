@@ -57,3 +57,39 @@ select
 
 from esperado e
 order by e.tabla;
+
+
+-- =====================================================================
+-- ¿ESTÁ CERRADA LA PUERTA?
+-- =====================================================================
+-- Lo anterior comprueba que las políticas EXISTEN. Esto comprueba que
+-- además sirven de algo: una política `using (true)` existe, cuenta, y
+-- deja entrar a cualquiera que se registre con la clave anon (que es
+-- pública). Ver README → "Tener sesión no es ser del equipo".
+-- =====================================================================
+
+select
+  case when to_regclass('public.equipo') is null
+    then '❌ falta la tabla equipo — corre migracion-cerrar-acceso-equipo.sql'
+    else '✅ existe la lista del equipo' end                    as lista,
+
+  case when to_regclass('public.equipo') is null then '—'
+    when (select count(*) from public.equipo) = 0
+      then '❌ lista vacía: nadie puede ver nada'
+    else '✅ ' || (select count(*) from public.equipo)::text || ' en la lista'
+  end                                                          as gente,
+
+  case when exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename in ('clientes','pedidos','pagos','formularios',
+                        'invitaciones','confirmaciones','visitas')
+      and qual = 'true'
+  ) then '❌ hay políticas abiertas a cualquier registrado'
+    else '✅ ninguna política abierta' end                      as politicas,
+
+  case when exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'es_del_equipo'
+  ) then '✅ es_del_equipo() instalada'
+    else '❌ falta la función es_del_equipo()' end              as funcion;

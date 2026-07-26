@@ -568,13 +568,99 @@ la sección de avisos para invitados no publica por error una instrucción inter
 
 ## 8. Seguridad
 
-- Las tablas tienen **RLS activado**: solo usuarios autenticados (el equipo) pueden leerlas/escribirlas.
+- Las tablas tienen **RLS activado** y solo dejan pasar a quien esté en la lista
+  `equipo` (ver más abajo: *tener sesión no es ser del equipo*).
 - El formulario público **nunca toca Supabase directamente**: pasa por rutas API del servidor que validan el token único del pedido y usan la `service_role` key solo en el backend.
 - El bucket de fotos es **privado**; las vistas y descargas usan URLs firmadas temporales.
 - **Nunca subas un `.env`.** `.gitignore` tiene el patrón, pero *no desrastrea lo que
   ya está rastreado*: por eso `.env.local` llegó a subirse con la clave secreta
   dentro y siguió ahí commit tras commit. Hay una prueba que falla si vuelve a
   pasar (`pruebas/configuracion.prueba.ts`).
+
+### Tener sesión no es ser del equipo
+
+Este fue el agujero más grande que tuvo el sistema, y no se notaba porque todo
+funcionaba bien con él puesto.
+
+Las políticas de la base decían `for all to authenticated using (true)`. Eso
+suena a "solo el equipo" y no lo es: **`authenticated` es cualquiera con una
+sesión en nuestro proyecto de Supabase**. Y la clave anon viaja en el navegador
+—está en el código de cualquier página—, así que cualquiera podía leerla, llamar
+a `supabase.auth.signUp()` y quedar autenticado. A partir de ahí no necesitaba ni
+el panel ni el login: hablando directo con la API de Supabase leía la tabla de
+clientes entera, con nombres, teléfonos, pedidos y pagos.
+
+Por eso el arreglo va en la base de datos y no en el proxy de Next: **un guardia
+en `/panel` no protege nada si el atacante nunca pasa por `/panel`**.
+
+Ahora hay una lista blanca, la tabla `equipo`. Estar autenticado no basta: hay
+que estar además en esa lista, y las políticas lo comprueban con
+`public.es_del_equipo()`. Quien se registre por su cuenta queda autenticado y sin
+acceso a un solo dato.
+
+**Para ponerlo al día** (una vez, en Supabase → SQL Editor):
+
+1. Corre `supabase/migracion-cerrar-acceso-equipo.sql`. Se siembra sola con los
+   usuarios que ya existen, así que quien hoy entra al panel sigue entrando
+   igual. Las tres filas de comprobación del final tienen que decir OK.
+2. **Apaga el registro público**: Supabase → *Authentication* → *Sign In / Up* →
+   *Email* → desactiva **Allow new users to sign up**. La lista blanca ya
+   protege los datos; esto además evita que se acumulen cuentas fantasma.
+3. Comprueba que puedes entrar al panel. Si se ve el aviso *"Esta cuenta no
+   tiene acceso al panel"*, es que tu usuario no quedó en la lista:
+
+   ```sql
+   insert into public.equipo (usuario_id, email)
+   select id, email from auth.users where email = 'tu-correo@ejemplo.com';
+   ```
+
+**Para dar de alta a alguien nuevo del equipo**: créale el usuario en
+*Authentication* → *Users* y añádelo a la lista con ese mismo `insert`. Nadie
+puede añadirse a sí mismo: sobre `equipo` solo hay política de lectura.
+
+El orden de despliegue no importa. Si el código llega antes que la migración, el
+panel sigue funcionando como hasta ahora (ver `src/lib/equipo.ts`, que explica
+por qué cede cuando la tabla no existe todavía).
+
+### Cabeceras de seguridad y el CSP que no se puede poner
+
+`next.config.ts` pone `X-Content-Type-Options`, `Referrer-Policy`,
+`Permissions-Policy` y `Strict-Transport-Security` en todo, y `X-Frame-Options:
+DENY` más `Cache-Control: no-store` en `/panel`, `/login` y `/api`.
+
+**Lo que NO lleva es un CSP que limite scripts, y es a propósito.** Las
+invitaciones de código propio son HTML de terceros que se muestra en un iframe
+con `srcDoc`. Un documento srcdoc no hace petición de red: hereda el CSP de la
+página que lo contiene. Un `script-src 'self'` dejaría sin JavaScript, sin
+tipografías y sin imágenes externas al diseño del cliente — invitaciones ya
+pagadas y repartidas. Y no valdría ponerlo solo en el panel, porque el editor
+enseña esa misma vista previa en vivo.
+
+Ese HTML no se aísla con el CSP, se aísla con el iframe: `sandbox` sin
+`allow-same-origin`, o sea con origen opaco y sin acceso a la sesión del equipo
+(ver `src/lib/codigo.ts`). Contra el clickjacking del panel se usa
+`X-Frame-Options`, que es cabecera de respuesta y no lo hereda ningún srcdoc.
+
+Hay pruebas que vigilan las dos direcciones en `pruebas/seguridad.prueba.ts`:
+que las cabeceras estén, y que a nadie se le ocurra añadir el `script-src`.
+
+### Freno de peticiones en las rutas públicas
+
+Tres rutas abiertas llevan límite por ventana (`src/lib/limite.ts`): confirmar
+asistencia (20 cada 10 min por IP), guardar el formulario (300 cada 10 min por
+token) y subir fotos (120 cada 15 min por token, comprobado **antes** de leer el
+archivo, que puede pesar 50 MB). Al pasarse responden `429` con `Retry-After`.
+
+El contador vive en la memoria del proceso, así que en Vercel cada instancia
+lleva el suyo: frena el bucle casero, que es lo que de verdad pasa, no un ataque
+repartido entre muchas máquinas. Si algún día hiciera falta más, lo único que
+habría que cambiar es esa función.
+
+El contador de visitas queda **sin freno a propósito**: en el salón del evento
+cien invitados abren la invitación desde el mismo wifi, o sea desde la misma IP,
+y frenarlos dejaría sin contar justo el día que importa. Ahí el abuso lo corta el
+índice único `(invitacion_id, huella, hora)`, que solo admite una fila por
+dispositivo y hora.
 
 ### Rotar la clave secreta de Supabase
 

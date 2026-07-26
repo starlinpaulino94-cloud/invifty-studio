@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { limitar, ipDePeticion } from "@/lib/limite";
 
 /**
  * CONFIRMACIÓN DE ASISTENCIA (RSVP)
@@ -23,6 +24,13 @@ const MAX_ACOMPANANTES = 20;
 const MAX_CONFIRMACIONES = 1500;
 
 /**
+ * Una familia entera confirmando desde el mismo wifi son unas pocas
+ * confirmaciones seguidas; veinte en diez minutos ya no es una familia.
+ * El tope de 1500 de más abajo protege la tabla; esto protege el rato.
+ */
+const FRENO = { max: 20, ventanaMs: 10 * 60 * 1000 };
+
+/**
  * Nombre comparable: sin acentos, en minúsculas y con los espacios
  * colapsados. Sirve para reconocer que "José  Pérez" y "jose perez" son
  * la misma persona corrigiendo su respuesta, y no dos invitados.
@@ -41,6 +49,14 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
+
+  const freno = limitar(`rsvp:${ipDePeticion(req.headers)}`, FRENO);
+  if (!freno.ok) {
+    return NextResponse.json(
+      { error: "Demasiadas confirmaciones seguidas. Espera un momento." },
+      { status: 429, headers: { "Retry-After": String(freno.esperaS) } }
+    );
+  }
 
   const body = await req.json().catch(() => null);
   if (!body || typeof body !== "object") {

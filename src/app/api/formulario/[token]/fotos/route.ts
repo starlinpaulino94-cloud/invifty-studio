@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { limitar } from "@/lib/limite";
 import { LIMITE_FOTOS } from "@/lib/planes";
 import { Plan } from "@/lib/tipos";
 import { generarDerivados } from "@/lib/imagenes";
@@ -12,6 +13,14 @@ const TIPOS_PERMITIDOS = [
   "video/mp4", "video/quicktime", "video/webm",
 ];
 const TAMANO_MAXIMO = 50 * 1024 * 1024; // 50 MB (videos de portada)
+
+/**
+ * El plan ya limita cuántas fotos se GUARDAN, pero no cuántas veces se
+ * intenta subir: subir y borrar en bucle nos hace pagar tráfico y convertir
+ * imágenes sin parar. El plan más grande no llega a 60 archivos, así que
+ * 120 intentos en un cuarto de hora le sobran a cualquier cliente real.
+ */
+const FRENO_SUBIDA = { max: 120, ventanaMs: 15 * 60 * 1000 };
 
 async function buscarFormulario(token: string) {
   const supabase = crearClienteAdmin();
@@ -29,6 +38,16 @@ export async function POST(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  // Antes de leer el cuerpo: si no, ya nos habríamos tragado los 50 MB.
+  const freno = limitar(`fotos:${token}`, FRENO_SUBIDA);
+  if (!freno.ok) {
+    return NextResponse.json(
+      { error: "Demasiadas subidas seguidas. Espera un momento." },
+      { status: 429, headers: { "Retry-After": String(freno.esperaS) } }
+    );
+  }
+
   const formulario = await buscarFormulario(token);
   if (!formulario) {
     return NextResponse.json({ error: "Formulario no encontrado" }, { status: 404 });

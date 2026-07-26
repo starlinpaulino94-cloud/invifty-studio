@@ -24,7 +24,11 @@ create trigger invitaciones_tocar before update on public.invitaciones
 
 alter table public.invitaciones enable row level security;
 
+-- NOTA: esta política se endureció después. "authenticated" no quiere decir
+-- "del equipo": la clave anon es pública y cualquiera puede registrarse.
+-- Ver migracion-cerrar-acceso-equipo.sql.
 create policy "equipo acceso total invitaciones" on public.invitaciones
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 -- El público NO accede a la tabla: la página /i/<slug> se sirve desde el
 -- servidor con la clave secreta y solo muestra invitaciones publicadas.

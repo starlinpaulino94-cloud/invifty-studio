@@ -13,6 +13,18 @@ import { huellaDeVisita, horaTruncada, ipDeCabecera } from "@/lib/visitas";
  * No guarda IP ni cookies: solo una huella irreversible (ver lib/visitas.ts).
  * Nunca devuelve error al visitante: si algo falla, la invitación sigue
  * viéndose igual. Contar visitas no puede estropear la experiencia.
+ *
+ * SIN FRENO POR IP, A PROPÓSITO
+ * ------------------------------
+ * Las demás rutas públicas llevan un límite por IP (ver lib/limite.ts).
+ * Esta no, y no es un olvido: en el salón del evento cien invitados abren
+ * la invitación desde el mismo wifi, o sea desde la misma IP. Un freno ahí
+ * dejaría sin contar justo el día que importa, y el número de visitas es lo
+ * que se le enseña al cliente para que renueve.
+ *
+ * Lo que frena el abuso es el índice único (invitacion_id, huella, hora):
+ * por mucho que alguien insista, de un dispositivo solo cabe una fila por
+ * hora. La tabla no se puede inflar.
  */
 
 export async function POST(
