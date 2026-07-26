@@ -117,39 +117,37 @@ al cliente sin que nadie lo note.
 | El mensaje de WhatsApp que se copia | `mensajeWhatsAppFormulario` en `src/lib/planes.ts` |
 | Estados del pipeline | `src/lib/planes.ts` (constante `ESTADOS`) + constraint en `supabase/schema.sql` |
 
-### ⚠️ Vigencias: decisión pendiente
+### Vigencias
 
-Hay una contradicción abierta que conviene cerrar:
+Meses que la invitación queda en línea desde la entrega. Es la misma política que
+anuncia la página pública:
 
-| | Esencial | Popular | Premium | Luxury |
-|---|---|---|---|---|
-| Configurado en el sistema | 3 | **3** | **3** | 12 |
-| Anunciado en la web pública | 3 | **6** | **9** | 12 |
+| Esencial | Popular | Premium | Luxury |
+|---|---|---|---|
+| 3 meses | 6 meses | 9 meses | 12 meses |
 
-**Manda lo que dice el sistema.** Desde que el repaso diario funciona, las
-invitaciones se apagan solas: con la configuración actual, un cliente Premium que
-compró creyendo que tenía 9 meses se queda sin invitación a los 3.
+Se cambia en un solo sitio: `VIGENCIA_MESES` en
+[`src/lib/planes.ts`](./src/lib/planes.ts). El repaso diario apaga las
+invitaciones según ese valor, así que **tiene que coincidir con lo que anuncia la
+web**; antes el sistema aplicaba 3/3/3/12 mientras la web prometía 3/6/9/12, y un
+cliente Premium se quedaba sin invitación a los 3 meses.
 
-Para cerrarlo:
+**Si vuelve a cambiar:** los pedidos ya entregados llevan su fecha congelada con
+la política vieja. Para aplicarles la nueva:
 
-1. Ajusta `VIGENCIA_MESES` en [`src/lib/planes.ts`](./src/lib/planes.ts) — es el
-   único sitio donde se cambia.
-2. Alinea la página pública para que anuncie lo mismo.
-3. Los pedidos **ya entregados** llevan su fecha congelada con la política vieja.
-   Para aplicarles la nueva:
+```bash
+# Ver qué cambiaría, sin tocar nada
+node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts
 
-   ```bash
-   # Ver qué cambiaría, sin tocar nada
-   node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts
+# Si el listado convence, aplicarlo
+node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts --aplicar
+```
 
-   # Si el listado convence, aplicarlo
-   node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts --aplicar
-   ```
-
-   El script **solo alarga, nunca acorta**: si la política nueva diera una fecha
-   anterior a la que ya tiene un pedido, lo deja como está. A un cliente no se le
-   quita algo que ya se le prometió. A los que revive les limpia el aviso, para
-   que el repaso diario vuelva a avisar con la fecha nueva.
+El script **solo alarga, nunca acorta**: si la política nueva diera una fecha
+anterior a la que ya tiene un pedido, lo deja como está y te lo dice. A un cliente
+no se le quita algo que ya se le prometió. A las invitaciones que revive las
+devuelve a estado *Activa* y les limpia el aviso, para que el repaso diario vuelva
+a avisar con la fecha nueva.
 
 ## 6. Funciones adicionales
 

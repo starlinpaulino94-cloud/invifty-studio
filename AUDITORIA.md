@@ -30,7 +30,7 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 | 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ✅ Resuelto |
 | 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ✅ Resuelto (requiere correr la migración) |
 | 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Resuelto |
-| 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ✅ Resuelto (requiere correr la migración) |
+| 6 | Sin métrica de vistas · vencimientos · vigencias | 🟡 Medio | 1 día | ✅ Resuelto (requiere correr migraciones y el recálculo) |
 | 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ✅ Resuelto |
 
 ---
@@ -480,7 +480,7 @@ invitación, que **cambia** entre invitaciones y que no deja ver la IP.
 9 pruebas nuevas (27 en total). La ruta de registro devuelve siempre 200 y falla en
 silencio: contar visitas no puede estropearle la invitación a un invitado.
 
-### 6.2 ⏳ La política de vigencias es contradictoria — PREPARADO, FALTA DECIDIR
+### 6.2 ✅ La política de vigencias es contradictoria — RESUELTO
 
 El propio README lo admite (§5): el sistema aplica **3/3/3/12 meses**
 (`planes.ts:21-26`) mientras la página pública anuncia **3/6/9/12**. Un cliente
@@ -510,10 +510,18 @@ un cambio de una línea y no un problema:
 - **`VIGENCIA_MESES` documenta la contradicción en el propio código**, con los pasos
   a seguir al cambiarla.
 
-Recomendación: **3/6/9/12**, lo que anuncia la web. Es lo que el cliente vio al
-comprar y lo más defendible ante un reclamo; el coste es más meses de hosting, que
-para páginas estáticas con las fotos ya optimizadas es marginal. Pero es tu
-decisión: dime los números y los aplico.
+**Decisión tomada: 3/6/9/12**, lo que anuncia la web pública. Se honra lo que el
+cliente vio al comprar. Ya está aplicado en `VIGENCIA_MESES`.
+
+**Falta un paso operativo:** los pedidos ya entregados llevan su fecha congelada
+con la política vieja, así que hay que ejecutar el recálculo (ver README). Con la
+política nueva, un pedido Popular o Premium entregado hace cuatro meses **estaba
+vencido y vuelve a publicarse**: el script lo devuelve a estado *Activa* y le
+limpia el aviso. Eso solo puede hacerlo quien tenga acceso a la base de datos.
+
+La regla de "solo alarga, nunca acorta" vive en `planificarRecalculo` con siete
+pruebas propias, y se verificó que **fallan si alguien rompe la regla**: al
+permitir que también acortara, la prueba correspondiente salta.
 
 ### 6.3 ✅ El vencimiento llega sin aviso — RESUELTO
 

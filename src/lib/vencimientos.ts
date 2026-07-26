@@ -105,6 +105,72 @@ export interface RepasoVencimientos<T extends PedidoVigencia> {
 /** Estados en los que la invitación sigue publicada y su vigencia corre. */
 const ESTADOS_VIVOS: EstadoPedido[] = ["entregada", "activa"];
 
+/* ============================================================
+   RECÁLCULO AL CAMBIAR LA POLÍTICA
+   ============================================================ */
+
+export interface PedidoRecalculo {
+  id: string;
+  plan: Plan;
+  estado: EstadoPedido;
+  fecha_entrega: string | null;
+  fecha_vencimiento: string | null;
+}
+
+export interface CambioVencimiento<T extends PedidoRecalculo> {
+  pedido: T;
+  antes: string | null;
+  despues: string;
+  /** Estaba vencido y la fecha nueva lo devuelve a la vida. */
+  revive: boolean;
+}
+
+export interface PlanRecalculo<T extends PedidoRecalculo> {
+  /** Se les alarga la vigencia. */
+  aAlargar: CambioVencimiento<T>[];
+  /** La política nueva los acortaría: se dejan intactos. */
+  seRespetan: CambioVencimiento<T>[];
+}
+
+/**
+ * Decide qué pedidos ya entregados hay que tocar cuando cambia la política.
+ *
+ * REGLA DE ORO: solo alarga, nunca acorta. Si el recálculo diera una fecha
+ * anterior a la que el pedido ya tiene, se deja como está — a un cliente no
+ * se le quita algo que ya se le prometió, aunque la política nueva sea más
+ * corta. No toca la base de datos: devuelve el plan y quien llama decide.
+ */
+export function planificarRecalculo<T extends PedidoRecalculo>(
+  pedidos: T[],
+  hoy = new Date()
+): PlanRecalculo<T> {
+  const aAlargar: CambioVencimiento<T>[] = [];
+  const seRespetan: CambioVencimiento<T>[] = [];
+  const hoyISO = hoy.toISOString().slice(0, 10);
+
+  for (const pedido of pedidos) {
+    if (!pedido.fecha_entrega) continue;
+
+    const despues = calcularVencimiento(pedido.fecha_entrega, pedido.plan);
+    if (!despues) continue;
+
+    const antes = pedido.fecha_vencimiento;
+    const cambio: CambioVencimiento<T> = {
+      pedido,
+      antes,
+      despues,
+      // Ya había pasado de fecha y la nueva lo devuelve al futuro.
+      revive: !!antes && antes < hoyISO && despues >= hoyISO,
+    };
+
+    if (!antes || despues > antes) aAlargar.push(cambio);
+    else if (despues < antes) seRespetan.push(cambio);
+    // Si coinciden, no hay nada que hacer.
+  }
+
+  return { aAlargar, seRespetan };
+}
+
 /**
  * Decide qué hacer con cada pedido en el repaso diario. No toca la base de
  * datos: devuelve las dos listas y quien llama se encarga.

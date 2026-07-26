@@ -8,6 +8,8 @@
  * REGLA DE ORO: solo alarga, nunca acorta. Si el recálculo diera una fecha
  * anterior a la que ya tiene el pedido, se deja como está. A un cliente no
  * se le quita algo que ya se le prometió, aunque la política haya cambiado.
+ * (La decisión vive en `planificarRecalculo`, en src/lib/vencimientos.ts,
+ * que tiene sus propias pruebas.)
  *
  * Cómo usarlo (desde la raíz del proyecto):
  *
@@ -22,7 +24,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { calcularVencimiento } from "../src/lib/vencimientos.ts";
+import { planificarRecalculo, type PedidoRecalculo } from "../src/lib/vencimientos.ts";
 import { VIGENCIA_MESES, PLANES } from "../src/lib/planes.ts";
 import type { Plan } from "../src/lib/tipos.ts";
 
@@ -49,7 +51,11 @@ for (const [plan, meses] of Object.entries(VIGENCIA_MESES)) {
 }
 console.log(aplicar ? "\nMODO REAL: se van a guardar los cambios.\n" : "\nSIMULACIÓN: no se guarda nada.\n");
 
-const { data: pedidos, error } = await supabase
+type PedidoConNombre = PedidoRecalculo & {
+  clientes: { nombre: string } | { nombre: string }[] | null;
+};
+
+const { data, error } = await supabase
   .from("pedidos")
   .select("id, plan, estado, fecha_entrega, fecha_vencimiento, clientes(nombre)")
   .not("fecha_entrega", "is", null);
@@ -59,53 +65,43 @@ if (error) {
   process.exit(1);
 }
 
-interface Cambio {
-  id: string;
-  cliente: string;
-  plan: Plan;
-  antes: string | null;
-  despues: string;
+const pedidos = (data ?? []) as unknown as PedidoConNombre[];
+
+/** Supabase devuelve la relación como objeto o como lista según el caso. */
+function nombreDe(pedido: PedidoConNombre): string {
+  const c = pedido.clientes;
+  if (!c) return "Cliente";
+  return (Array.isArray(c) ? c[0]?.nombre : c.nombre) ?? "Cliente";
 }
 
-const alargar: Cambio[] = [];
-const seRespeta: Cambio[] = [];
+const { aAlargar, seRespetan } = planificarRecalculo(pedidos);
 
-for (const pedido of pedidos ?? []) {
-  const plan = pedido.plan as Plan;
-  const nueva = calcularVencimiento(pedido.fecha_entrega as string, plan);
-  if (!nueva) continue;
-
-  const cambio: Cambio = {
-    id: pedido.id as string,
-    // Supabase devuelve la relación como objeto o como lista según el caso.
-    cliente:
-      (Array.isArray(pedido.clientes) ? pedido.clientes[0]?.nombre : (pedido.clientes as { nombre?: string } | null)?.nombre) ??
-      "Cliente",
-    plan,
-    antes: pedido.fecha_vencimiento as string | null,
-    despues: nueva,
-  };
-
-  if (!cambio.antes || nueva > cambio.antes) alargar.push(cambio);
-  else if (nueva < cambio.antes) seRespeta.push(cambio);
-}
-
-if (seRespeta.length) {
-  console.log(`Se dejan como están (la nueva política los acortaría) — ${seRespeta.length}:`);
-  for (const c of seRespeta) {
-    console.log(`  · ${c.cliente} (${PLANES[c.plan].nombre}): conserva ${c.antes}, no se toca ${c.despues}`);
+if (seRespetan.length) {
+  console.log(`Se dejan como están, la política nueva los acortaría — ${seRespetan.length}:`);
+  for (const c of seRespetan) {
+    console.log(
+      `  · ${nombreDe(c.pedido)} (${PLANES[c.pedido.plan].nombre}): conserva ${c.antes}`
+    );
   }
   console.log();
 }
 
-if (!alargar.length) {
+if (!aAlargar.length) {
   console.log("No hay nada que alargar: todos los pedidos ya reflejan la política actual.");
   process.exit(0);
 }
 
-console.log(`Se alargarían — ${alargar.length}:`);
-for (const c of alargar) {
-  console.log(`  · ${c.cliente} (${PLANES[c.plan].nombre}): ${c.antes ?? "sin fecha"} → ${c.despues}`);
+const revividos = aAlargar.filter((c) => c.revive);
+
+console.log(`Se alargarían — ${aAlargar.length}:`);
+for (const c of aAlargar) {
+  console.log(
+    `  · ${nombreDe(c.pedido)} (${PLANES[c.pedido.plan].nombre}): ` +
+      `${c.antes ?? "sin fecha"} → ${c.despues}${c.revive ? "  [vuelve a estar activa]" : ""}`
+  );
+}
+if (revividos.length) {
+  console.log(`\n${revividos.length} invitación(es) estaban vencidas y vuelven a publicarse.`);
 }
 
 if (!aplicar) {
@@ -114,20 +110,20 @@ if (!aplicar) {
 }
 
 let guardados = 0;
-for (const c of alargar) {
+for (const c of aAlargar) {
   const { error: errorGuardar } = await supabase
     .from("pedidos")
-    // Se limpia el aviso para que el repaso diario vuelva a avisar con la
-    // fecha nueva, y se revive el pedido si se había dado por vencido.
     .update({
       fecha_vencimiento: c.despues,
+      // Se limpia el aviso para que el repaso diario vuelva a avisar con la
+      // fecha nueva, y se revive el pedido si se había dado por vencido.
       aviso_vencimiento_en: null,
-      ...(c.antes && c.antes < new Date().toISOString().slice(0, 10) ? { estado: "activa" } : {}),
+      ...(c.revive ? { estado: "activa" } : {}),
     })
-    .eq("id", c.id);
+    .eq("id", c.pedido.id);
 
-  if (errorGuardar) console.warn(`  ✗ ${c.cliente}: ${errorGuardar.message}`);
+  if (errorGuardar) console.warn(`  ✗ ${nombreDe(c.pedido)}: ${errorGuardar.message}`);
   else guardados++;
 }
 
-console.log(`\nListo. ${guardados} de ${alargar.length} pedido(s) actualizados.`);
+console.log(`\nListo. ${guardados} de ${aAlargar.length} pedido(s) actualizados.`);

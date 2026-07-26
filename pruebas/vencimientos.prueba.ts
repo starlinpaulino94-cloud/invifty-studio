@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   diasHasta, estadoVigencia, textoVigencia, repasarVencimientos, calcularVencimiento,
-  sumarMeses, DIAS_DE_AVISO, type PedidoVigencia,
+  sumarMeses, planificarRecalculo, DIAS_DE_AVISO,
+  type PedidoVigencia, type PedidoRecalculo,
 } from "@/lib/vencimientos";
 import { mensajeWhatsAppRenovacion, VIGENCIA_MESES } from "@/lib/planes";
+import type { Plan } from "@/lib/tipos";
 
 /**
  * VENCIMIENTOS
@@ -156,6 +158,98 @@ test("una invitación en estado activa también entra en el repaso", () => {
     HOY
   );
   assert.deepEqual(aMarcarVencidas.map((p) => p.id), ["activa"]);
+});
+
+/* ---------- Recálculo al cambiar la política ---------- */
+
+function entregado(
+  id: string,
+  plan: Plan,
+  fechaEntrega: string,
+  fechaVencimiento: string | null,
+  estado: PedidoRecalculo["estado"] = "entregada"
+): PedidoRecalculo {
+  return { id, plan, estado, fecha_entrega: fechaEntrega, fecha_vencimiento: fechaVencimiento };
+}
+
+test("el recálculo alarga a quien la política nueva favorece", () => {
+  // Entregado con la política vieja (Premium = 3 meses); ahora son 9.
+  const { aAlargar } = planificarRecalculo(
+    [entregado("premium", "premium", "2026-05-10", "2026-08-10")],
+    HOY
+  );
+
+  assert.equal(aAlargar.length, 1);
+  assert.equal(aAlargar[0].antes, "2026-08-10");
+  assert.equal(aAlargar[0].despues, "2027-02-10", "9 meses desde la entrega");
+});
+
+test("el recálculo NUNCA acorta la vigencia de un cliente", () => {
+  // Un pedido con una fecha más generosa de la que tocaría: se respeta.
+  const { aAlargar, seRespetan } = planificarRecalculo(
+    [entregado("regalado", "esencial", "2026-05-10", "2027-12-31")],
+    HOY
+  );
+
+  assert.deepEqual(aAlargar, [], "no se toca");
+  assert.equal(seRespetan.length, 1);
+  assert.equal(
+    seRespetan[0].pedido.fecha_vencimiento,
+    "2027-12-31",
+    "al cliente no se le quita algo ya prometido"
+  );
+});
+
+test("un pedido que ya cuadra con la política no se toca", () => {
+  const correcto = calcularVencimiento("2026-05-10", "popular");
+  const { aAlargar, seRespetan } = planificarRecalculo(
+    [entregado("ok", "popular", "2026-05-10", correcto)],
+    HOY
+  );
+  assert.deepEqual(aAlargar, []);
+  assert.deepEqual(seRespetan, []);
+});
+
+test("una invitación vencida que la política nueva revive queda marcada", () => {
+  // Entregada hace 8 meses con 3 de vigencia: vencida. Con 9 meses, revive.
+  const { aAlargar } = planificarRecalculo(
+    [entregado("revive", "premium", "2025-10-15", "2026-01-15", "vencida")],
+    HOY
+  );
+
+  assert.equal(aAlargar.length, 1);
+  assert.equal(aAlargar[0].revive, true, "hay que devolverla a estado activa");
+  assert.ok(aAlargar[0].despues > "2026-06-15", "la fecha nueva está en el futuro");
+});
+
+test("una invitación vencida que sigue vencida no se marca como reviviendo", () => {
+  // Entregada hace mucho: ni con 9 meses llega a hoy.
+  const { aAlargar } = planificarRecalculo(
+    [entregado("vieja", "premium", "2024-01-10", "2024-04-10", "vencida")],
+    HOY
+  );
+
+  assert.equal(aAlargar.length, 1, "se le corrige la fecha igualmente");
+  assert.equal(aAlargar[0].revive, false, "sigue vencida, no hay que reactivarla");
+});
+
+test("un pedido sin fecha de entrega se ignora", () => {
+  const { aAlargar, seRespetan } = planificarRecalculo(
+    [{ id: "sin-entregar", plan: "popular", estado: "en_diseno", fecha_entrega: null, fecha_vencimiento: null }],
+    HOY
+  );
+  assert.deepEqual(aAlargar, []);
+  assert.deepEqual(seRespetan, []);
+});
+
+test("un pedido entregado sin fecha de vencimiento recibe una", () => {
+  const { aAlargar } = planificarRecalculo(
+    [entregado("sin-fecha", "luxury", "2026-05-10", null)],
+    HOY
+  );
+  assert.equal(aAlargar.length, 1);
+  assert.equal(aAlargar[0].antes, null);
+  assert.equal(aAlargar[0].despues, "2027-05-10");
 });
 
 test("el mensaje de renovación lleva lo que el cliente necesita saber", () => {

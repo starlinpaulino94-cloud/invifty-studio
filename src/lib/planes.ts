@@ -16,18 +16,14 @@ export const PLANES: Record<Plan, { nombre: string; precioDOP: number }> = {
 /**
  * VIGENCIA DE LA INVITACIÓN (meses desde la entrega)
  * ===================================================
- * ⚠️ DECISIÓN PENDIENTE — ESTE ES EL ÚNICO SITIO DONDE SE CAMBIA.
+ * ESTE ES EL ÚNICO SITIO DONDE SE CAMBIA. Manda lo que diga este archivo:
+ * el repaso diario (lib/vencimientos.ts) apaga las invitaciones solo.
  *
- * Ahora mismo hay una contradicción abierta:
- *   · aquí está configurado    3 / 3 / 3 / 12 meses
- *   · la página pública anuncia 3 / 6 / 9 / 12 meses
+ * Política vigente: la misma que anuncia la página pública, 3/6/9/12.
+ * Antes el sistema aplicaba 3/3/3/12 mientras la web prometía 3/6/9/12, así
+ * que un cliente Premium se quedaba sin invitación a los 3 meses.
  *
- * Manda lo que diga este archivo: desde que el repaso diario funciona
- * (ver lib/vencimientos.ts), el sistema apaga las invitaciones solo. Con
- * la configuración actual, un cliente Premium que compró creyendo que
- * tenía 9 meses se queda sin invitación a los 3.
- *
- * Al cambiar estos números:
+ * Si vuelve a cambiar:
  *   1. Alinea la página pública para que anuncie lo mismo.
  *   2. Los pedidos YA entregados llevan su fecha congelada; para
  *      aplicarles la política nueva ejecuta:
@@ -38,8 +34,8 @@ export const PLANES: Record<Plan, { nombre: string; precioDOP: number }> = {
  */
 export const VIGENCIA_MESES: Record<Plan, number> = {
   esencial: 3,
-  popular: 3,
-  premium: 3,
+  popular: 6,
+  premium: 9,
   luxury: 12,
 };
 
