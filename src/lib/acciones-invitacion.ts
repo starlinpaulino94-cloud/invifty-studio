@@ -69,14 +69,16 @@ export async function guardarInvitacion(
   invitacionId: string,
   datos: DatosInvitacion,
   slug: string,
-  plantilla: string
+  plantilla: string,
+  /** HTML de la invitación cuando se hizo fuera del sistema. */
+  codigoHtml?: string | null
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await crearClienteServidor();
 
   const slugLimpio = slugificar(slug);
   const { error } = await supabase
     .from("invitaciones")
-    .update({ datos, slug: slugLimpio, plantilla })
+    .update({ datos, slug: slugLimpio, plantilla, codigo_html: codigoHtml ?? null })
     .eq("id", invitacionId);
 
   if (error) {

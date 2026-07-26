@@ -5,14 +5,17 @@ import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/tipos";
 import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
-import { PALETAS, TIPOGRAFIAS } from "@/config/diseno";
+import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
+import {
+  PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
+} from "@/lib/codigo";
 import {
   guardarInvitacion, publicarInvitacion, despublicarInvitacion,
 } from "@/lib/acciones-invitacion";
 import {
   Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
-  ClipboardList,
+  ClipboardList, Code2, AlertTriangle,
 } from "lucide-react";
 
 const input =
@@ -27,6 +30,7 @@ export default function EditorInvitacion({
   estado,
   urlPublica,
   fotos,
+  codigoInicial,
 }: {
   invitacionId: string;
   slugInicial: string;
@@ -36,6 +40,8 @@ export default function EditorInvitacion({
   urlPublica: string;
   /** Fotos que subió el cliente, sin ordenar ni filtrar. */
   fotos: FotoInvitacion[];
+  /** HTML guardado si la invitación se hizo fuera del sistema. */
+  codigoInicial: string | null;
 }) {
   const [datos, setDatos] = useState<DatosInvitacion>({
     ...datosIniciales,
@@ -55,6 +61,7 @@ export default function EditorInvitacion({
   const [plantilla, setPlantilla] = useState(
     plantillaInicial === "clasica" ? "editorial" : plantillaInicial
   );
+  const [codigoHtml, setCodigoHtml] = useState(codigoInicial ?? "");
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [guardando, startGuardar] = useTransition();
   const [publicando, startPublicar] = useTransition();
@@ -74,6 +81,7 @@ export default function EditorInvitacion({
   /** Al cambiar de plantilla se sugieren su paleta y tipografía. */
   const cambiarPlantilla = (id: string) => {
     setPlantilla(id);
+    if (id === PLANTILLA_CODIGO) return; // el diseño viene del código pegado
     const meta = PLANTILLAS.find((p) => p.id === id);
     if (meta) {
       setDatos((d) => ({ ...d, paleta: meta.paletaSugerida, tipografia: meta.tipografiaSugerida }));
@@ -82,7 +90,7 @@ export default function EditorInvitacion({
 
   const guardar = () =>
     startGuardar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla);
+      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml);
       setMensaje(
         res.ok
           ? { tipo: "ok", texto: "Cambios guardados. Abre la vista previa para verlos." }
@@ -93,7 +101,7 @@ export default function EditorInvitacion({
 
   const publicar = () =>
     startPublicar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla);
+      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml);
       if (!res.ok) {
         setMensaje({ tipo: "error", texto: res.error ?? "Error al guardar" });
         return;
@@ -131,6 +139,8 @@ export default function EditorInvitacion({
     setTimeout(() => setResaltada((actual) => (actual === id ? null : actual)), 2000);
   };
   const efectos = { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}) };
+  const esCodigo = esInvitacionDeCodigo(plantilla);
+  const avisosCodigo = esCodigo ? revisarCodigo(codigoHtml) : [];
 
   return (
     <div className="space-y-6">
@@ -256,8 +266,82 @@ export default function EditorInvitacion({
             );
           })}
         </div>
+
+        {/* Invitación hecha fuera del sistema */}
+        <button
+          onClick={() => cambiarPlantilla(PLANTILLA_CODIGO)}
+          className={`mt-3 w-full text-left rounded-xl border-2 p-4 transition-all flex items-start gap-3 ${
+            esCodigo
+              ? "border-[#D4AF37] bg-[#FFFBF0]"
+              : "border-dashed border-gray-200 hover:border-gray-400"
+          }`}
+        >
+          <Code2 className={`w-5 h-5 shrink-0 mt-0.5 ${esCodigo ? "text-[#B08D2A]" : "text-gray-400"}`} />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-gray-900">Código propio</span>
+            <span className="block text-[11px] text-gray-500 leading-snug mt-0.5">
+              Para invitaciones hechas fuera del sistema, por ejemplo con IA. Pegas el
+              HTML y se publica igual que las demás: misma dirección, misma vista previa
+              al compartir y mismo contador de visitas.
+            </span>
+          </span>
+        </button>
       </Tarjeta>
 
+      {esCodigo && (
+        <Tarjeta
+          titulo="Código de la invitación"
+          subtitulo="Pega aquí el HTML completo. Se guarda al pulsar «Guardar cambios»."
+          id="codigo"
+          resaltada={resaltada === "codigo"}
+        >
+          <textarea
+            value={codigoHtml}
+            onChange={(e) => setCodigoHtml(e.target.value)}
+            rows={14}
+            spellCheck={false}
+            placeholder={"<!doctype html>\n<html>\n  …\n</html>"}
+            className={`${input} font-mono text-xs leading-relaxed resize-y`}
+          />
+
+          {avisosCodigo.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {avisosCodigo.map((aviso, i) => (
+                <li
+                  key={i}
+                  className={`text-xs flex items-start gap-1.5 ${
+                    aviso.tipo === "error" ? "text-red-600" : "text-amber-700"
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  {aviso.texto}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-4 rounded-xl bg-gray-50 p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-2">
+              Marcadores: escríbelos en el código y el sistema pone el dato real
+            </p>
+            <ul className="space-y-1">
+              {MARCADORES_DISPONIBLES.map((m) => (
+                <li key={m.marcador} className="text-[11px] text-gray-500">
+                  <code className="text-[#B08D2A] font-mono">{m.marcador}</code> — {m.descripcion}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+              El código se muestra aislado del resto del sistema por seguridad, así que
+              no puede usar rutas relativas: las direcciones tienen que ir completas.
+              El título y la fecha de la tarjeta «Portada» siguen usándose para la vista
+              previa al compartir por WhatsApp.
+            </p>
+          </div>
+        </Tarjeta>
+      )}
+
+      {!esCodigo && (<>
       <Tarjeta titulo="Paleta de colores">
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           {Object.entries(PALETAS).map(([id, p]) => (
@@ -282,6 +366,32 @@ export default function EditorInvitacion({
               <span className="text-[11px] font-medium text-gray-700 leading-tight">{p.nombre}</span>
             </button>
           ))}
+        </div>
+      </Tarjeta>
+
+      <Tarjeta
+        titulo="Cuánto adorno"
+        subtitulo="El mismo diseño puede salir limpio o cargado de flores."
+      >
+        <div className="grid sm:grid-cols-3 gap-3">
+          {DENSIDADES.map((d) => {
+            const activa = (datos.densidad ?? DENSIDAD_POR_DEFECTO) === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => set("densidad", d.id)}
+                className={`text-left rounded-xl border-2 p-4 transition-all ${
+                  activa ? "border-[#D4AF37] bg-[#FFFBF0]" : "border-gray-200 hover:border-gray-400"
+                }`}
+              >
+                <span className="text-xl block mb-1.5">{d.emoji}</span>
+                <span className="block text-sm font-semibold text-gray-900">{d.nombre}</span>
+                <span className="block text-[11px] text-gray-500 leading-snug mt-0.5">
+                  {d.descripcion}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Tarjeta>
 
@@ -345,6 +455,11 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       {/* ---------- CONTENIDO ---------- */}
+      </>)}
+
+      {/* La portada sigue visible con código propio: de aquí salen el
+          título y la fecha de la vista previa al compartir, y la
+          dirección web de la invitación. */}
       <Tarjeta titulo="Portada" id="portada" resaltada={resaltada === "portada"}>
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
@@ -388,6 +503,7 @@ export default function EditorInvitacion({
         </div>
       </Tarjeta>
 
+      {!esCodigo && (<>
       <Tarjeta titulo="Lugares" id="lugares" resaltada={resaltada === "lugares"}>
         <ListaEditable
           items={datos.lugares}
@@ -557,6 +673,7 @@ export default function EditorInvitacion({
           </div>
         </div>
       </Tarjeta>
+      </>)}
 
         </div>
 
@@ -564,6 +681,7 @@ export default function EditorInvitacion({
           plantilla={plantilla}
           datos={datos}
           fotos={fotos}
+          codigoHtml={codigoHtml}
           onSenalarCampo={irACampo}
         />
       </div>

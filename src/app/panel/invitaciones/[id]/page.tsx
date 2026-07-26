@@ -78,6 +78,7 @@ export default async function PaginaEditorInvitacion({
         estado={invitacion.estado}
         urlPublica={urlPublica}
         fotos={fotos}
+        codigoInicial={invitacion.codigo_html}
       />
     </div>
   );

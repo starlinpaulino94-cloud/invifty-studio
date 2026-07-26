@@ -1,5 +1,5 @@
 import type { Plan, TipoEvento } from "@/lib/tipos";
-import { PALETAS, muestraDePaleta } from "@/config/diseno";
+import { PALETAS, muestraDePaleta, DENSIDADES } from "@/config/diseno";
 
 /**
  * MOTOR DE FORMULARIOS DINÁMICOS DE INVIFTY
@@ -137,6 +137,25 @@ const PALETAS_SUAVES = opcionesPaleta([
   "malva_perla", "turquesa_arena", "rosa_dorado", "champan_perla",
 ]);
 
+/**
+ * Cuánto adorno quiere el cliente. Las opciones salen de DENSIDADES para
+ * que lo que se ofrece y lo que el sistema aplica no puedan separarse.
+ */
+const NIVEL_ADORNO: OpcionVisual[] = DENSIDADES.map((d) => ({
+  valor: d.id,
+  etiqueta: d.nombre,
+  emoji: d.emoji,
+  descripcion: d.paraCliente,
+}));
+
+const PREGUNTA_ADORNO: Pregunta = {
+  id: "nivel_adorno",
+  tipo: "seleccion",
+  titulo: "¿Cuánto adorno quieres en tu invitación?",
+  subtitulo: "Desde muy limpia hasta llena de flores y detalles. El diseño es el mismo; cambia cuánto lo decoramos.",
+  opciones: NIVEL_ADORNO,
+};
+
 const DRESS_CODES: OpcionVisual[] = [
   { valor: "formal", etiqueta: "Formal / Etiqueta", emoji: "🤵", descripcion: "Traje y vestido largo" },
   { valor: "semiformal", etiqueta: "Semiformal", emoji: "👗", descripcion: "Elegante sin etiqueta" },
@@ -229,6 +248,7 @@ const BLOQUES_BODA: Bloque[] = [
         opciones: PALETAS_BODA,
         requerida: true,
       },
+      PREGUNTA_ADORNO,
       {
         id: "frase_portada",
         tipo: "seleccion",
@@ -483,6 +503,7 @@ const BLOQUES_CUMPLEANOS: Bloque[] = [
         opciones: PALETAS_FIESTA,
         requerida: true,
       },
+      PREGUNTA_ADORNO,
       {
         id: "dress_code",
         tipo: "seleccion",
@@ -898,6 +919,7 @@ const BLOQUES_OTRO: Bloque[] = [
         subtitulo: "Los círculos muestran los colores exactos de tu invitación.",
         opciones: PALETAS_SUAVES,
       },
+      PREGUNTA_ADORNO,
       {
         id: "dress_code",
         tipo: "seleccion",

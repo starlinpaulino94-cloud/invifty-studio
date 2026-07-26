@@ -87,6 +87,9 @@ export interface FotoInvitacion {
 
 export type EstadoInvitacion = "borrador" | "publicada";
 
+/** Cuánto adorno lleva la invitación. */
+export type DensidadOrnamental = "sobrio" | "equilibrado" | "extravagante";
+
 /** Contenido editable de una invitación generada (columna datos, JSONB). */
 export interface DatosInvitacion {
   titulo: string;            // "Camila & Lucas" / "Mis 15 Años — Valeria"
@@ -120,6 +123,12 @@ export interface DatosInvitacion {
 
   /** Pareja tipográfica (ver config/diseno.ts) */
   tipografia?: string;
+  /**
+   * Cuánto adorno lleva la invitación (ver DENSIDADES en config/diseno.ts).
+   * Si se omite vale "equilibrado", que es exactamente el aspecto que ha
+   * tenido siempre: ninguna invitación existente cambia por esto.
+   */
+  densidad?: DensidadOrnamental;
   /**
    * Orden en que se muestran las fotos, por nombre de archivo. La primera
    * es la PORTADA. Las que no estén aquí van después, en el orden en que
@@ -177,6 +186,11 @@ export interface Invitacion {
   slug: string;
   plantilla: string;
   datos: DatosInvitacion;
+  /**
+   * HTML de una invitación hecha fuera del sistema (por ejemplo con IA).
+   * Solo se usa cuando `plantilla` es PLANTILLA_CODIGO.
+   */
+  codigo_html: string | null;
   estado: EstadoInvitacion;
   publicada_en: string | null;
   creado_en: string;

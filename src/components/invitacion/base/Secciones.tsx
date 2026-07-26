@@ -1,8 +1,9 @@
 "use client";
 
 import { ReactNode } from "react";
-import { DatosInvitacion, FotoInvitacion } from "@/lib/tipos";
+import type { DatosInvitacion, DensidadOrnamental, FotoInvitacion } from "@/lib/tipos";
 import { Divisor } from "./Ornamentos";
+import { Guirnalda, SeparadorFloral } from "./OrnamentosFlorales";
 import { Revelar } from "./Efectos";
 import { Contador, BotonesMapa, BotonCalendario, CopiarDetalle, Galeria, Rsvp } from "./Piezas";
 import { etiquetaDressCode, hora12 } from "./Marco";
@@ -19,15 +20,30 @@ export function TituloSeccion({
   icono,
   variante,
   centrado = true,
+  densidad,
 }: {
   titulo: string;
   icono?: ReactNode;
   variante: string;
   centrado?: boolean;
+  /** Cuánto adorno lleva la invitación (ver config/diseno.ts). */
+  densidad?: DensidadOrnamental;
 }) {
+  const nivel = densidad ?? "equilibrado";
+  const esSobrio = nivel === "sobrio";
+  const esExtravagante = nivel === "extravagante";
+
   return (
     <div className={`mb-8 ${centrado ? "text-center" : ""}`}>
-      {icono && (
+      {/* En las invitaciones recargadas, una guirnalda corona el título */}
+      {esExtravagante && centrado && (
+        <div className="flex justify-center mb-2" style={{ color: "var(--inv-acento)" }}>
+          <Guirnalda className="w-44 sm:w-56 opacity-60" />
+        </div>
+      )}
+
+      {/* El icono en círculo es un detalle: sobra en las sobrias */}
+      {icono && !esSobrio && (
         <span
           className="inline-flex items-center justify-center w-10 h-10 rounded-full mb-4"
           style={{ border: "1px solid var(--inv-linea)", color: "var(--inv-acento)" }}
@@ -35,15 +51,21 @@ export function TituloSeccion({
           {icono}
         </span>
       )}
+
       <h2
         className="text-2xl sm:text-4xl"
         style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
       >
         {titulo}
       </h2>
-      {centrado && (
+
+      {centrado && !esSobrio && (
         <div className="flex justify-center mt-3" style={{ color: "var(--inv-acento)" }}>
-          <Divisor variante={variante} />
+          {esExtravagante ? (
+            <SeparadorFloral className="w-32 sm:w-40" />
+          ) : (
+            <Divisor variante={variante} />
+          )}
         </div>
       )}
     </div>
@@ -113,7 +135,7 @@ export function BloqueHistoria({ datos, variante }: { datos: DatosInvitacion; va
     <Seccion campo="historia">
       <div className="max-w-xl mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Nuestra Historia" icono={<Heart className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Nuestra Historia" icono={<Heart className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <Revelar retraso={120}>
           <p
@@ -142,7 +164,7 @@ export function BloqueLugares({
     <Seccion campo="lugares">
       <div className="max-w-3xl mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Dónde y cuándo" icono={<MapPin className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Dónde y cuándo" icono={<MapPin className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
 
         <div className={columnas && datos.lugares.length > 1 ? "grid sm:grid-cols-2 gap-5" : "space-y-5 max-w-lg mx-auto"}>
@@ -196,7 +218,7 @@ export function BloqueDressCode({ datos, variante }: { datos: DatosInvitacion; v
     <Seccion campo="dresscode">
       <Revelar>
         <div className="max-w-md mx-auto text-center">
-          <TituloSeccion titulo="Código de vestimenta" icono={<Shirt className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Código de vestimenta" icono={<Shirt className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
           <p
             className="text-2xl sm:text-3xl"
             style={{ fontFamily: "var(--inv-script)", color: "var(--inv-acento)" }}
@@ -215,7 +237,7 @@ export function BloqueCronograma({ datos, variante }: { datos: DatosInvitacion; 
     <Seccion campo="cronograma">
       <div className="max-w-lg mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Programa del día" icono={<Clock className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Programa del día" icono={<Clock className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
 
         <div className="relative">
@@ -261,7 +283,7 @@ export function BloquePadrinos({ datos, variante }: { datos: DatosInvitacion; va
     <Seccion campo="padrinos">
       <div className="max-w-2xl mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Personas especiales" icono={<Users className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Personas especiales" icono={<Users className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
           {lista.map((p, i) => (
@@ -301,7 +323,7 @@ export function BloqueGaleria({
     <Seccion campo="galeria">
       <div className="max-w-3xl mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Galería" icono={<Camera className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Galería" icono={<Camera className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <Revelar retraso={100}>
           <Galeria fotos={fotos} disposicion={disposicion} />
@@ -320,7 +342,7 @@ export function BloqueRegalos({ datos, variante }: { datos: DatosInvitacion; var
     <Seccion campo="regalos">
       <div className="max-w-lg mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Mesa de regalos" icono={<Gift className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Mesa de regalos" icono={<Gift className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <Revelar retraso={100}>
           <p className="text-center text-sm mb-7 leading-relaxed" style={{ color: "var(--inv-texto-suave)" }}>
@@ -358,7 +380,7 @@ export function BloqueNotas({ datos, variante }: { datos: DatosInvitacion; varia
     <Seccion campo="notas">
       <div className="max-w-2xl mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Detalles a tener en cuenta" icono={<Info className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Detalles a tener en cuenta" icono={<Info className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <div className="grid sm:grid-cols-2 gap-4">
           {lista.map((nota, i) => (
@@ -391,7 +413,7 @@ export function BloqueRsvp({ datos, variante }: { datos: DatosInvitacion; varian
     <Seccion campo="rsvp">
       <div className="max-w-md mx-auto">
         <Revelar>
-          <TituloSeccion titulo="Confirma tu asistencia" icono={<Sparkles className="w-4 h-4" />} variante={variante} />
+          <TituloSeccion titulo="Confirma tu asistencia" icono={<Sparkles className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <Revelar retraso={100}>
           <Rsvp
