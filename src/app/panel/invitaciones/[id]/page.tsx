@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import EditorInvitacion from "@/components/panel/EditorInvitacion";
 import { PLANES, TIPOS_EVENTO } from "@/lib/planes";
-import { Cliente, DatosInvitacion, Invitacion, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import type { Cliente, DatosInvitacion, Invitacion, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { listarArchivos, urlsDeFoto } from "@/lib/fotos";
 import { urlBase as resolverUrlBase } from "@/lib/url";
 import { ArrowLeft, Link2 } from "lucide-react";
 
@@ -30,8 +32,19 @@ export default async function PaginaEditorInvitacion({
   const urlBase = resolverUrlBase();
   const urlPublica = `${urlBase}/i/${invitacion.slug}`;
 
+  // Fotos del cliente, para que el equipo elija portada y orden.
+  // Se pasan SIN ordenar: el editor aplica el orden guardado y deja
+  // cambiarlo, y así también se ven las que están ocultas.
+  const admin = crearClienteAdmin();
+  const archivos = await listarArchivos(admin, pedido.id, 60);
+  const fotos = await Promise.all(
+    archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedido.id, a))
+  );
+
   return (
-    <div className="space-y-6 max-w-3xl">
+    // Más ancho que el resto del panel: aquí conviven el formulario y la
+    // vista previa en vivo, una al lado de la otra.
+    <div className="space-y-6 max-w-[1500px]">
       <Link
         href={`/panel/pedidos/${pedido.id}`}
         className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 font-medium"
@@ -64,6 +77,7 @@ export default async function PaginaEditorInvitacion({
         datosIniciales={invitacion.datos as DatosInvitacion}
         estado={invitacion.estado}
         urlPublica={urlPublica}
+        fotos={fotos}
       />
     </div>
   );

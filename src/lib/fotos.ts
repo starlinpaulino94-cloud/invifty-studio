@@ -115,6 +115,39 @@ export async function urlsDeFoto(
   return { nombre: archivo.nombre, url, urlMiniatura };
 }
 
+/**
+ * Aplica a las fotos el orden que decidió el equipo en el editor.
+ *
+ * Importa más de lo que parece: las diez plantillas usan `fotos[0]` como
+ * portada, y las fotos llegan del Storage ordenadas por nombre — que es un
+ * UUID. Sin esto, la foto de portada de cada invitación es literalmente al
+ * azar. Con esto, la elige el equipo.
+ *
+ * Las fotos que el equipo no haya ordenado van después, en el orden en que
+ * llegaron, para que subir una foto nueva no descoloque las ya colocadas.
+ */
+export function ordenarFotos<T extends { nombre: string }>(
+  fotos: T[],
+  orden?: string[],
+  ocultas?: string[]
+): T[] {
+  const escondidas = new Set(ocultas ?? []);
+  const visibles = fotos.filter((f) => !escondidas.has(f.nombre));
+
+  if (!orden?.length) return visibles;
+
+  const posicion = new Map(orden.map((nombre, i) => [nombre, i]));
+  const colocadas: T[] = [];
+  const resto: T[] = [];
+
+  for (const foto of visibles) {
+    (posicion.has(foto.nombre) ? colocadas : resto).push(foto);
+  }
+
+  colocadas.sort((a, b) => posicion.get(a.nombre)! - posicion.get(b.nombre)!);
+  return [...colocadas, ...resto];
+}
+
 /** Borra un archivo y, si los tiene, sus derivados. */
 export async function borrarArchivo(
   admin: ClienteAdmin,

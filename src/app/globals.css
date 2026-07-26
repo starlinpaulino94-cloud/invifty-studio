@@ -28,6 +28,40 @@ body {
   animation: aparecer 0.35s ease-out both;
 }
 
+/* ============================================================
+   VISTA PREVIA EN VIVO (editor del panel)
+   Las plantillas miden la portada contra la altura de la pantalla
+   (100dvh). Dentro del marco de vista previa eso las haría enormes, así
+   que aquí esas medidas se refieren al alto del marco, que el componente
+   pasa en --alto-previa.
+
+   Los elementos con position:fixed (sobre, textura, viñeta, botón de
+   música) no necesitan regla: el `transform` del contenedor ya hace que
+   se posicionen contra el marco y no contra la ventana del panel.
+   ============================================================ */
+
+.vista-previa .min-h-dvh,
+.vista-previa .min-h-\[100dvh\] {
+  min-height: var(--alto-previa);
+}
+
+.vista-previa .max-h-\[85dvh\] {
+  max-height: calc(var(--alto-previa) * 0.85);
+}
+
+/* Modo señalar: se marca el bloque bajo el cursor y nada responde al clic,
+   para que tocar la invitación lleve al campo en vez de abrir un mapa. */
+.vista-previa--senalando,
+.vista-previa--senalando * {
+  cursor: crosshair !important;
+}
+
+.vista-previa--senalando [data-campo]:hover {
+  outline: 2px dashed #d4af37;
+  outline-offset: -4px;
+  background-color: rgb(212 175 55 / 0.07);
+}
+
 /* Scrollbar sobria para el panel */
 ::-webkit-scrollbar {
   width: 8px;

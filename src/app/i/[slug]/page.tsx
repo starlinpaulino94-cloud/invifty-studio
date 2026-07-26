@@ -8,7 +8,7 @@ import RegistroVisita from "@/components/invitacion/base/RegistroVisita";
 import { DatosInvitacion } from "@/lib/tipos";
 import { urlFuentes, paleta } from "@/config/diseno";
 import { fechaLarga } from "@/lib/fechas";
-import { listarArchivos, urlsDeFoto } from "@/lib/fotos";
+import { listarArchivos, ordenarFotos, urlsDeFoto } from "@/lib/fotos";
 import { urlBase } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
@@ -121,15 +121,20 @@ export default async function PaginaInvitacion({
   // Fotos del pedido con URLs firmadas (frescas en cada visita).
   // Se sirven las versiones ligeras: la miniatura en la cuadrícula de la
   // galería y la versión web en la portada y el visor a pantalla completa.
+  const datos = invitacion.datos as DatosInvitacion;
+
   const admin = crearClienteAdmin();
   const pedidoId = invitacion.pedido_id as string;
   const archivos = await listarArchivos(admin, pedidoId, 60);
 
-  const fotos = await Promise.all(
-    archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedidoId, a))
+  // El orden lo decide el equipo en el editor; la primera es la portada.
+  const fotos = ordenarFotos(
+    await Promise.all(
+      archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedidoId, a))
+    ),
+    datos.ordenFotos,
+    datos.fotosOcultas
   );
-
-  const datos = invitacion.datos as DatosInvitacion;
 
   return (
     <>
