@@ -13,7 +13,7 @@ Se marcan aquí a medida que se cierran.
 | | Qué | Estado |
 |---|---|---|
 | **1A** | Elegir portada, reordenar y ocultar fotos | ✅ Hecho |
-| **1B** | Vista previa en vivo dentro del editor, sin guardar ni recargar | ⏳ |
+| **1B** | Vista previa en vivo dentro del editor, sin guardar ni recargar | ✅ Hecho |
 | **1C** | Clic en la vista previa → salta al campo que lo controla | ⏳ |
 | **1D** | Edición literal encima del diseño | 🤔 Decidir después de 1B/1C |
 
@@ -40,6 +40,36 @@ nadie podía cambiarla.
 - Ocultar la portada asciende a la siguiente; una invitación nunca se queda sin
   portada.
 - 9 pruebas, incluidas las de orden con fotos ya borradas y ocultarlas todas.
+
+### ✅ 1B — Vista previa en vivo
+
+El editor pasa a dos columnas en pantallas anchas: el formulario a la izquierda
+y la invitación real a la derecha, fija al hacer scroll y actualizándose
+mientras escribes. Se acabó el guardar → abrir pestaña → mirar → volver.
+
+Tres cosas hubo que resolver para que la vista previa sea **fiel** y no una
+aproximación:
+
+- **Los elementos con `position: fixed`** —el sobre lacrado, la textura de
+  papel, la viñeta, el botón de música— habrían tapado todo el panel. El
+  `transform: scale` del marco los obliga a posicionarse contra el marco, que
+  es justo lo que hace falta.
+- **La portada mide `100dvh`** en las diez plantillas, o sea el alto de la
+  pantalla: dentro de un marco pequeño se salía. Unas reglas acotadas a
+  `.vista-previa` la miden contra el alto del marco.
+- **Las fuentes reales** se cargan según la pareja tipográfica elegida. Sin
+  eso se estaría eligiendo la tipografía sin verla.
+
+Además: marco de celular y de computadora, botón para volver a ver la apertura
+del sobre, y el orden de las fotos se aplica en vivo — cambiar la portada en el
+panel de 1A se ve al instante.
+
+**Las confirmaciones enviadas desde la vista previa no se guardan**: el marco la
+declara borrador, igual que la vista previa pública.
+
+Verificado con capturas reales del navegador: sobre cerrado, invitación abierta,
+desplazamiento dentro del marco y vista de escritorio. Nada se escapa al panel y
+la portada encaja exacta.
 
 ---
 

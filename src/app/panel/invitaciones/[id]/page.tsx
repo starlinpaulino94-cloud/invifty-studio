@@ -42,7 +42,9 @@ export default async function PaginaEditorInvitacion({
   );
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    // Más ancho que el resto del panel: aquí conviven el formulario y la
+    // vista previa en vivo, una al lado de la otra.
+    <div className="space-y-6 max-w-[1500px]">
       <Link
         href={`/panel/pedidos/${pedido.id}`}
         className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 font-medium"

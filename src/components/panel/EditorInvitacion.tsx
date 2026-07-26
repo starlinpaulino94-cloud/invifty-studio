@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/tipos";
 import GestorFotos from "./GestorFotos";
+import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import { PALETAS, TIPOGRAFIAS } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import {
@@ -162,6 +163,11 @@ export default function EditorInvitacion({
           {mensaje.texto}
         </p>
       )}
+
+      {/* En pantallas anchas el formulario va a la izquierda y la vista
+          previa fija a la derecha; en pantallas estrechas se apila. */}
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_auto] gap-6 items-start">
+        <div className="space-y-6 min-w-0">
 
       {/* ---------- LO QUE PIDIÓ EL CLIENTE ----------
           Respuestas del formulario que el sistema no puede aplicar solo.
@@ -523,6 +529,11 @@ export default function EditorInvitacion({
           </div>
         </div>
       </Tarjeta>
+
+        </div>
+
+        <VistaPreviaEnVivo plantilla={plantilla} datos={datos} fotos={fotos} />
+      </div>
     </div>
   );
 }
