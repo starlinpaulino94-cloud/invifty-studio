@@ -1,4 +1,4 @@
-import { DatosInvitacion, Plan, TipoEvento } from "./tipos";
+import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida } from "@/config/diseno";
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
 

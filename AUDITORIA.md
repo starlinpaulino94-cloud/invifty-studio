@@ -31,7 +31,7 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 | 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ✅ Resuelto (requiere correr la migración) |
 | 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Resuelto |
 | 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ⏳ Pendiente |
-| 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ⏳ Pendiente |
+| 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ✅ Resuelto |
 
 ---
 
@@ -511,7 +511,7 @@ sin perder frescura real, y firmar las URLs por más tiempo.
 
 ---
 
-## 7. 🔵 Deuda técnica
+## 7. ✅ Deuda técnica — RESUELTO
 
 ### 7.1 El lint está roto: 5 errores
 
@@ -550,14 +550,60 @@ maneja datos de clientes, unas pocas pruebas sobre `derivarDatosInvitacion()`,
 silenciosa que describe la sección 5. Un workflow que corra `lint` + `tsc` + `build`
 en cada push cuesta veinte minutos de configuración.
 
+### ✅ Lo implementado
+
+**Lint (7.1).** `npm run lint` pasa limpio, de 5 errores y 3 avisos a cero.
+Ninguno se silenció: se corrigió la causa.
+
+| Sitio | Qué se hizo |
+|---|---|
+| `Campos.tsx` | Se acumulan las fotos en una lista local en vez de reasignar la prop |
+| `Piezas.tsx` (contador) | El reloj se lee con `useSyncExternalStore`; en el servidor devuelve `null` y se pinta "––", así el HTML coincide al hidratar y desaparece el estado `montado` |
+| `Efectos.tsx` (`Revelar`) | El `IntersectionObserver` se crea desde un callback de ref con su propia limpieza, en vez de un efecto |
+| `Dictado.tsx` | El soporte de voz del navegador no cambia nunca: se lee, no se guarda en estado |
+| `eslint.config.mjs` | Un argumento que empieza por `_` deja de contar como sin usar |
+
+Los tres primeros corren en cada invitación publicada, así que además de
+callar al linter quitan renders en cascada en móviles modestos.
+
+**Fuentes (7.2).** El panel y el formulario pasan a `next/font`: Playfair
+Display y Plus Jakarta Sans se descargan en el build y se sirven desde nuestro
+dominio (se ven los `.woff2` en `.next/static/media/`). Se acabó el `<link>` a
+Google Fonts que bloqueaba el pintado. Las invitaciones publicadas siguen
+cargándolas en tiempo de ejecución, y es correcto: su tipografía depende de cuál
+de las diez parejas elija el equipo, así que no se puede resolver en el build.
+
+**Email (7.3).** El nombre y el teléfono se escapan antes de entrar en el HTML
+del correo.
+
+**Pruebas y CI (7.4).** 18 pruebas en `pruebas/`, con el ejecutor que ya trae
+Node y **sin añadir ninguna dependencia** — corren TypeScript directamente con
+`--experimental-strip-types` y un gancho de 30 líneas que resuelve el alias
+`@/`. Cubren lo que más se ha roto en esta auditoría: coherencia entre el
+formulario y el catálogo de diseño, y el mapeo de respuestas a invitación.
+
+Se comprobó que la prueba clave **falla de verdad**: al reintroducir a mano una
+paleta inexistente en el formulario, salta con el mensaje *«El formulario de
+"boda" ofrece la paleta "vino_fantasma", que no existe en PALETAS»*. Una prueba
+que pasa pero no sabría fallar no sirve de nada.
+
+`.github/workflows/ci.yml` corre lint, tipos, pruebas y build en cada push y
+cada pull request.
+
+Efecto secundario del cambio: los imports de tipos pasan a ser `import type`
+explícitos en nueve módulos. Node lo exige para poder eliminarlos al ejecutar,
+y de paso es lo que recomienda TypeScript con `isolatedModules`, que este
+proyecto ya tenía activado.
+
 ### 7.5 Menores
 
-- `schema.sql` contiene la tabla `invitaciones` duplicada al final, sin encabezado de
-  sección y sin las líneas de RLS agrupadas — se ve como un pegado apurado. Funciona,
-  pero conviene ordenarlo.
-- El bucle de colisión de slugs hace hasta 48 consultas secuenciales
-  (`acciones-invitacion.ts:46-54`).
-- `variante` sin usar en `Secciones.tsx:69` y `_plan` sin usar en `invitacion.ts:112`.
+- ✅ `variante` sin usar en `Secciones.tsx` y `_plan` sin usar en `invitacion.ts`
+  — resueltos con el resto del lint.
+- ⏳ `schema.sql` contiene la tabla `invitaciones` duplicada al final, sin encabezado
+  de sección — se ve como un pegado apurado. Funciona; conviene ordenarlo.
+- ⏳ El bucle de colisión de slugs hace hasta 48 consultas secuenciales
+  (`acciones-invitacion.ts`). Es camino frío (una vez por invitación), así que
+  no se tocó.
 
 ---
 

@@ -51,6 +51,26 @@ cp .env.example .env.local     # pega los 3 valores de Supabase
 npm run dev                    # abre http://localhost:3000
 ```
 
+### Comprobaciones antes de subir un cambio
+
+```bash
+npm run lint       # estilo de código
+npx tsc --noEmit   # tipos
+npm test           # pruebas
+npm run build      # compilación
+```
+
+Las cuatro corren solas en cada push y cada pull request
+(`.github/workflows/ci.yml`).
+
+**Las pruebas** (`pruebas/`) usan el ejecutor que trae Node, sin dependencias
+extra, y corren TypeScript directamente (requiere **Node 22.6+**). Cubren sobre
+todo las costuras entre el formulario y el sistema de diseño: que ninguna paleta
+ofrecida al cliente falte del catálogo, que toda plantilla sugerida exista, que
+no haya identificadores de pregunta repetidos y que las respuestas lleguen
+enteras a la invitación. Es justo el tipo de fallo que no rompe el build y llega
+al cliente sin que nadie lo note.
+
 `NEXT_PUBLIC_APP_URL` en local es `http://localhost:3000` — se usa para armar los links de formulario que envías por WhatsApp.
 
 ---

@@ -1,0 +1,4 @@
+{
+  "//": "Marca solo esta carpeta como ESM, para que Node no tenga que adivinar el tipo de cada archivo de prueba. No afecta al resto del proyecto.",
+  "type": "module"
+}

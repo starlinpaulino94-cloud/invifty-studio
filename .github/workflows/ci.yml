@@ -1,0 +1,40 @@
+name: CI
+
+# Red de seguridad en cada cambio: si algo de esto falla, no debería
+# llegar a producción. Es rápido a propósito, para que nadie lo esquive.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Node 22: las pruebas corren TypeScript directamente, sin compilar.
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Estilo de código
+        run: npm run lint
+
+      - name: Tipos
+        run: npx tsc --noEmit
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Compilación
+        run: npm run build
+        env:
+          # Valores de relleno: el build no habla con Supabase, pero las
+          # variables tienen que existir para que los módulos carguen.
+          NEXT_PUBLIC_SUPABASE_URL: https://ejemplo.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: clave-de-ejemplo
+          SUPABASE_SERVICE_ROLE_KEY: clave-de-ejemplo

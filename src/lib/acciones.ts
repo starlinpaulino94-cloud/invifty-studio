@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { VIGENCIA_MESES } from "./planes";
-import { EstadoPedido, Plan } from "./tipos";
+import type { EstadoPedido, Plan } from "./tipos";
 
 /** Normaliza un teléfono a solo dígitos (formato WhatsApp: 18091234567). */
 function normalizarTelefono(t: string): string {

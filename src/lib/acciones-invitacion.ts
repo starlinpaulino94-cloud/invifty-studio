@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { derivarDatosInvitacion, slugificar } from "./invitacion";
 import { VIGENCIA_MESES } from "./planes";
-import { DatosInvitacion, Plan, TipoEvento } from "./tipos";
+import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
 
 /**

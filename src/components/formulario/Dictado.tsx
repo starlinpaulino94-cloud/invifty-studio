@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useSyncExternalStore } from "react";
 import { Mic, Square, Loader2 } from "lucide-react";
 
 /**
@@ -69,6 +69,15 @@ function obtenerConstructor(): ConstructorReconocedor | null {
   return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
 }
 
+function haySoporteDeVoz(): boolean {
+  return !!obtenerConstructor();
+}
+
+/** El soporte del navegador no cambia durante la visita: nada a lo que suscribirse. */
+function sinCambios(): () => void {
+  return () => {};
+}
+
 /** Une el texto ya escrito con lo dictado, cuidando espacios y mayúscula inicial. */
 function unir(base: string, dictado: string): string {
   const limpio = dictado.replace(/\s+/g, " ").trimStart();
@@ -98,7 +107,12 @@ export default function BotonDictado({
   etiqueta?: string;
   compacto?: boolean;
 }) {
-  const [soportado, setSoportado] = useState(false);
+  /**
+   * Si el navegador reconoce voz no cambia nunca, así que se lee con
+   * useSyncExternalStore en lugar de un efecto que actualice estado. En el
+   * servidor devuelve false: el botón aparece al hidratar, sin desajuste.
+   */
+  const soportado = useSyncExternalStore(sinCambios, haySoporteDeVoz, () => false);
   const [escuchando, setEscuchando] = useState(false);
   const [preparando, setPreparando] = useState(false);
   const [aviso, setAviso] = useState("");
@@ -108,11 +122,6 @@ export default function BotonDictado({
   const finalRef = useRef("");         // todo lo dictado ya confirmado
   const detenerRef = useRef(false);    // el usuario pidió detener
   const temporizadorRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // El navegador soporta dictado?
-  useEffect(() => {
-    setSoportado(!!obtenerConstructor());
-  }, []);
 
   const detener = useCallback(() => {
     detenerRef.current = true;

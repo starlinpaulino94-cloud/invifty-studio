@@ -1,5 +1,5 @@
 import { PLANES, TIPOS_EVENTO, formatoFecha } from "./planes";
-import { Plan, TipoEvento } from "./tipos";
+import type { Plan, TipoEvento } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
 
 /**
@@ -18,6 +18,19 @@ import { urlBase as resolverUrlBase } from "./url";
  * (ej. studio@invifty.com), verifica tu dominio en Resend → Domains y
  * define NOTIFICACIONES_REMITENTE="Invifty Studio <studio@invifty.com>".
  */
+
+/**
+ * Escapa el texto que se inserta en el HTML del correo. Los datos vienen de
+ * la ficha del cliente, así que un nombre como «Joyería Pérez & Hijos»
+ * rompería el formato del email sin esto.
+ */
+function escaparHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 interface DatosNotificacion {
   nombreCliente: string;
@@ -56,8 +69,8 @@ export async function notificarFormularioCompletado(datos: DatosNotificacion): P
         Un cliente terminó de llenar su formulario. El pedido está listo para pasar a diseño.
       </p>
       <table style="width: 100%; font-size: 14px; color: #111; border-collapse: collapse;">
-        <tr><td style="padding: 6px 0; color: #999; width: 110px;">Cliente</td><td style="padding: 6px 0;"><strong>${datos.nombreCliente}</strong></td></tr>
-        <tr><td style="padding: 6px 0; color: #999;">WhatsApp</td><td style="padding: 6px 0;">${datos.telefonoCliente}</td></tr>
+        <tr><td style="padding: 6px 0; color: #999; width: 110px;">Cliente</td><td style="padding: 6px 0;"><strong>${escaparHtml(datos.nombreCliente)}</strong></td></tr>
+        <tr><td style="padding: 6px 0; color: #999;">WhatsApp</td><td style="padding: 6px 0;">${escaparHtml(datos.telefonoCliente)}</td></tr>
         <tr><td style="padding: 6px 0; color: #999;">Evento</td><td style="padding: 6px 0;">${evento} · Plan ${plan}</td></tr>
         <tr><td style="padding: 6px 0; color: #999;">Fecha evento</td><td style="padding: 6px 0;">${datos.fechaEvento ? formatoFecha(datos.fechaEvento) : "Sin definir"}</td></tr>
       </table>

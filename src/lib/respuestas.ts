@@ -1,4 +1,4 @@
-import { Bloque, Pregunta } from "@/config/formularios";
+import type { Bloque, Pregunta } from "@/config/formularios";
 import { formatoFecha } from "./planes";
 
 /**

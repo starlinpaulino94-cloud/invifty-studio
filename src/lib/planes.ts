@@ -1,4 +1,4 @@
-import { Plan, TipoEvento, EstadoPedido } from "./tipos";
+import type { Plan, TipoEvento, EstadoPedido } from "./tipos";
 
 /**
  * CONFIGURACIÓN COMERCIAL DE INVIFTY

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent, useCallback } from "react";
+import { useEffect, useState, FormEvent, useCallback, useSyncExternalStore } from "react";
 import {
   Check, Copy, MessageCircle, CalendarPlus, MapPin, Navigation, X,
   ChevronLeft, ChevronRight, Heart, Loader2,
@@ -13,6 +13,25 @@ import { FotoInvitacion } from "@/lib/tipos";
    CUENTA REGRESIVA
    ============================================================ */
 
+/**
+ * El paso del tiempo como fuente externa, para leerlo con
+ * useSyncExternalStore. `leerReloj` devuelve el mismo valor durante todo un
+ * segundo a propósito: React compara la lectura con la anterior y volvería
+ * a renderizar sin parar si cambiara en cada llamada.
+ */
+function suscribirseAlReloj(alCambiar: () => void): () => void {
+  const i = setInterval(alCambiar, 1000);
+  return () => clearInterval(i);
+}
+
+function leerReloj(): number {
+  return Math.floor(Date.now() / 1000) * 1000;
+}
+
+function leerRelojEnServidor(): null {
+  return null;
+}
+
 export function Contador({
   fecha,
   hora,
@@ -23,30 +42,22 @@ export function Contador({
   variante?: "tarjetas" | "lineal" | "circulos";
 }) {
   const objetivo = new Date(`${fecha}T${hora || "18:00"}:00`).getTime();
-  const [t, setT] = useState({ d: 0, h: 0, m: 0, s: 0 });
-  const [montado, setMontado] = useState(false);
-  const [llego, setLlego] = useState(false);
 
-  useEffect(() => {
-    const tick = () => {
-      const diff = objetivo - Date.now();
-      if (diff <= 0) {
-        setLlego(true);
-        setT({ d: 0, h: 0, m: 0, s: 0 });
-        return;
-      }
-      setT({
-        d: Math.floor(diff / 86400000),
-        h: Math.floor((diff % 86400000) / 3600000),
-        m: Math.floor((diff % 3600000) / 60000),
-        s: Math.floor((diff % 60000) / 1000),
-      });
-    };
-    tick();
-    setMontado(true);
-    const i = setInterval(tick, 1000);
-    return () => clearInterval(i);
-  }, [objetivo]);
+  // El reloj es un dato externo a React, así que se lee con
+  // useSyncExternalStore en vez de meter setState dentro de un efecto.
+  // En el servidor devuelve null y se pinta "––": el HTML del servidor y el
+  // del navegador coinciden y no hay salto al hidratar.
+  const ahora = useSyncExternalStore(suscribirseAlReloj, leerReloj, leerRelojEnServidor);
+  const montado = ahora !== null;
+  const diff = montado ? objetivo - ahora : 0;
+  const llego = montado && diff <= 0;
+
+  const t = {
+    d: Math.max(Math.floor(diff / 86400000), 0),
+    h: Math.max(Math.floor((diff % 86400000) / 3600000), 0),
+    m: Math.max(Math.floor((diff % 3600000) / 60000), 0),
+    s: Math.max(Math.floor((diff % 60000) / 1000), 0),
+  };
 
   if (llego) {
     return (

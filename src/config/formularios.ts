@@ -1,4 +1,4 @@
-import { Plan, TipoEvento } from "@/lib/tipos";
+import type { Plan, TipoEvento } from "@/lib/tipos";
 import { PALETAS, muestraDePaleta } from "@/config/diseno";
 
 /**

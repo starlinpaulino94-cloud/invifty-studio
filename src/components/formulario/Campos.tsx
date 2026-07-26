@@ -327,6 +327,11 @@ export function CampoFotos({
     if (!archivos?.length) return;
     setError("");
     setSubiendo(true);
+
+    // Se acumulan en una lista local: al subir varias fotos seguidas, cada
+    // vuelta necesita ver las anteriores, y las props no se pueden reasignar.
+    let acumuladas = fotos;
+
     for (const archivo of Array.from(archivos)) {
       const data = new FormData();
       data.append("archivo", archivo);
@@ -341,13 +346,14 @@ export function CampoFotos({
         const prev = await fetch(
           `/api/formulario/${token}/fotos?ruta=${encodeURIComponent(json.foto.ruta)}`
         ).then((r) => r.json());
-        setFotos([...fotos, { ...json.foto, url: prev.url }]);
-        fotos = [...fotos, { ...json.foto, url: prev.url }];
+        acumuladas = [...acumuladas, { ...json.foto, url: prev.url }];
+        setFotos(acumuladas);
       } catch {
         setError("Error de conexión. Intenta de nuevo.");
         break;
       }
     }
+
     setSubiendo(false);
     if (inputRef.current) inputRef.current.value = "";
   };
