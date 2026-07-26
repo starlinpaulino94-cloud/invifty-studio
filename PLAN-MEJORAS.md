@@ -105,7 +105,7 @@ resalta su tarjeta.
 | **2A** | Plantilla tipo "código": pegar el HTML y guardarlo | ✅ Hecho |
 | **2B** | Servirla en `/i/<slug>` dentro de un iframe aislado | ✅ Hecho |
 | **2C** | Mantener vista previa al compartir, contador de visitas y borrador/publicada | ✅ Hecho |
-| **2D** | Puente para que el RSVP del sistema funcione dentro de ese HTML | ⏳ |
+| **2D** | Puente para que el RSVP del sistema funcione dentro de ese HTML | ✅ Hecho |
 
 **El aislamiento de 2B no es opcional.** Código pegado corriendo en el mismo
 origen que `/panel` podría leer la sesión del equipo. En un iframe con
@@ -152,6 +152,40 @@ frontera.
 
 **Por eso no se filtra ni se limpia el HTML:** el aislamiento es la frontera de
 seguridad, y limpiarlo solo rompería código legítimo.
+
+### ✅ 2D — Confirmaciones desde el código pegado
+
+Ese mismo aislamiento impedía que el HTML llamara a la API: desde un origen
+opaco no hay cookies ni peticiones al sistema. Lo único que sí puede hacer es
+mandarle un mensaje a la página que lo contiene, y que sea ella quien guarde.
+
+**Para quien escribe el HTML no hay que saber nada de eso.** Basta un formulario
+normal marcado con `data-invifty-rsvp` y campos llamados `nombre`, `asiste`,
+`cantidad` y `nota`. Cero JavaScript. Para flujos propios existe además
+`invifty.confirmar({…})`, que devuelve una promesa. El contrato está escrito en
+el editor, junto al campo del código, listo para copiárselo a la IA.
+
+Las confirmaciones caen en la misma tabla que las demás: mismo conteo, misma
+lista, misma exportación. Y en la vista previa del equipo no se guardan, igual
+que en las plantillas del sistema.
+
+#### Lo que sostiene la seguridad del puente
+
+El mensaje se acepta solo si viene de **nuestro propio iframe**
+(`event.source`). El origen no sirve para comprobarlo: en un iframe aislado
+siempre llega como `"null"`, así que cualquier página podría falsificarlo.
+
+Comprobado en el navegador, con la llamada a la API interceptada para ver
+exactamente qué le llega:
+
+| Origen del mensaje | Resultado |
+|---|---|
+| La propia página del sistema | **Ignorado** |
+| Otro iframe metido en la página | **Ignorado** |
+| El formulario de la invitación | **Aceptado**, con `{nombre, asiste, cantidad, nota}` correctos |
+
+Y el invitado ve dentro de su invitación el aviso «¡Gracias por confirmar!»
+sin salir de ella.
 
 ---
 

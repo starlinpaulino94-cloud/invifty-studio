@@ -338,6 +338,35 @@ export default function EditorInvitacion({
               previa al compartir por WhatsApp.
             </p>
           </div>
+
+          <div className="mt-3 rounded-xl bg-gray-50 p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-2">
+              Confirmaciones: para que lleguen al panel como las demás
+            </p>
+            <p className="text-[11px] text-gray-500 leading-relaxed mb-2">
+              Marca el formulario con <code className="text-[#B08D2A] font-mono">data-invifty-rsvp</code> y
+              nombra sus campos <code className="font-mono">nombre</code>,{" "}
+              <code className="font-mono">asiste</code>, <code className="font-mono">cantidad</code> y{" "}
+              <code className="font-mono">nota</code>. No hace falta escribir JavaScript.
+            </p>
+            <pre className="text-[10px] font-mono text-gray-600 bg-white rounded-lg p-3 overflow-x-auto leading-relaxed">{`<form data-invifty-rsvp>
+  <input name="nombre" required>
+  <select name="asiste">
+    <option value="si">Sí asistiré</option>
+    <option value="no">No podré ir</option>
+  </select>
+  <input name="cantidad" type="number" value="1">
+  <textarea name="nota"></textarea>
+  <button>Confirmar</button>
+  <p data-invifty-mensaje></p>
+</form>`}</pre>
+            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+              El aviso aparece dentro del elemento con{" "}
+              <code className="font-mono">data-invifty-mensaje</code>. Para flujos propios,
+              también existe <code className="font-mono">invifty.confirmar({"{…}"})</code>,
+              que devuelve una promesa.
+            </p>
+          </div>
         </Tarjeta>
       )}
 

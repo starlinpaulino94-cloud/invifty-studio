@@ -82,6 +82,109 @@ export function aplicarMarcadores(
 }
 
 /* ============================================================
+   PUENTE DE CONFIRMACIONES
+   ============================================================ */
+
+/** Nombre del canal de mensajes. Cualquier otro mensaje se ignora. */
+export const CANAL = "invifty";
+
+/**
+ * Guion que se inyecta en el código pegado para que sus confirmaciones
+ * lleguen al sistema.
+ *
+ * Hace falta porque el iframe va aislado: desde un origen opaco no se
+ * puede llamar a nuestra API ni leer cookies. Lo único que sí puede es
+ * mandarle un mensaje a la página que lo contiene, y que sea ella quien
+ * guarde. El puente esconde ese ir y venir.
+ *
+ * Dos formas de usarlo, según lo que sepa quien escribe el HTML:
+ *
+ *  1. Un formulario normal marcado con `data-invifty-rsvp`, cuyos campos
+ *     se llamen nombre / asiste / cantidad / nota. Cero JavaScript.
+ *  2. `invifty.confirmar({...})`, que devuelve una promesa, para flujos
+ *     propios.
+ */
+const PUENTE = `
+<script>
+(function () {
+  var pendientes = {}, n = 0;
+
+  window.invifty = {
+    confirmar: function (datos) {
+      return new Promise(function (resolver) {
+        var id = "m" + (++n);
+        pendientes[id] = resolver;
+        parent.postMessage({ canal: "${CANAL}", accion: "rsvp", id: id, datos: datos }, "*");
+      });
+    }
+  };
+
+  window.addEventListener("message", function (e) {
+    var m = e.data;
+    if (!m || m.canal !== "${CANAL}" || m.accion !== "rsvp:respuesta") return;
+    var resolver = pendientes[m.id];
+    if (resolver) { delete pendientes[m.id]; resolver(m.resultado); }
+  });
+
+  // Cableado automático de <form data-invifty-rsvp>
+  document.addEventListener("submit", function (e) {
+    var f = e.target;
+    if (!f || !f.matches || !f.matches("[data-invifty-rsvp]")) return;
+    e.preventDefault();
+
+    var d = new FormData(f);
+    f.setAttribute("data-invifty-estado", "enviando");
+
+    window.invifty.confirmar({
+      nombre: d.get("nombre"),
+      asiste: d.get("asiste") !== "no",
+      cantidad: Number(d.get("cantidad") || 1),
+      nota: d.get("nota") || ""
+    }).then(function (res) {
+      f.setAttribute("data-invifty-estado", res && res.ok ? "ok" : "error");
+      var aviso = f.querySelector("[data-invifty-mensaje]");
+      if (aviso) {
+        aviso.textContent = res && res.ok
+          ? "¡Gracias por confirmar!"
+          : (res && res.error) || "No se pudo guardar tu confirmación.";
+      }
+    });
+  });
+})();
+</script>`;
+
+/**
+ * Añade el puente al final del código pegado. Si el HTML tiene </body> se
+ * pone justo antes, para que el guion corra con el documento ya montado.
+ */
+export function inyectarPuente(html: string): string {
+  if (!html.trim()) return html;
+  const cierre = /<\/body\s*>/i;
+  return cierre.test(html) ? html.replace(cierre, `${PUENTE}\n</body>`) : html + PUENTE;
+}
+
+/** Lo que el código pegado manda al confirmar. */
+export interface MensajeRsvp {
+  canal: typeof CANAL;
+  accion: "rsvp";
+  id: string;
+  datos: { nombre?: unknown; asiste?: unknown; cantidad?: unknown; nota?: unknown };
+}
+
+/** Comprueba que un mensaje recibido es una confirmación con la forma esperada. */
+export function esMensajeRsvp(dato: unknown): dato is MensajeRsvp {
+  if (!dato || typeof dato !== "object") return false;
+  const m = dato as Record<string, unknown>;
+  return (
+    m.canal === CANAL &&
+    m.accion === "rsvp" &&
+    typeof m.id === "string" &&
+    !!m.datos &&
+    typeof m.datos === "object"
+  );
+}
+
+/* ============================================================
    REVISIÓN AL PEGAR EL CÓDIGO
    ============================================================ */
 

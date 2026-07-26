@@ -152,7 +152,6 @@ export default async function PaginaInvitacion({
             html={invitacion.codigo_html as string | null}
             datos={datos}
             fotos={fotos}
-            esBorrador={esBorrador}
           />
         ) : (
           <Renderizador

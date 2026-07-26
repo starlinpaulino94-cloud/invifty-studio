@@ -264,6 +264,28 @@ Como consecuencia, el código **no puede usar rutas relativas** (`/foto.jpg`,
 `./estilo.css`): las direcciones tienen que ir completas, o usar los marcadores.
 El editor avisa de esto y de otros descuidos habituales antes de publicar.
 
+**Confirmaciones.** Para que las confirmaciones lleguen al panel como las de
+cualquier otra invitación, basta un formulario normal marcado con
+`data-invifty-rsvp` y campos llamados `nombre`, `asiste`, `cantidad` y `nota`:
+
+```html
+<form data-invifty-rsvp>
+  <input name="nombre" required>
+  <select name="asiste">
+    <option value="si">Sí asistiré</option>
+    <option value="no">No podré ir</option>
+  </select>
+  <input name="cantidad" type="number" value="1">
+  <textarea name="nota"></textarea>
+  <button>Confirmar</button>
+  <p data-invifty-mensaje></p>
+</form>
+```
+
+No hace falta escribir JavaScript: el sistema inyecta el puente. El aviso al
+invitado aparece dentro del elemento con `data-invifty-mensaje`. Para flujos
+propios existe `invifty.confirmar({…})`, que devuelve una promesa.
+
 > El título y la fecha de la tarjeta **Portada** se siguen usando aunque el
 > diseño venga del código: de ahí salen la vista previa al compartir y la
 > dirección web.
