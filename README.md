@@ -231,6 +231,35 @@ vestimenta, historia, programa del día, galería (las fotos que subió el
 cliente), mesa de regalos con botón de copiar, y confirmación de asistencia
 que queda registrada en el sistema.
 
+### La dirección de la invitación
+
+Cada invitación vive en `tu-dominio/i/<slug>`. El slug sale del título, y a las
+**nuevas** se les añade un sufijo corto al azar:
+
+```
+camila-y-lucas-v73nd
+```
+
+**Por qué.** Sin él, la dirección se adivina probando: `boda-maria-y-jose` no
+cuesta nada de acertar, y quien acierte ve la dirección del evento, la fecha, las
+fotos privadas y el WhatsApp del anfitrión. La página lleva `noindex`, así que no
+sale en Google — pero eso no protege de quien prueba a mano.
+
+Son cinco caracteres sin vocales ni `0/o/1/l/i`: unos 17 millones de
+combinaciones por título, se dicta por teléfono sin equivocarse, y sin vocales no
+puede salir una palabra desafortunada pegada al nombre de los novios. Se sortea
+con el generador criptográfico del sistema, no con `Math.random`.
+
+**Las invitaciones que ya estaban publicadas no se tocan.** Su enlace ya está
+repartido entre los invitados y cambiarlo lo rompería. El editor las señala en
+ámbar y ofrece un botón **"Añadir sufijo al azar"** por si a alguna hace falta
+protegerla — con el aviso de que, si ya está publicada, el enlace viejo deja de
+funcionar. La decisión es del equipo, nada se cambia solo.
+
+Guardar una invitación **nunca** cambia su dirección: el editor guarda con
+`slugificar`, que solo limpia el texto. El sufijo lo pone `slugConSufijo`, y eso
+solo pasa al generar la invitación o al pulsar ese botón.
+
 ### La vista previa en vivo del editor
 
 El editor tiene la invitación real al lado, dibujada con lo que hay escrito en

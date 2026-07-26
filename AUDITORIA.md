@@ -32,6 +32,8 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 | 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Resuelto |
 | 6 | Sin métrica de vistas · vencimientos · vigencias | 🟡 Medio | 1 día | ✅ Resuelto (requiere correr migraciones y el recálculo) |
 | 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ✅ Resuelto |
+| 8 | Promesas del catálogo sin implementar (§5.4, §6.4) | 🟡 Medio | 1 día | ✅ Resuelto (requiere correr la migración del dominio) |
+| 9 | Enlaces adivinables (§6.5) | 🟡 Medio | ½ día | ✅ Resuelto para las nuevas; las publicadas conservan su enlace |
 
 ---
 
@@ -577,17 +579,23 @@ compartir dominio: lo impide un índice único. Lo que el código no puede hacer
 documenta como paso manual una vez por dominio, es dar de alta el dominio en Vercel
 y apuntar el DNS.
 
-### 6.5 Los enlaces son adivinables y exponen datos sensibles
+### 6.5 ✅ Los enlaces son adivinables y exponen datos sensibles
 
-El slug se deriva del título (`invitacion.ts:29-40`): "Camila & Lucas" →
-`camila-y-lucas`. Cualquiera que adivine el slug ve la dirección del evento, la fecha,
-las fotos privadas de la pareja y **el número de WhatsApp del anfitrión**. La página
-está marcada `noindex`, así que Google no la lista — pero adivinar `boda-maria-y-jose`
-no es difícil.
+El slug se derivaba solo del título: "Camila & Lucas" → `camila-y-lucas`. Cualquiera
+que adivinara el slug veía la dirección del evento, la fecha, las fotos privadas de la
+pareja y **el número de WhatsApp del anfitrión**. La página está marcada `noindex`, así
+que Google no la lista — pero adivinar `boda-maria-y-jose` no es difícil.
 
-Sugerencia: añadir un sufijo corto aleatorio (`camila-y-lucas-k3f9`). Sigue siendo
-bonito de compartir y deja de ser enumerable. Conviene consultarlo con el cliente
-antes de cambiarlo en invitaciones ya publicadas.
+**Resuelto para las nuevas.** `slugConSufijo` (`lib/slug.ts`) añade cinco caracteres al
+azar detrás: `camila-y-lucas-v73nd`. Sin vocales ni `0/o/1/l/i` — se dicta por teléfono
+sin equivocarse y no puede formar una palabra desafortunada pegada al nombre. Se sortea
+con el generador criptográfico del sistema. Si dos invitaciones chocaran, se sortea otro
+sufijo en vez de añadir `-2`, que volvería a hacer la dirección predecible.
+
+**Las ya publicadas conservan su enlace**, por decisión explícita: el cliente ya lo
+repartió entre sus invitados. El editor las señala y ofrece añadirles el sufijo a mano,
+avisando de que eso rompe el enlace viejo. Guardar nunca cambia la dirección por su
+cuenta: el editor guarda con `slugificar`, que solo limpia el texto.
 
 ### 6.6 Detalles del flujo de fotos
 

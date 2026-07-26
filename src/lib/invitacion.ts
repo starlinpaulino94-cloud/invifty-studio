@@ -70,20 +70,6 @@ function etiquetaPaletaPedida(id: string): string {
   return PALETAS_SIN_EQUIVALENTE[id] ?? `"${id}"`;
 }
 
-/** Convierte texto a slug de URL: "Camila & Lucas" → "camila-y-lucas" */
-export function slugificar(t: string): string {
-  return (
-    t
-      .toLowerCase()
-      .replace(/&/g, " y ")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "invitacion"
-  );
-}
-
 /* ---------- Elección de plantilla ---------- */
 
 /**

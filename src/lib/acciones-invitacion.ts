@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
-import { derivarDatosInvitacion, slugificar } from "./invitacion";
+import { derivarDatosInvitacion } from "./invitacion";
+import { slugificar, slugConSufijo } from "./slug";
 import { normalizarDominio, dominioValido } from "./dominios";
 import { calcularVencimiento } from "./vencimientos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
@@ -41,17 +42,24 @@ export async function generarInvitacion(pedidoId: string) {
     pedido.plan as Plan
   );
 
-  // Slug único a partir del título
-  const base = slugificar(datos.titulo);
-  let slug = base;
-  for (let intento = 2; intento < 50; intento++) {
+  /**
+   * Dirección única a partir del título, con un sufijo al azar detrás:
+   * "camila-y-lucas-k3f9m". Sin él, "boda-maria-y-jose" se adivina probando,
+   * y quien acierte ve la dirección del evento, las fotos y el WhatsApp del
+   * anfitrión. Ver `slugConSufijo` en lib/slug.ts.
+   *
+   * Si por lo que sea chocara, se sortea otro sufijo en vez de añadir "-2":
+   * un contador al final volvería a hacer la dirección predecible.
+   */
+  let slug = slugConSufijo(datos.titulo);
+  for (let intento = 0; intento < 10; intento++) {
     const { data: choque } = await supabase
       .from("invitaciones")
       .select("id")
       .eq("slug", slug)
       .maybeSingle();
     if (!choque) break;
-    slug = `${base}-${intento}`;
+    slug = slugConSufijo(datos.titulo);
   }
 
   const { data: nueva, error } = await supabase

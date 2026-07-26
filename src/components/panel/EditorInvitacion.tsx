@@ -8,6 +8,7 @@ import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import { escribirEnRuta } from "@/lib/rutas";
+import { slugConSufijo, tieneSufijo } from "@/lib/slug";
 import { normalizarDominio } from "@/lib/dominios";
 import {
   PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/acciones-invitacion";
 import {
   Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
-  ClipboardList, Code2, AlertTriangle, Clapperboard, Link2,
+  ClipboardList, Code2, AlertTriangle, Clapperboard, Link2, ShieldCheck, ShieldAlert, Dices,
 } from "lucide-react";
 
 const input =
@@ -67,6 +68,13 @@ export default function EditorInvitacion({
   });
   const [slug, setSlug] = useState(slugInicial);
   const [dominio, setDominio] = useState(dominioInicial ?? "");
+
+  /**
+   * Le pone sufijo al azar a una dirección que no lo tiene. Solo se ofrece a
+   * mano: las invitaciones que ya estaban publicadas antes de esto conservan
+   * su enlace, porque el cliente ya lo repartió entre sus invitados.
+   */
+  const ponerSufijo = () => setSlug((actual) => slugConSufijo(actual || datos.titulo));
   const [plantilla, setPlantilla] = useState(
     plantillaInicial === "clasica" ? "editorial" : plantillaInicial
   );
@@ -558,6 +566,38 @@ export default function EditorInvitacion({
           <div className="sm:col-span-2">
             <label className={label}>Dirección web (slug): tu-dominio/i/…</label>
             <input value={slug} onChange={(e) => setSlug(e.target.value)} className={`${input} font-mono`} />
+
+            {/* El sufijo al azar es lo que impide adivinar la dirección
+                probando nombres. Ver `slugConSufijo` en lib/slug.ts. */}
+            {tieneSufijo(slug) ? (
+              <p className="text-[11px] text-emerald-700 mt-1.5 flex items-start gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-px" />
+                Termina en un sufijo al azar, así que nadie llega a esta invitación
+                probando nombres. Se sigue compartiendo igual de bien.
+              </p>
+            ) : (
+              <div className="mt-1.5 space-y-2">
+                <p className="text-[11px] text-amber-700 flex items-start gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  Esta dirección se puede adivinar probando nombres, y quien acierte ve
+                  la dirección del evento, las fotos y el WhatsApp del anfitrión.
+                </p>
+                <button
+                  type="button"
+                  onClick={ponerSufijo}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-400 transition-colors"
+                >
+                  <Dices className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  Añadir sufijo al azar
+                </button>
+                {estado === "publicada" && (
+                  <p className="text-[11px] text-gray-400">
+                    Ojo: esta invitación ya está publicada. Cambiar la dirección deja sin
+                    funcionar el enlace que el cliente ya repartió entre sus invitados.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Extra "Dominio Web Propio" del catálogo. Lo que hace el sistema

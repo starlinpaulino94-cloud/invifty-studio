@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { derivarDatosInvitacion, slugificar } from "@/lib/invitacion";
+import { derivarDatosInvitacion } from "@/lib/invitacion";
+import { slugificar } from "@/lib/slug";
 import { fechaLarga, fechaSinDiaSemana, fechaCorta, hora12 } from "@/lib/fechas";
 
 /**
