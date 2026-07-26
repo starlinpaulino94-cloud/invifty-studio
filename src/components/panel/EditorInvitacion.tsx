@@ -5,7 +5,7 @@ import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/tipos";
 import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
-import { PALETAS, TIPOGRAFIAS } from "@/config/diseno";
+import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import {
   PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
@@ -366,6 +366,32 @@ export default function EditorInvitacion({
               <span className="text-[11px] font-medium text-gray-700 leading-tight">{p.nombre}</span>
             </button>
           ))}
+        </div>
+      </Tarjeta>
+
+      <Tarjeta
+        titulo="Cuánto adorno"
+        subtitulo="El mismo diseño puede salir limpio o cargado de flores."
+      >
+        <div className="grid sm:grid-cols-3 gap-3">
+          {DENSIDADES.map((d) => {
+            const activa = (datos.densidad ?? DENSIDAD_POR_DEFECTO) === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => set("densidad", d.id)}
+                className={`text-left rounded-xl border-2 p-4 transition-all ${
+                  activa ? "border-[#D4AF37] bg-[#FFFBF0]" : "border-gray-200 hover:border-gray-400"
+                }`}
+              >
+                <span className="text-xl block mb-1.5">{d.emoji}</span>
+                <span className="block text-sm font-semibold text-gray-900">{d.nombre}</span>
+                <span className="block text-[11px] text-gray-500 leading-snug mt-0.5">
+                  {d.descripcion}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Tarjeta>
 

@@ -163,13 +163,45 @@ seguridad, y limpiarlo solo rompería código legítimo.
 
 | | Qué | Estado |
 |---|---|---|
-| **3A** | Eje de ornamentación: sobrio / equilibrado / extravagante | ⏳ |
-| **3B** | Familia nueva de ornamentos: florales, guirnaldas, marcos botánicos | ⏳ |
+| **3A** | Eje de ornamentación: sobrio / equilibrado / extravagante | ✅ Hecho |
+| **3B** | Familia nueva de ornamentos: florales, guirnaldas, marcos botánicos | ✅ Hecho |
 | **3C** | 2-3 plantillas nuevas realmente recargadas | ⏳ |
-| **3D** | Pregunta en el formulario para que el cliente elija cuánto adorno | ⏳ |
+| **3D** | Pregunta en el formulario para que el cliente elija cuánto adorno | ✅ Hecho |
 
-**Lo que ya existe no cambia.** El nivel por defecto será exactamente el look
+**Lo que ya existe no cambia.** El nivel por defecto es exactamente el aspecto
 actual, porque es el que gusta. La ornamentación se suma encima, no sustituye.
+
+### ✅ 3A, 3B y 3D — El eje de ornamentación
+
+Un eje nuevo, **aparte de la plantilla**: la misma Editorial puede salir limpia
+o cargada de flores. Tres niveles:
+
+| Nivel | Qué hace |
+|---|---|
+| **Sobrio** | Sin filigranas, sin textura de papel, sin iconos en círculo. Solo tipografía y aire |
+| **Equilibrado** | El aspecto de siempre — **valor por defecto** |
+| **Extravagante** | Ramos en las cuatro esquinas, ramas laterales, follaje de fondo, guirnaldas coronando cada título y separadores florales |
+
+**Ninguna invitación existente cambia.** El nivel por defecto es "equilibrado",
+y hay una prueba que lo fija con un mensaje explícito, porque tocar ese valor
+cambiaría el aspecto de todas las invitaciones ya publicadas.
+
+**Cómo alcanza a las diez plantillas sin tocarlas.** La capa ornamental vive en
+`Marco`, que todas envuelven, y los adornos de los títulos en `TituloSeccion`,
+que todas usan. Una plantilla nueva hereda los tres niveles sin escribir nada.
+
+**Los ornamentos** (`OrnamentosFlorales.tsx`) son SVG dibujados a mano, sin
+dependencias, y heredan el color del acento: funcionan con las 25 paletas. Van
+detrás del contenido y con opacidad baja — eso es lo que separa una invitación
+recargada de una recargada e ilegible.
+
+**El cliente lo elige** en su formulario, con las opciones construidas desde el
+mismo catálogo que aplica el sistema, así que no pueden separarse. La pregunta
+no aparece en eventos corporativos: ahí el diseño lo marca la identidad de la
+empresa.
+
+Verificado con capturas de los tres niveles: el extravagante enmarca sin tapar
+el texto, y el equilibrado sale **idéntico** al de siempre.
 
 ---
 

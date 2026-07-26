@@ -2,7 +2,8 @@
 
 import { ReactNode, useState } from "react";
 import { DatosInvitacion, EFECTOS_POR_DEFECTO } from "@/lib/tipos";
-import { paleta, variablesDeDiseno } from "@/config/diseno";
+import { paleta, variablesDeDiseno, densidad } from "@/config/diseno";
+import CapaOrnamental from "./CapaOrnamental";
 import { inicialesDe } from "./Ornamentos";
 import { SobreApertura, TexturaPapel, Vineta, Musica, AvisoMusica } from "./Efectos";
 
@@ -24,6 +25,7 @@ export default function Marco({
   const efectos = { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}) };
   const iniciales = (datos.monograma?.trim() || inicialesDe(datos.titulo)).slice(0, 7);
   const p = paleta(datos.paleta);
+  const nivel = densidad(datos.densidad);
 
   const [abierta, setAbierta] = useState(!efectos.sobre);
   const conMusica = efectos.musica && !!datos.musicaUrl;
@@ -52,7 +54,13 @@ export default function Marco({
         />
       )}
 
-      {efectos.textura && (
+      {/* El adorno extra vive aquí, así que las diez plantillas lo reciben
+          sin tocar ninguna. En densidad "equilibrado" no dibuja nada. */}
+      <CapaOrnamental densidad={nivel} />
+
+      {/* La textura de papel se apaga en las invitaciones sobrias: es
+          justo el tipo de detalle que sobra cuando se busca limpieza. */}
+      {efectos.textura && nivel !== "sobrio" && (
         <>
           <TexturaPapel intensidad={p.oscura ? 0.07 : 0.045} />
           <Vineta oscura={p.oscura} />

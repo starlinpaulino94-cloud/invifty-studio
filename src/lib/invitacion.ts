@@ -1,5 +1,5 @@
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
-import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida } from "@/config/diseno";
+import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida, densidad } from "@/config/diseno";
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
 
 /**
@@ -190,6 +190,9 @@ export function derivarDatosInvitacion(
     dressCode: texto(r, "dress_code"),
     paleta: paletaAplicable ? paletaPedida : meta.paletaSugerida,
     tipografia: meta.tipografiaSugerida,
+    // Cuánto adorno pidió el cliente. Si no contestó, queda el nivel de
+    // siempre: las invitaciones no cambian de aspecto por esta función.
+    densidad: densidad(texto(r, "nivel_adorno")),
     historia: "",
     cronograma: lista(r, "hitos_dia")
       .filter((h) => h.actividad)

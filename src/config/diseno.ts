@@ -309,6 +309,58 @@ export function urlFuentes(idTipografia?: string): string {
 }
 
 /* ============================================================
+   DENSIDAD ORNAMENTAL
+   ============================================================ */
+
+import type { DensidadOrnamental } from "@/lib/tipos";
+
+/**
+ * Cuánto adorno lleva la invitación. Es un eje aparte de la plantilla: la
+ * misma Editorial puede salir sobria o cargada de flores.
+ *
+ * "equilibrado" es el aspecto que las invitaciones han tenido siempre y
+ * el valor por defecto, así que ninguna invitación existente cambia.
+ */
+export const DENSIDADES: {
+  id: DensidadOrnamental;
+  nombre: string;
+  descripcion: string;
+  /** Cómo se le presenta al cliente en su formulario. */
+  paraCliente: string;
+  emoji: string;
+}[] = [
+  {
+    id: "sobrio",
+    nombre: "Sobrio",
+    descripcion: "Sin filigranas ni texturas. Solo tipografía y aire.",
+    paraCliente: "Limpio y minimalista, sin adornos",
+    emoji: "◽",
+  },
+  {
+    id: "equilibrado",
+    nombre: "Equilibrado",
+    descripcion: "Los ornamentos propios de la plantilla. El aspecto clásico de Invifty.",
+    paraCliente: "Con detalles elegantes, sin recargar",
+    emoji: "✨",
+  },
+  {
+    id: "extravagante",
+    nombre: "Extravagante",
+    descripcion: "Ramos en las esquinas, guirnaldas y follaje de fondo. Mucha presencia.",
+    paraCliente: "Con muchos adornos: flores, guirnaldas y detalles",
+    emoji: "💐",
+  },
+];
+
+export const DENSIDAD_POR_DEFECTO: DensidadOrnamental = "equilibrado";
+
+export function densidad(id?: string): DensidadOrnamental {
+  return DENSIDADES.some((d) => d.id === id)
+    ? (id as DensidadOrnamental)
+    : DENSIDAD_POR_DEFECTO;
+}
+
+/* ============================================================
    VARIABLES CSS
    ============================================================ */
 
