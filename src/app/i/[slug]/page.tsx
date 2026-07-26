@@ -2,15 +2,10 @@ import { notFound } from "next/navigation";
 import type { Metadata, Viewport } from "next";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
-import Renderizador from "@/components/invitacion/Renderizador";
-import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
-import RegistroVisita from "@/components/invitacion/base/RegistroVisita";
-import CodigoPropio from "@/components/invitacion/CodigoPropio";
-import { esInvitacionDeCodigo } from "@/lib/codigo";
-import { DatosInvitacion } from "@/lib/tipos";
-import { urlFuentes, paleta } from "@/config/diseno";
-import { fechaLarga } from "@/lib/fechas";
-import { listarArchivos, ordenarFotos, urlsDeFoto } from "@/lib/fotos";
+import Publicada, {
+  metadatosDeInvitacion, type InvitacionPublicable,
+} from "@/components/invitacion/Publicada";
+import { paleta } from "@/config/diseno";
 import { urlBase } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
@@ -20,17 +15,19 @@ export const dynamic = "force-dynamic";
  * - Publicada → visible para todo el mundo.
  * - Borrador  → visible SOLO para el equipo con sesión iniciada
  *   (vista previa antes de publicar); el público recibe 404.
- * Las fotos usan URLs firmadas generadas en cada visita (bucket privado).
+ *
+ * Quien pagó el extra de dominio propio llega por otra puerta a lo mismo:
+ * ver `src/app/d/[host]/page.tsx`. Lo que se dibuja está en `Publicada`.
  */
 
-async function buscarInvitacion(slug: string) {
+async function buscarInvitacion(slug: string): Promise<InvitacionPublicable | null> {
   const admin = crearClienteAdmin();
   const { data } = await admin
     .from("invitaciones")
     .select("*, pedidos(id)")
     .eq("slug", slug)
     .single();
-  return data;
+  return (data as InvitacionPublicable | null) ?? null;
 }
 
 /**
@@ -44,19 +41,9 @@ export async function generateViewport({
 }): Promise<Viewport> {
   const { slug } = await params;
   const invitacion = await buscarInvitacion(slug);
-  const datos = invitacion?.datos as DatosInvitacion | undefined;
-  return { themeColor: paleta(datos?.paleta).fondo };
+  return { themeColor: paleta(invitacion?.datos?.paleta).fondo };
 }
 
-/**
- * Metadatos para compartir. Lo que el cliente hace con su invitación es
- * mandarla por WhatsApp a todos sus invitados: estos tags (más la imagen de
- * `opengraph-image.tsx`) son los que convierten ese enlace en una tarjeta
- * con los colores y el nombre del evento en vez de un link gris.
- *
- * Se mantiene `noindex` a propósito: la invitación no debe salir en Google.
- * No afecta a la vista previa — WhatsApp y Facebook leen los tags igual.
- */
 export async function generateMetadata({
   params,
 }: {
@@ -64,40 +51,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const invitacion = await buscarInvitacion(slug);
-  if (!invitacion) return { title: "Invitación — Invifty" };
-
-  const datos = invitacion.datos as DatosInvitacion;
-  const publicada = invitacion.estado === "publicada";
-
-  // Los borradores no anuncian nada: aún no son del cliente para compartir.
-  if (!publicada) {
-    return { title: "Invitación — Invifty", robots: { index: false, follow: false } };
-  }
-
-  const titulo = datos.titulo || "Nuestra celebración";
-  const descripcion =
-    [datos.subtitulo, datos.fechaEvento ? fechaLarga(datos.fechaEvento) : ""]
-      .filter(Boolean)
-      .join(" · ") || "Estás invitado. Abre tu invitación digital.";
-
-  return {
-    title: `${titulo} — Invitación`,
-    description: descripcion,
-    robots: { index: false, follow: false },
-    openGraph: {
-      type: "website",
-      siteName: "Invifty",
-      locale: "es_DO",
-      title: titulo,
-      description: descripcion,
-      url: `${urlBase()}/i/${slug}`,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: titulo,
-      description: descripcion,
-    },
-  };
+  return metadatosDeInvitacion(invitacion, `${urlBase()}/i/${slug}`);
 }
 
 export default async function PaginaInvitacion({
@@ -120,49 +74,5 @@ export default async function PaginaInvitacion({
     if (!user) notFound();
   }
 
-  // Fotos del pedido con URLs firmadas (frescas en cada visita).
-  // Se sirven las versiones ligeras: la miniatura en la cuadrícula de la
-  // galería y la versión web en la portada y el visor a pantalla completa.
-  const datos = invitacion.datos as DatosInvitacion;
-
-  const admin = crearClienteAdmin();
-  const pedidoId = invitacion.pedido_id as string;
-  const archivos = await listarArchivos(admin, pedidoId, 60);
-
-  // El orden lo decide el equipo en el editor; la primera es la portada.
-  const fotos = ordenarFotos(
-    await Promise.all(
-      archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedidoId, a))
-    ),
-    datos.ordenFotos,
-    datos.fotosOcultas
-  );
-
-  return (
-    <>
-      {/* Solo se cargan las familias tipográficas que esta invitación usa */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link rel="stylesheet" href={urlFuentes(datos.tipografia)} />
-
-      <ProveedorInvitacion slug={slug} esBorrador={esBorrador}>
-        <RegistroVisita />
-        {esInvitacionDeCodigo(invitacion.plantilla as string) ? (
-          <CodigoPropio
-            html={invitacion.codigo_html as string | null}
-            datos={datos}
-            fotos={fotos}
-            esBorrador={esBorrador}
-          />
-        ) : (
-          <Renderizador
-            plantilla={invitacion.plantilla as string}
-            datos={datos}
-            fotos={fotos}
-            esBorrador={esBorrador}
-          />
-        )}
-      </ProveedorInvitacion>
-    </>
-  );
+  return <Publicada invitacion={invitacion} esBorrador={esBorrador} />;
 }

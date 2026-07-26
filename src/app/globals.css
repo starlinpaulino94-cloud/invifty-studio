@@ -62,6 +62,33 @@ body {
   background-color: rgb(212 175 55 / 0.07);
 }
 
+/* Modo editar: los textos que se pueden cambiar tocándolos se insinúan con
+   un subrayado tenue, para que se vea cuáles son sin ensuciar el diseño.
+   Lo que no lleve marca se sigue editando en su tarjeta del editor. */
+.vista-previa--editando .texto-editable {
+  outline: none;
+  cursor: text;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 0 rgb(212 175 55 / 0.45);
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.vista-previa--editando .texto-editable:hover {
+  background-color: rgb(212 175 55 / 0.1);
+}
+
+.vista-previa--editando .texto-editable:focus {
+  background-color: rgb(212 175 55 / 0.14);
+  box-shadow: 0 0 0 2px rgb(212 175 55 / 0.75);
+}
+
+/* Con el modo editar encendido, la invitación no reacciona a los clics: se
+   está escribiendo encima, no usándola. Los textos editables sí, claro. */
+.vista-previa--editando a,
+.vista-previa--editando button {
+  pointer-events: none;
+}
+
 /* Scrollbar sobria para el panel */
 ::-webkit-scrollbar {
   width: 8px;

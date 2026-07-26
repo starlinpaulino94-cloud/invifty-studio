@@ -6,7 +6,7 @@ import {
   estadoVigencia, textoVigencia, DIAS_DE_AVISO, type EstadoVigencia,
 } from "@/lib/vencimientos";
 import { BotonCopiar } from "@/components/panel/Interactivos";
-import { CalendarClock, ExternalLink } from "lucide-react";
+import { CalendarClock, ExternalLink, Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +38,13 @@ export default async function PaginaVencimientos() {
           correo {DIAS_DE_AVISO} días antes; aquí puedes copiar el mensaje de
           renovación ya escrito para mandárselo al cliente.
         </p>
+        <Link
+          href="/panel/mantenimiento"
+          className="text-xs text-[#B08D2A] hover:underline inline-flex items-center gap-1 mt-2"
+        >
+          <Wrench className="w-3.5 h-3.5" />
+          ¿Cambió la política de vigencias? Recalcula las fechas ya entregadas
+        </Link>
       </div>
 
       {pedidos.length === 0 ? (

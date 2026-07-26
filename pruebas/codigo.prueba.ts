@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  PLANTILLA_CODIGO, ATRIBUTOS_SANDBOX, esInvitacionDeCodigo,
-  aplicarMarcadores, revisarCodigo,
+  PLANTILLA_CODIGO, ATRIBUTOS_SANDBOX, CANAL, esInvitacionDeCodigo,
+  aplicarMarcadores, revisarCodigo, inyectarPuente, esMensajeRsvp,
 } from "@/lib/codigo";
 
 /**
@@ -72,6 +72,43 @@ test("un marcador que no es del sistema se deja intacto", () => {
 test("sin fotos ni datos no se rompe nada", () => {
   const salida = aplicarMarcadores("<img src='{{PORTADA}}'>{{TITULO}}", { fotos: [] });
   assert.doesNotMatch(salida, /PORTADA|TITULO/);
+});
+
+/* ---------- Puente de confirmaciones ---------- */
+
+test("el puente se inyecta justo antes de cerrar el cuerpo", () => {
+  const salida = inyectarPuente("<html><body><h1>Hola</h1></body></html>");
+  assert.ok(salida.indexOf("<script>") < salida.indexOf("</body>"), "debe ir dentro del body");
+  assert.match(salida, /window\.invifty/);
+  assert.match(salida, /data-invifty-rsvp/);
+});
+
+test("un HTML sin etiqueta de cierre también recibe el puente", () => {
+  const salida = inyectarPuente("<h1>Solo un trozo</h1>");
+  assert.match(salida, /window\.invifty/);
+});
+
+test("no se inyecta nada en un código vacío", () => {
+  assert.equal(inyectarPuente(""), "");
+  assert.equal(inyectarPuente("   "), "   ");
+});
+
+test("el puente habla por el canal del sistema y no por otro", () => {
+  const salida = inyectarPuente("<body></body>");
+  assert.match(salida, new RegExp(`canal: "${CANAL}"`));
+});
+
+test("solo se aceptan mensajes con la forma de una confirmación", () => {
+  assert.equal(esMensajeRsvp({ canal: CANAL, accion: "rsvp", id: "m1", datos: {} }), true);
+
+  // Todo lo demás se ignora: por esta ventana llegan mensajes de
+  // extensiones del navegador, de otros iframes y de herramientas.
+  assert.equal(esMensajeRsvp(null), false);
+  assert.equal(esMensajeRsvp("hola"), false);
+  assert.equal(esMensajeRsvp({ canal: "otro", accion: "rsvp", id: "m1", datos: {} }), false);
+  assert.equal(esMensajeRsvp({ canal: CANAL, accion: "borrar", id: "m1", datos: {} }), false);
+  assert.equal(esMensajeRsvp({ canal: CANAL, accion: "rsvp", datos: {} }), false, "sin id");
+  assert.equal(esMensajeRsvp({ canal: CANAL, accion: "rsvp", id: "m1" }), false, "sin datos");
 });
 
 /* ---------- Revisión antes de publicar ---------- */

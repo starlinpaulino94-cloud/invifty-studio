@@ -5,6 +5,8 @@ import Marco, { fechaCorta, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { DivisorBotanico } from "../base/Ornamentos";
+import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * BOTÁNICA
@@ -29,8 +31,7 @@ export default function Botanica({
       <header className="relative min-h-[100dvh] flex items-center justify-center px-5 py-16 overflow-hidden">
         {portada?.url && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={portada.url} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.5 }} />
+            <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.5 }} />
             <div className="absolute inset-0" style={{ backgroundColor: "color-mix(in srgb, var(--inv-fondo) 55%, transparent)" }} />
           </>
         )}
@@ -60,7 +61,7 @@ export default function Botanica({
                   className="text-[10px] uppercase tracking-[0.45em] mb-6"
                   style={{ color: "var(--inv-texto-suave)" }}
                 >
-                  {datos.subtitulo}
+                  <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
                 </p>
               )}
 
@@ -68,7 +69,7 @@ export default function Botanica({
                 className="text-4xl sm:text-5xl leading-tight mb-7"
                 style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
               >
-                {datos.titulo}
+                <Texto ruta="titulo">{datos.titulo}</Texto>
               </h1>
 
               {/* Fecha en bloque clásico */}
@@ -109,7 +110,7 @@ export default function Botanica({
                   className="text-xl sm:text-2xl leading-relaxed"
                   style={{ fontFamily: "var(--inv-script)", color: "var(--inv-acento)" }}
                 >
-                  {datos.frase}
+                  <Texto ruta="frase">{datos.frase}</Texto>
                 </p>
               )}
 

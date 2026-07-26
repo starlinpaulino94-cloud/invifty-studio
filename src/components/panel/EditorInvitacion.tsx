@@ -7,6 +7,9 @@ import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
+import { escribirEnRuta } from "@/lib/rutas";
+import { slugConSufijo, tieneSufijo } from "@/lib/slug";
+import { normalizarDominio } from "@/lib/dominios";
 import {
   PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
 } from "@/lib/codigo";
@@ -15,7 +18,7 @@ import {
 } from "@/lib/acciones-invitacion";
 import {
   Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
-  ClipboardList, Code2, AlertTriangle,
+  ClipboardList, Code2, AlertTriangle, Clapperboard, Link2, ShieldCheck, ShieldAlert, Dices,
 } from "lucide-react";
 
 const input =
@@ -25,21 +28,27 @@ const label = "block text-xs font-semibold text-gray-600 mb-1.5";
 export default function EditorInvitacion({
   invitacionId,
   slugInicial,
+  dominioInicial,
   plantillaInicial,
   datosIniciales,
   estado,
   urlPublica,
   fotos,
+  video,
   codigoInicial,
 }: {
   invitacionId: string;
   slugInicial: string;
+  /** Dominio propio del cliente, si compró el extra. */
+  dominioInicial: string | null;
   plantillaInicial: string;
   datosIniciales: DatosInvitacion;
   estado: EstadoInvitacion;
   urlPublica: string;
   /** Fotos que subió el cliente, sin ordenar ni filtrar. */
   fotos: FotoInvitacion[];
+  /** Video del cliente, si subió uno. Va de portada. */
+  video?: FotoInvitacion;
   /** HTML guardado si la invitación se hizo fuera del sistema. */
   codigoInicial: string | null;
 }) {
@@ -58,6 +67,14 @@ export default function EditorInvitacion({
     },
   });
   const [slug, setSlug] = useState(slugInicial);
+  const [dominio, setDominio] = useState(dominioInicial ?? "");
+
+  /**
+   * Le pone sufijo al azar a una dirección que no lo tiene. Solo se ofrece a
+   * mano: las invitaciones que ya estaban publicadas antes de esto conservan
+   * su enlace, porque el cliente ya lo repartió entre sus invitados.
+   */
+  const ponerSufijo = () => setSlug((actual) => slugConSufijo(actual || datos.titulo));
   const [plantilla, setPlantilla] = useState(
     plantillaInicial === "clasica" ? "editorial" : plantillaInicial
   );
@@ -72,7 +89,7 @@ export default function EditorInvitacion({
   const setSeccion = (clave: keyof DatosInvitacion["secciones"], valor: boolean) =>
     setDatos((d) => ({ ...d, secciones: { ...d.secciones, [clave]: valor } }));
 
-  const setEfecto = (clave: "sobre" | "textura" | "musica", valor: boolean) =>
+  const setEfecto = (clave: keyof typeof EFECTOS_POR_DEFECTO, valor: boolean) =>
     setDatos((d) => ({
       ...d,
       efectos: { ...EFECTOS_POR_DEFECTO, ...(d.efectos ?? {}), [clave]: valor },
@@ -90,7 +107,7 @@ export default function EditorInvitacion({
 
   const guardar = () =>
     startGuardar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml);
+      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
       setMensaje(
         res.ok
           ? { tipo: "ok", texto: "Cambios guardados. Abre la vista previa para verlos." }
@@ -101,7 +118,7 @@ export default function EditorInvitacion({
 
   const publicar = () =>
     startPublicar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml);
+      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
       if (!res.ok) {
         setMensaje({ tipo: "error", texto: res.error ?? "Error al guardar" });
         return;
@@ -138,6 +155,18 @@ export default function EditorInvitacion({
     setResaltada(id);
     setTimeout(() => setResaltada((actual) => (actual === id ? null : actual)), 2000);
   };
+
+  /**
+   * Un texto cambiado encima del diseño. La ruta la pone el propio texto en
+   * la invitación ("titulo", "lugares.0.nombre"…) y aquí solo se aplica.
+   *
+   * Queda igual que si se hubiera escrito en la tarjeta: el campo del
+   * formulario se actualiza solo y hay que darle a Guardar. Escribir encima
+   * es otra forma de llenar el mismo formulario, no un atajo que se salta
+   * el guardado.
+   */
+  const editarTexto = (ruta: string, valor: string) =>
+    setDatos((d) => escribirEnRuta(d, ruta, valor));
   const efectos = { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}) };
   const esCodigo = esInvitacionDeCodigo(plantilla);
   const avisosCodigo = esCodigo ? revisarCodigo(codigoHtml) : [];
@@ -338,6 +367,35 @@ export default function EditorInvitacion({
               previa al compartir por WhatsApp.
             </p>
           </div>
+
+          <div className="mt-3 rounded-xl bg-gray-50 p-4">
+            <p className="text-xs font-semibold text-gray-700 mb-2">
+              Confirmaciones: para que lleguen al panel como las demás
+            </p>
+            <p className="text-[11px] text-gray-500 leading-relaxed mb-2">
+              Marca el formulario con <code className="text-[#B08D2A] font-mono">data-invifty-rsvp</code> y
+              nombra sus campos <code className="font-mono">nombre</code>,{" "}
+              <code className="font-mono">asiste</code>, <code className="font-mono">cantidad</code> y{" "}
+              <code className="font-mono">nota</code>. No hace falta escribir JavaScript.
+            </p>
+            <pre className="text-[10px] font-mono text-gray-600 bg-white rounded-lg p-3 overflow-x-auto leading-relaxed">{`<form data-invifty-rsvp>
+  <input name="nombre" required>
+  <select name="asiste">
+    <option value="si">Sí asistiré</option>
+    <option value="no">No podré ir</option>
+  </select>
+  <input name="cantidad" type="number" value="1">
+  <textarea name="nota"></textarea>
+  <button>Confirmar</button>
+  <p data-invifty-mensaje></p>
+</form>`}</pre>
+            <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+              El aviso aparece dentro del elemento con{" "}
+              <code className="font-mono">data-invifty-mensaje</code>. Para flujos propios,
+              también existe <code className="font-mono">invifty.confirmar({"{…}"})</code>,
+              que devuelve una promesa.
+            </p>
+          </div>
         </Tarjeta>
       )}
 
@@ -430,6 +488,15 @@ export default function EditorInvitacion({
             activo={efectos.textura}
             onChange={(v) => setEfecto("textura", v)}
           />
+          {video && (
+            <Interruptor
+              icono={<Clapperboard className="w-4 h-4 text-[#D4AF37]" />}
+              titulo="Video en la portada"
+              detalle="El video que subió el cliente se ve en bucle y sin sonido detrás de la portada, por delante de las fotos. Es lo que promete el plan Luxury."
+              activo={efectos.videoPortada}
+              onChange={(v) => setEfecto("videoPortada", v)}
+            />
+          )}
           <Interruptor
             icono={<Music className="w-4 h-4 text-[#D4AF37]" />}
             titulo="Música de fondo"
@@ -499,6 +566,78 @@ export default function EditorInvitacion({
           <div className="sm:col-span-2">
             <label className={label}>Dirección web (slug): tu-dominio/i/…</label>
             <input value={slug} onChange={(e) => setSlug(e.target.value)} className={`${input} font-mono`} />
+
+            {/* El sufijo al azar es lo que impide adivinar la dirección
+                probando nombres. Ver `slugConSufijo` en lib/slug.ts. */}
+            {tieneSufijo(slug) ? (
+              <p className="text-[11px] text-emerald-700 mt-1.5 flex items-start gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-px" />
+                Termina en un sufijo al azar, así que nadie llega a esta invitación
+                probando nombres. Se sigue compartiendo igual de bien.
+              </p>
+            ) : (
+              <div className="mt-1.5 space-y-2">
+                <p className="text-[11px] text-amber-700 flex items-start gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-px" />
+                  Esta dirección se puede adivinar probando nombres, y quien acierte ve
+                  la dirección del evento, las fotos y el WhatsApp del anfitrión.
+                </p>
+                <button
+                  type="button"
+                  onClick={ponerSufijo}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-400 transition-colors"
+                >
+                  <Dices className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  Añadir sufijo al azar
+                </button>
+                {estado === "publicada" && (
+                  <p className="text-[11px] text-gray-400">
+                    Ojo: esta invitación ya está publicada. Cambiar la dirección deja sin
+                    funcionar el enlace que el cliente ya repartió entre sus invitados.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Extra "Dominio Web Propio" del catálogo. Lo que hace el sistema
+              es saber de quién es cada dominio; el DNS se apunta aparte. */}
+          <div className="sm:col-span-2">
+            <label className={label}>
+              <span className="inline-flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+                Dominio propio del cliente (extra)
+              </span>
+            </label>
+            <input
+              value={dominio}
+              onChange={(e) => setDominio(e.target.value)}
+              className={`${input} font-mono`}
+              placeholder="bodacamila.com"
+              inputMode="url"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+            {dominio.trim() ? (
+              <div className="text-[11px] text-gray-500 mt-2 space-y-1 bg-gray-50 border border-gray-100 rounded-xl p-3">
+                <p className="font-semibold text-gray-700">
+                  Para que <span className="font-mono">{normalizarDominio(dominio)}</span> abra
+                  esta invitación faltan dos pasos fuera del sistema:
+                </p>
+                <p>1. Añadir el dominio en Vercel → el proyecto → Domains.</p>
+                <p>2. Apuntar el DNS del dominio a donde Vercel indique.</p>
+                <p className="text-gray-400 pt-1">
+                  Hecho eso, el dominio sirve esta invitación sin tocar nada más. Solo
+                  funciona con la invitación <strong>publicada</strong>: en el dominio del
+                  cliente no hay sesión del equipo, así que un borrador da 404.
+                </p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Déjalo vacío si el cliente no compró el extra. La invitación sigue
+                funcionando en su dirección de siempre aunque tenga dominio.
+              </p>
+            )}
           </div>
         </div>
       </Tarjeta>
@@ -681,8 +820,10 @@ export default function EditorInvitacion({
           plantilla={plantilla}
           datos={datos}
           fotos={fotos}
+          video={video}
           codigoHtml={codigoHtml}
           onSenalarCampo={irACampo}
+          onEditarTexto={editarTexto}
         />
       </div>
     </div>

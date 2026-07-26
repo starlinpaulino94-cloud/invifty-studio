@@ -103,6 +103,24 @@ export const PLANTILLAS: PlantillaMeta[] = [
     tipografiaSugerida: "cinema",
   },
   {
+    id: "jardin",
+    nombre: "Jardín Encantado",
+    descripcion:
+      "Retrato en óvalo envuelto por guirnaldas y ramos que crecen desde las esquinas. El follaje es la estructura, no un adorno añadido.",
+    ideal: "Bodas al aire libre · 15 años románticos · Baby showers",
+    paletaSugerida: "blanco_verde",
+    tipografiaSugerida: "romantica",
+  },
+  {
+    id: "barroco",
+    nombre: "Barroco",
+    descripcion:
+      "Monograma en cartucho ovalado, volutas de acanto en las cuatro esquinas y doble marco. Filigrana densa y simetría estricta.",
+    ideal: "Galas · 15 años de etiqueta · Aniversarios",
+    paletaSugerida: "dorado_negro",
+    tipografiaSugerida: "editorial",
+  },
+  {
     id: "boho",
     nombre: "Boho Retro",
     descripcion:

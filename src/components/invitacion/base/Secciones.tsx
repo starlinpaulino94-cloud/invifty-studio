@@ -2,7 +2,9 @@
 
 import { ReactNode } from "react";
 import type { DatosInvitacion, DensidadOrnamental, FotoInvitacion } from "@/lib/tipos";
+import { esVideo } from "@/lib/fotos";
 import { Divisor } from "./Ornamentos";
+import Texto from "./Texto";
 import { Guirnalda, SeparadorFloral } from "./OrnamentosFlorales";
 import { Revelar } from "./Efectos";
 import { Contador, BotonesMapa, BotonCalendario, CopiarDetalle, Galeria, Rsvp } from "./Piezas";
@@ -142,7 +144,7 @@ export function BloqueHistoria({ datos, variante }: { datos: DatosInvitacion; va
             className="text-center leading-loose whitespace-pre-line text-[15px]"
             style={{ color: "var(--inv-texto-suave)", fontFamily: "var(--inv-cuerpo)" }}
           >
-            {datos.historia}
+            <Texto ruta="historia">{datos.historia}</Texto>
           </p>
         </Revelar>
       </div>
@@ -179,7 +181,7 @@ export function BloqueLugares({
                     className="text-[10px] uppercase tracking-[0.35em] mb-3"
                     style={{ color: "var(--inv-acento)" }}
                   >
-                    {lugar.nombre}
+                    <Texto ruta={`lugares.${i}.nombre`}>{lugar.nombre}</Texto>
                   </p>
                   <p
                     className="text-lg mb-1"
@@ -264,7 +266,7 @@ export function BloqueCronograma({ datos, variante }: { datos: DatosInvitacion; 
                     {hora12(hito.hora)}
                   </p>
                   <p className="text-[15px]" style={{ color: "var(--inv-texto)" }}>
-                    {hito.actividad}
+                    <Texto ruta={`cronograma.${i}.actividad`}>{hito.actividad}</Texto>
                   </p>
                 </div>
               </div>
@@ -293,10 +295,10 @@ export function BloquePadrinos({ datos, variante }: { datos: DatosInvitacion; va
                   className="text-[9px] uppercase tracking-[0.3em] mb-1.5"
                   style={{ color: "var(--inv-acento)" }}
                 >
-                  {p.rol}
+                  <Texto ruta={`padrinos.${i}.rol`}>{p.rol}</Texto>
                 </p>
                 <p className="text-base" style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}>
-                  {p.nombre}
+                  <Texto ruta={`padrinos.${i}.nombre`}>{p.nombre}</Texto>
                 </p>
               </div>
             </Revelar>
@@ -318,7 +320,10 @@ export function BloqueGaleria({
   variante: string;
   disposicion?: "mosaico" | "rejilla" | "tira";
 }) {
-  if (!datos.secciones.galeria || fotos.length < 2) return null;
+  // El video va de portada, no en la cuadrícula: ahí abriría el visor de
+  // fotos con un archivo que no es una foto.
+  const soloFotos = fotos.filter((f) => !esVideo(f.nombre));
+  if (!datos.secciones.galeria || soloFotos.length < 2) return null;
   return (
     <Seccion campo="galeria">
       <div className="max-w-3xl mx-auto">
@@ -326,7 +331,7 @@ export function BloqueGaleria({
           <TituloSeccion titulo="Galería" icono={<Camera className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <Revelar retraso={100}>
-          <Galeria fotos={fotos} disposicion={disposicion} />
+          <Galeria fotos={soloFotos} disposicion={disposicion} />
         </Revelar>
         <p className="text-center text-[10px] mt-4" style={{ color: "var(--inv-texto-suave)" }}>
           Toca cualquier fotografía para ampliarla
@@ -358,9 +363,9 @@ export function BloqueRegalos({ datos, variante }: { datos: DatosInvitacion; var
                 style={{ backgroundColor: "var(--inv-tarjeta)", border: "1px solid var(--inv-linea)" }}
               >
                 <div className="min-w-0">
-                  <p className="text-sm mb-0.5" style={{ color: "var(--inv-texto)" }}>{regalo.titulo}</p>
+                  <p className="text-sm mb-0.5" style={{ color: "var(--inv-texto)" }}><Texto ruta={`regalos.${i}.titulo`}>{regalo.titulo}</Texto></p>
                   <p className="text-xs break-all" style={{ color: "var(--inv-texto-suave)" }}>
-                    {regalo.detalle}
+                    <Texto ruta={`regalos.${i}.detalle`}>{regalo.detalle}</Texto>
                   </p>
                 </div>
                 <CopiarDetalle detalle={regalo.detalle} />
@@ -393,10 +398,10 @@ export function BloqueNotas({ datos, variante }: { datos: DatosInvitacion; varia
                   className="text-[10px] uppercase tracking-[0.28em] mb-2"
                   style={{ color: "var(--inv-acento)" }}
                 >
-                  {nota.titulo}
+                  <Texto ruta={`notas.${i}.titulo`}>{nota.titulo}</Texto>
                 </p>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--inv-texto-suave)" }}>
-                  {nota.texto}
+                  <Texto ruta={`notas.${i}.texto`}>{nota.texto}</Texto>
                 </p>
               </div>
             </Revelar>
@@ -437,7 +442,7 @@ export function BloqueMensajeFinal({ datos }: { datos: DatosInvitacion }) {
           className="max-w-lg mx-auto text-center text-2xl sm:text-3xl leading-snug"
           style={{ fontFamily: "var(--inv-script)", color: "var(--inv-acento)" }}
         >
-          {datos.mensajeFinal}
+          <Texto ruta="mensajeFinal">{datos.mensajeFinal}</Texto>
         </p>
       </Revelar>
     </Seccion>

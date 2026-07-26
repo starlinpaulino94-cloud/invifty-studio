@@ -5,6 +5,8 @@ import Marco, { fechaLarga, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar, MonogramaPortada } from "../base/Efectos";
 import { EsquinaOrnamental, DivisorFiligrana, inicialesDe } from "../base/Ornamentos";
+import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * EDITORIAL LUXE
@@ -31,13 +33,7 @@ export default function Editorial({
         {/* Fotografía de fondo */}
         {portada?.url && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={portada.url}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ opacity: 0.32 }}
-            />
+            <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.32 }} />
             <div
               className="absolute inset-0"
               style={{
@@ -73,7 +69,7 @@ export default function Editorial({
                 className="text-[10px] sm:text-[11px] uppercase tracking-[0.55em] mb-7"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -83,7 +79,7 @@ export default function Editorial({
               className="text-5xl sm:text-7xl leading-[1.08] mb-8"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -99,7 +95,7 @@ export default function Editorial({
                 className="text-xl sm:text-2xl mb-9 px-4 leading-relaxed"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

@@ -41,6 +41,11 @@ export default async function PaginaEditorInvitacion({
     archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedido.id, a))
   );
 
+  // El video va aparte de las fotos: no se ordena ni se oculta como ellas,
+  // se enciende o se apaga con su interruptor.
+  const archivoVideo = archivos.find((a) => a.esVideo);
+  const video = archivoVideo ? await urlsDeFoto(admin, pedido.id, archivoVideo) : undefined;
+
   return (
     // Más ancho que el resto del panel: aquí conviven el formulario y la
     // vista previa en vivo, una al lado de la otra.
@@ -73,11 +78,13 @@ export default async function PaginaEditorInvitacion({
       <EditorInvitacion
         invitacionId={invitacion.id}
         slugInicial={invitacion.slug}
+        dominioInicial={invitacion.dominio ?? null}
         plantillaInicial={invitacion.plantilla}
         datosIniciales={invitacion.datos as DatosInvitacion}
         estado={invitacion.estado}
         urlPublica={urlPublica}
         fotos={fotos}
+        video={video}
         codigoInicial={invitacion.codigo_html}
       />
     </div>

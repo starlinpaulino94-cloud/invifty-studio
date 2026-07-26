@@ -5,6 +5,8 @@ import Marco, { fechaCorta, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { SolRetro, DivisorOnda } from "../base/Ornamentos";
+import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * BOHO RETRO
@@ -58,8 +60,7 @@ export default function Boho({
                   boxShadow: "0 20px 50px -24px rgba(0,0,0,.45)",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={portada.url} alt="" className="w-full h-full object-cover" />
+                <MedioPortada medio={portada} className="w-full h-full object-cover" />
               </div>
             </Revelar>
           )}
@@ -70,7 +71,7 @@ export default function Boho({
                 className="text-[11px] uppercase tracking-[0.42em] mb-4"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -80,7 +81,7 @@ export default function Boho({
               className="text-4xl sm:text-6xl leading-[1.06] mb-5"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -115,7 +116,7 @@ export default function Boho({
                 className="text-base mt-7 leading-relaxed px-2"
                 style={{ color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

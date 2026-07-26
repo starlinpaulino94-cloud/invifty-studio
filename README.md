@@ -27,6 +27,7 @@ Dos caras:
    - **¿Y antes del contador de visitas?** Ejecuta [`supabase/migracion-visitas.sql`](./supabase/migracion-visitas.sql), que agrega la tabla `visitas`. Sin ella el panel muestra el contador en cero, pero nada se rompe.
    - **¿Y antes de los avisos de vencimiento?** Ejecuta [`supabase/migracion-aviso-vencimiento.sql`](./supabase/migracion-aviso-vencimiento.sql), que agrega la columna `aviso_vencimiento_en` a `pedidos`.
    - **¿Y antes de las invitaciones con código propio?** Ejecuta [`supabase/migracion-codigo-propio.sql`](./supabase/migracion-codigo-propio.sql), que agrega la columna `codigo_html` a `invitaciones`.
+   - **¿Y antes del dominio propio?** Ejecuta [`supabase/migracion-dominio-propio.sql`](./supabase/migracion-dominio-propio.sql), que agrega la columna `dominio` a `invitaciones`. Sin ella, el editor no puede guardar el dominio del cliente.
    - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Las siete filas deben decir `OK`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
@@ -54,6 +55,21 @@ npm install
 cp .env.example .env.local     # pega los 3 valores de Supabase
 npm run dev                    # abre http://localhost:3000
 ```
+
+### Tareas de mantenimiento
+
+Están en **Panel → Mantenimiento** como botones, que es la vía normal. Los
+mismos trabajos existen como comandos de terminal, con la misma lógica
+compartida en `src/lib/`; se ejecutan dentro de la carpeta del proyecto y con
+el `.env.local` puesto. No son SQL: no se pegan en Supabase.
+
+```bash
+npm run fotos:ligeras          # versiones ligeras de fotos ya subidas
+npm run vencimientos:simular   # qué pasaría al recalcular vigencias
+npm run vencimientos:aplicar   # aplicarlo de verdad
+```
+
+Cada una está explicada en su sección más abajo.
 
 ### Comprobaciones antes de subir un cambio
 
@@ -136,12 +152,15 @@ cliente Premium se quedaba sin invitación a los 3 meses.
 **Si vuelve a cambiar:** los pedidos ya entregados llevan su fecha congelada con
 la política vieja. Para aplicarles la nueva:
 
+Desde **Panel → Mantenimiento**: "Ver qué cambiaría" enseña la tabla y
+"Aplicar" la guarda. O desde la terminal, que hace exactamente lo mismo:
+
 ```bash
 # Ver qué cambiaría, sin tocar nada
-node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts
+npm run vencimientos:simular
 
 # Si el listado convence, aplicarlo
-node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts --aplicar
+npm run vencimientos:aplicar
 ```
 
 El script **solo alarga, nunca acorta**: si la política nueva diera una fecha
@@ -212,6 +231,68 @@ vestimenta, historia, programa del día, galería (las fotos que subió el
 cliente), mesa de regalos con botón de copiar, y confirmación de asistencia
 que queda registrada en el sistema.
 
+### La dirección de la invitación
+
+Cada invitación vive en `tu-dominio/i/<slug>`. El slug sale del título, y a las
+**nuevas** se les añade un sufijo corto al azar:
+
+```
+camila-y-lucas-v73nd
+```
+
+**Por qué.** Sin él, la dirección se adivina probando: `boda-maria-y-jose` no
+cuesta nada de acertar, y quien acierte ve la dirección del evento, la fecha, las
+fotos privadas y el WhatsApp del anfitrión. La página lleva `noindex`, así que no
+sale en Google — pero eso no protege de quien prueba a mano.
+
+Son cinco caracteres sin vocales ni `0/o/1/l/i`: unos 17 millones de
+combinaciones por título, se dicta por teléfono sin equivocarse, y sin vocales no
+puede salir una palabra desafortunada pegada al nombre de los novios. Se sortea
+con el generador criptográfico del sistema, no con `Math.random`.
+
+**Las invitaciones que ya estaban publicadas no se tocan.** Su enlace ya está
+repartido entre los invitados y cambiarlo lo rompería. El editor las señala en
+ámbar y ofrece un botón **"Añadir sufijo al azar"** por si a alguna hace falta
+protegerla — con el aviso de que, si ya está publicada, el enlace viejo deja de
+funcionar. La decisión es del equipo, nada se cambia solo.
+
+Guardar una invitación **nunca** cambia su dirección: el editor guarda con
+`slugificar`, que solo limpia el texto. El sufijo lo pone `slugConSufijo`, y eso
+solo pasa al generar la invitación o al pulsar ese botón.
+
+### La vista previa en vivo del editor
+
+El editor tiene la invitación real al lado, dibujada con lo que hay escrito en
+ese momento. Cuatro botones encima del marco:
+
+| Botón | Qué hace |
+|---|---|
+| Celular / Computadora | Cambia el marco. |
+| Señalar | Tocar una parte de la invitación desplaza el editor a la tarjeta que la controla. |
+| Editar | Escribe los textos **encima del diseño**, ahí mismo. |
+| Reiniciar | Vuelve a ver la apertura del sobre. |
+
+**Modo editar.** Los textos que se pueden cambiar aparecen con un subrayado
+tenue. El cambio se guarda al salir del campo (no en cada tecla, o el cursor
+saltaría al principio en cada letra), Escape deshace, y lo que se pegue entra
+como texto plano. Mientras está encendido la invitación no responde a los clics
+y el marco pasa a celular a tamaño real.
+
+Se edita encima **lo que se guarda tal cual**: título, subtítulo, frase,
+historia, nombre de cada lugar, actividades del programa, personas especiales,
+regalos, avisos y mensaje de cierre. Lo que el sistema arma solo —la hora en
+formato de 12, la fecha larga, la etiqueta del código de vestimenta— se sigue
+editando en su tarjeta, porque escribir encima no tendría dónde guardarse.
+
+Escribir encima **no guarda en la base de datos**: llena el formulario, igual
+que escribir en la tarjeta. Hay que darle a **Guardar cambios**.
+
+Para el código: el componente `Texto` (`src/components/invitacion/base/Texto.tsx`)
+envuelve el texto y lleva su ruta dentro de los datos. En la invitación
+publicada **no dibuja nada** — devuelve lo que envuelve. Los textos del cuerpo
+se marcan una sola vez en `Secciones.tsx`; en una plantilla nueva solo hay que
+marcar el título y el subtítulo de la portada, y una prueba avisa si se olvida.
+
 ### Confirmaciones de asistencia (RSVP)
 
 Cuando un invitado confirma, su respuesta **queda guardada** y aparece en la
@@ -264,9 +345,87 @@ Como consecuencia, el código **no puede usar rutas relativas** (`/foto.jpg`,
 `./estilo.css`): las direcciones tienen que ir completas, o usar los marcadores.
 El editor avisa de esto y de otros descuidos habituales antes de publicar.
 
+**Confirmaciones.** Para que las confirmaciones lleguen al panel como las de
+cualquier otra invitación, basta un formulario normal marcado con
+`data-invifty-rsvp` y campos llamados `nombre`, `asiste`, `cantidad` y `nota`:
+
+```html
+<form data-invifty-rsvp>
+  <input name="nombre" required>
+  <select name="asiste">
+    <option value="si">Sí asistiré</option>
+    <option value="no">No podré ir</option>
+  </select>
+  <input name="cantidad" type="number" value="1">
+  <textarea name="nota"></textarea>
+  <button>Confirmar</button>
+  <p data-invifty-mensaje></p>
+</form>
+```
+
+No hace falta escribir JavaScript: el sistema inyecta el puente. El aviso al
+invitado aparece dentro del elemento con `data-invifty-mensaje`. Para flujos
+propios existe `invifty.confirmar({…})`, que devuelve una promesa.
+
 > El título y la fecha de la tarjeta **Portada** se siguen usando aunque el
 > diseño venga del código: de ahí salen la vista previa al compartir y la
 > dirección web.
+
+### Video de portada (lo que promete el plan Luxury)
+
+El plan Luxury dice que el video del cliente "se verá en bucle en la portada".
+El video se subía y se guardaba, pero **ninguna plantilla sabía dibujarlo**: se
+quedaba en el bucket ocupando 50 MB sin que nadie lo viera. Ahora, si el cliente
+subió un video, va de portada por delante de las fotos, en las doce plantillas.
+
+- **En bucle, mudo y sin controles.** Mudo no es opcional: ningún navegador deja
+  que un video con sonido arranque solo. La música de la invitación es aparte,
+  con su botón.
+- **La primera foto hace de respaldo**: es lo que se ve mientras el video carga.
+- Quien tenga activado **"reducir movimiento"** en su teléfono ve esa foto fija
+  en vez del bucle. Suele estar activado por mareos o migrañas.
+- **No entra en la galería**: ahí abriría el visor de fotos con un archivo que
+  no es una foto.
+- Se apaga desde el editor, en **Experiencia de apertura → Video en la portada**.
+  El interruptor solo aparece si hay video.
+
+Se admite **un solo video** por pedido. El tope se anunciaba en un comentario y
+no se aplicaba en ningún sitio; ahora la subida lo rechaza con un mensaje claro.
+
+Para el código: las plantillas piden su portada a `MedioPortada`
+(`src/components/invitacion/base/MedioPortada.tsx`) en vez de escribir un
+`<img>`, así que da igual si el cliente puso foto o video y una plantilla nueva
+lo hereda sin enterarse.
+
+### Dominio propio del cliente (extra de RD$ 1,500)
+
+El catálogo vende "Dominio Web Propio" y el formulario pregunta cuál quiere el
+cliente. No había nada detrás: todas las invitaciones vivían en `/i/<slug>` y el
+extra solo podía cumplirse a mano, si alguien se acordaba.
+
+Ahora el dominio es un dato de la invitación. En el editor, tarjeta **Portada**,
+campo **"Dominio propio del cliente"**. Da igual cómo lo escribas —
+`https://www.BodaCamila.com/` y `bodacamila.com` se guardan igual.
+
+**Faltan dos pasos que el código no puede dar** (ninguna plataforma deja que una
+aplicación reclame dominios por su cuenta):
+
+1. En **Vercel** → el proyecto → **Domains** → añadir el dominio.
+2. Apuntar el **DNS** del dominio a donde Vercel indique.
+
+Hecho eso, el dominio abre la invitación sin tocar nada más.
+
+| | |
+|---|---|
+| Qué se sirve en ese dominio | Solo esa invitación. `midominio.com/panel` también la muestra: ahí no hay panel. |
+| Borradores | 404. En el dominio del cliente no hay sesión del equipo. |
+| La API | Responde igual en el dominio del cliente — de ahí salen sus confirmaciones y su conteo de visitas. |
+| La dirección de siempre | Sigue funcionando. Tener dominio no apaga `/i/<slug>`. |
+| Al publicar | La URL que se guarda en la ficha del pedido pasa a ser la del dominio. |
+
+Dos invitaciones no pueden compartir dominio: la petición llega por el `Host` y
+no habría forma de saber cuál servir. La base de datos lo impide y el editor lo
+dice con un mensaje en vez de un error.
 
 ### Avisos de vencimiento y renovación
 
@@ -343,8 +502,11 @@ guarda igual y se sirve desde el original: la subida del cliente nunca se rompe.
 **Fotos subidas antes de esta mejora:** siguen funcionando desde el original, pero
 no se benefician. Para procesarlas una sola vez:
 
+Desde **Panel → Mantenimiento**, con el botón "Revisar fotos", o desde la
+terminal:
+
 ```bash
-node --experimental-strip-types --env-file=.env.local scripts/generar-derivados.mts
+npm run fotos:ligeras
 ```
 
 Es seguro repetirlo: salta las que ya están hechas y nunca modifica el original.
@@ -358,16 +520,17 @@ abrir en vivo con datos de ejemplo, también sirve para enseñárselo al cliente
 
 | Pieza | Cuántas | Dónde se edita |
 |---|---|---|
-| Plantillas (estructura y ornamentos) | 10 | `src/config/plantillas.ts` + `src/components/invitacion/plantillas/` |
+| Plantillas (estructura y ornamentos) | 12 | `src/config/plantillas.ts` + `src/components/invitacion/plantillas/` |
 | Paletas de color | 24 | `src/config/diseno.ts` |
 | Parejas tipográficas | 10 | `src/config/diseno.ts` |
 
-**Las 10 plantillas:** Editorial Luxe (bodas de gala), Botánica (aire libre),
+**Las 12 plantillas:** Editorial Luxe (bodas de gala), Botánica (aire libre),
 Moderna (minimalista), Art Déco (15 años y galas), Tropical Caribe (playa),
 Arco (bodas modernas), Celestial (bodas de noche), Acuarela (baby showers y
-bautizos), Cinema (lanzamientos y bodas de destino) y Boho Retro (fiestas al
-aire libre). Cada una tiene su propia portada, sus propios ornamentos
-vectoriales y su propio ritmo — no son variaciones de color.
+bautizos), Cinema (lanzamientos y bodas de destino) Boho Retro (fiestas al
+aire libre), Jardín Encantado (bodas al aire libre y 15 años románticos) y
+Barroco (galas y 15 años de etiqueta). Cada una tiene su propia portada, sus
+propios ornamentos vectoriales y su propio ritmo — no son variaciones de color.
 
 **Detalles que elevan la experiencia:**
 
@@ -408,3 +571,37 @@ la sección de avisos para invitados no publica por error una instrucción inter
 - Las tablas tienen **RLS activado**: solo usuarios autenticados (el equipo) pueden leerlas/escribirlas.
 - El formulario público **nunca toca Supabase directamente**: pasa por rutas API del servidor que validan el token único del pedido y usan la `service_role` key solo en el backend.
 - El bucket de fotos es **privado**; las vistas y descargas usan URLs firmadas temporales.
+- **Nunca subas un `.env`.** `.gitignore` tiene el patrón, pero *no desrastrea lo que
+  ya está rastreado*: por eso `.env.local` llegó a subirse con la clave secreta
+  dentro y siguió ahí commit tras commit. Hay una prueba que falla si vuelve a
+  pasar (`pruebas/configuracion.prueba.ts`).
+
+### Rotar la clave secreta de Supabase
+
+La clave secreta (`SUPABASE_SECRET_KEY`, antes `service_role`) **se salta el RLS
+por completo**: quien la tenga lee y escribe los datos de todos los clientes. Si
+alguna vez estuvo en el repositorio, en un chat o en una captura, hay que
+cambiarla — sacarla del repositorio no basta, porque el historial la conserva.
+
+**El orden importa.** Primero se crea la nueva y se despliega; solo después se
+revoca la vieja. Al revés, el sistema se queda sin acceso hasta el despliegue.
+
+1. **Supabase** → tu proyecto → *Project Settings* → *API Keys* → sección
+   *Secret keys* → **Create new secret key**. Cópiala; solo se ve una vez.
+2. **Vercel** → el proyecto → *Settings* → *Environment Variables* → edita
+   `SUPABASE_SECRET_KEY` y pega la nueva. (Si también tienes
+   `SUPABASE_SERVICE_ROLE_KEY`, cámbiala o bórrala: el código acepta las dos y
+   usa la primera que encuentre.)
+3. **Redespliega.** Las variables de entorno se leen al construir: sin
+   redesplegar, Vercel sigue usando la vieja. *Deployments* → el último → *Redeploy*.
+4. **Comprueba que todo sigue vivo** antes de romper nada: abre el panel, entra a
+   un pedido con fotos y ábrelas. Si cargan, la clave nueva funciona.
+5. **Ahora sí, revoca la vieja** en la misma pantalla de Supabase.
+6. **Tu `.env.local`**: pega la clave nueva ahí también, o los comandos de
+   terminal (`npm run fotos:ligeras`, `npm run vencimientos:*`) dejarán de entrar.
+
+**¿Y borrar la clave del historial de git?** Rotarla ya deja la vieja sin valor,
+que es lo que de verdad arregla el problema. Reescribir el historial
+(`git filter-repo`, BFG) es opcional: rompe todos los clones existentes y hay
+copias en caché que no siempre desaparecen. Si el repositorio es privado y la
+clave ya está rotada, no hace falta.

@@ -157,14 +157,23 @@ export interface DatosInvitacion {
   notasEquipo?: { titulo: string; texto: string }[];
   /** Efectos de la experiencia */
   efectos?: {
-    sobre: boolean;      // apertura tipo sobre lacrado
-    textura: boolean;    // grano de papel + viñeta
-    musica: boolean;     // reproductor flotante
+    sobre: boolean;         // apertura tipo sobre lacrado
+    textura: boolean;       // grano de papel + viñeta
+    musica: boolean;        // reproductor flotante
+    videoPortada: boolean;  // el video del cliente, en bucle, de portada
   };
 }
 
 /** Valores por defecto de los campos nuevos (compatibilidad hacia atrás). */
-export const EFECTOS_POR_DEFECTO = { sobre: true, textura: true, musica: false };
+export const EFECTOS_POR_DEFECTO = {
+  sobre: true,
+  textura: true,
+  musica: false,
+  // Encendido por defecto: si el cliente subió un video es porque lo quiere
+  // en su portada, que es justo lo que le vendió el plan Luxury. Sin video
+  // no cambia nada. El equipo puede apagarlo desde el editor.
+  videoPortada: true,
+};
 
 /** Confirmación de asistencia enviada por un invitado desde la invitación. */
 export interface Confirmacion {
@@ -191,6 +200,11 @@ export interface Invitacion {
    * Solo se usa cuando `plantilla` es PLANTILLA_CODIGO.
    */
   codigo_html: string | null;
+  /**
+   * Dominio propio del cliente (extra del catálogo), sin protocolo ni
+   * "www". Vacío en la mayoría: la invitación vive en /i/<slug>.
+   */
+  dominio: string | null;
   estado: EstadoInvitacion;
   publicada_en: string | null;
   creado_en: string;

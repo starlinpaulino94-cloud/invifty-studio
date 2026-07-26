@@ -6,9 +6,14 @@
  * procesa una sola vez, para que las invitaciones ya entregadas también
  * carguen rápido.
  *
- * Cómo ejecutarlo (desde la raíz del proyecto, con el .env.local puesto):
+ * LA VÍA NORMAL ES EL PANEL: Panel → Mantenimiento tiene esto mismo como
+ * botón, con la lógica compartida en src/lib/. Este script existe para
+ * quien prefiera la terminal.
  *
- *   node --experimental-strip-types --env-file=.env.local scripts/generar-derivados.mts
+ * NO es SQL: no se pega en Supabase. Es un programa que se ejecuta en la
+ * terminal de tu computadora, dentro de la carpeta del proyecto:
+ *
+ *   npm run fotos:ligeras
  *
  * Es seguro repetirlo: salta las fotos que ya tienen sus derivados y
  * nunca modifica ni borra el original.
@@ -29,8 +34,8 @@ const clave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECR
 
 if (!url || !clave) {
   console.error(
-    "Faltan las variables de entorno. Ejecuta con:\n" +
-      "  node --experimental-strip-types --env-file=.env.local scripts/generar-derivados.mts"
+    "Falta el archivo .env.local con NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SECRET_KEY.\n" +
+      "Ponlo en la raíz del proyecto y ejecuta:  npm run fotos:ligeras"
   );
   process.exit(1);
 }

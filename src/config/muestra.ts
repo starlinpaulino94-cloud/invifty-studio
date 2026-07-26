@@ -1,3 +1,4 @@
+import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion } from "@/lib/tipos";
 import { plantillaMeta } from "./plantillas";
 
@@ -69,7 +70,7 @@ export function datosMuestra(plantillaId: string): DatosInvitacion {
     hashtag: "#CamilaYLucas2026",
     musicaUrl: "",
     rsvp: { whatsapp: "18092693214", fechaLimite: proximaFecha(-30), acompanantes: true },
-    efectos: { sobre: true, textura: true, musica: false },
+    efectos: { ...EFECTOS_POR_DEFECTO },
     secciones: {
       historia: true,
       galeria: true,
@@ -210,6 +211,8 @@ export function fotosMuestra(plantillaId: string) {
     acuarela: "#f2b795",
     cinema: "#a8a8ac",
     boho: "#d6a765",
+    jardin: "#a8bd97",
+    barroco: "#c2a558",
   };
   const tono = tonos[plantillaMeta(plantillaId).id] ?? "#c9b184";
   return [0, 1, 2, 3, 4, 5].map((i) => ({

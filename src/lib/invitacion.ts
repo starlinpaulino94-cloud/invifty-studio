@@ -1,3 +1,4 @@
+import { EFECTOS_POR_DEFECTO } from "./tipos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida, densidad } from "@/config/diseno";
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
@@ -69,20 +70,6 @@ function etiquetaPaletaPedida(id: string): string {
   return PALETAS_SIN_EQUIVALENTE[id] ?? `"${id}"`;
 }
 
-/** Convierte texto a slug de URL: "Camila & Lucas" → "camila-y-lucas" */
-export function slugificar(t: string): string {
-  return (
-    t
-      .toLowerCase()
-      .replace(/&/g, " y ")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "invitacion"
-  );
-}
-
 /* ---------- Elección de plantilla ---------- */
 
 /**
@@ -108,12 +95,12 @@ export function sugerirPlantilla(tipoEvento: TipoEvento, respuestas: Record<stri
   const porEstilo: Record<string, string> = {
     // Bodas
     clasico_elegante: "editorial",
-    romantico_floral: "acuarela",
+    romantico_floral: "jardin",
     rustico: "boho",
     minimalista: "arco",
     tropical: "tropical",
     // Cumpleaños y 15 años
-    elegante_gala: "deco",
+    elegante_gala: "barroco",
     quince_princesa: "celestial",
     neon_fiesta: "cinema",
     vintage: "deco",
@@ -136,10 +123,10 @@ export function sugerirPlantilla(tipoEvento: TipoEvento, respuestas: Record<stri
 /** Plantillas disponibles agrupadas para el catálogo del panel. */
 export function plantillasSugeridasPara(tipoEvento: TipoEvento): string[] {
   const mapa: Record<TipoEvento, string[]> = {
-    boda: ["editorial", "arco", "botanica", "celestial", "acuarela", "tropical", "boho", "moderna", "cinema"],
-    cumpleanos: ["deco", "celestial", "cinema", "boho", "moderna", "acuarela"],
-    empresarial: ["moderna", "cinema", "editorial", "deco"],
-    otro: ["botanica", "acuarela", "arco", "boho", "tropical", "celestial"],
+    boda: ["editorial", "jardin", "arco", "botanica", "celestial", "barroco", "acuarela", "tropical", "boho", "moderna", "cinema"],
+    cumpleanos: ["deco", "barroco", "celestial", "cinema", "jardin", "boho", "moderna", "acuarela"],
+    empresarial: ["moderna", "cinema", "editorial", "deco", "barroco"],
+    otro: ["botanica", "jardin", "acuarela", "arco", "boho", "tropical", "celestial"],
   };
   return mapa[tipoEvento] ?? PLANTILLAS.map((p) => p.id);
 }
@@ -213,7 +200,7 @@ export function derivarDatosInvitacion(
       fechaLimite: rsvpRaw.fecha_limite ?? "",
       acompanantes: rsvpRaw.acompanantes !== "no",
     },
-    efectos: { sobre: true, textura: true, musica: false },
+    efectos: { ...EFECTOS_POR_DEFECTO },
     secciones: {
       historia: false,
       galeria: true,

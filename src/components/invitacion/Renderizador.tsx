@@ -10,6 +10,8 @@ import Celestial from "./plantillas/Celestial";
 import Acuarela from "./plantillas/Acuarela";
 import Cinema from "./plantillas/Cinema";
 import Boho from "./plantillas/Boho";
+import Jardin from "./plantillas/Jardin";
+import Barroco from "./plantillas/Barroco";
 
 interface Props {
   datos: DatosInvitacion;
@@ -43,6 +45,10 @@ export default function Renderizador({ plantilla, ...props }: Props & { plantill
       return <Cinema {...props} />;
     case "boho":
       return <Boho {...props} />;
+    case "jardin":
+      return <Jardin {...props} />;
+    case "barroco":
+      return <Barroco {...props} />;
     default:
       return <Editorial {...props} />;
   }

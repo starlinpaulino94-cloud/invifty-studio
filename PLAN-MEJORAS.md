@@ -15,13 +15,16 @@ Se marcan aquí a medida que se cierran.
 | **1A** | Elegir portada, reordenar y ocultar fotos | ✅ Hecho |
 | **1B** | Vista previa en vivo dentro del editor, sin guardar ni recargar | ✅ Hecho |
 | **1C** | Clic en la vista previa → salta al campo que lo controla | ✅ Hecho |
-| **1D** | Edición literal encima del diseño | 🤔 Decidir ahora, ya con 1B y 1C funcionando |
+| **1D** | Edición literal encima del diseño | ✅ Hecho |
 
-**Sobre 1D.** La edición inline real hay que cablearla en cada una de las diez
-plantillas, y en cada plantilla nueva que se haga: es coste permanente, no una
-vez. 1B + 1C dan casi todo ese control a una fracción del coste — se ve el
-cambio al instante y se llega al campo con un clic. Conviene decidir 1D con
-1B/1C ya funcionando, no antes.
+**Sobre el coste de 1D.** El aviso era que habría que cablear cada plantilla y
+cada plantilla nueva. Se resolvió con un componente `<Texto>` que envuelve el
+texto y lleva escrita su ruta en los datos: en la invitación publicada devuelve
+lo que envuelve y **no dibuja nada**, y solo se vuelve editable cuando la vista
+previa del panel enciende el modo. Los diez textos del cuerpo se marcan en
+`Secciones.tsx`, común a todas; en cada plantilla solo hay que marcar la
+portada, que es lo único que compone por su cuenta. Una prueba recorre las doce
+plantillas y falla si alguna se olvida.
 
 ### ✅ 1A — Portada, orden y fotos ocultas
 
@@ -93,6 +96,43 @@ lugares, código de vestimenta, programa, personas especiales, galería, regalos
 avisos, confirmación y cierre), y señalar la historia desplaza el editor y
 resalta su tarjeta.
 
+### ✅ 1D — Escribir encima del diseño
+
+Un botón de lápiz enciende el **modo editar**: los textos que se pueden cambiar
+aparecen con un subrayado tenue y se escriben ahí mismo, sobre la invitación.
+
+- **Se guarda al salir del texto**, no en cada tecla. Si React volviera a
+  dibujar mientras se escribe, el cursor saltaría al principio en cada letra.
+- **Escape deshace** y devuelve el texto anterior.
+- **Pegar entra como texto plano**: lo copiado de WhatsApp o Word trae colores y
+  tipografías que romperían el diseño.
+- El modo pasa al **marco de celular a tamaño real**: a 0,72 el cursor cae donde
+  no es, y el marco de escritorio (0,5) directamente no vale.
+- **El sobre no se dibuja** mientras se edita — habría que abrirlo para llegar al
+  texto, y en este modo el clic no lo abre.
+- Editar y señalar **se apagan entre sí**: señalar se traga el clic y editar lo
+  necesita para poner el cursor.
+
+**Qué se edita encima y qué no.** Lo que se guarda tal cual, encima: título,
+subtitulo, frase, historia, nombre de cada lugar, actividades del programa, rol
+y nombre de las personas especiales, regalos, avisos y mensaje de cierre. Lo que
+el sistema arma solo —la hora en formato de 12, la fecha larga, la etiqueta del
+código de vestimenta, la dirección partida en dos líneas— **se sigue editando en
+su tarjeta**, porque escribir encima no tendría dónde guardarse.
+
+**Un fallo que salió al probarlo en el navegador.** Varios campos llevan
+`uppercase` en su diseño, y `innerText` devuelve el texto *como se ve*: editar
+"Ceremonia" en el nombre de un lugar guardaba `CEREMONIA`, y el dato quedaba
+estropeado también en el formulario. Se apaga la transformación el instante
+justo de leer.
+
+Verificado en el navegador: sin el modo encendido no hay ni un atributo de más
+en la invitación (0 elementos marcados); al encenderlo aparecen los 13 textos
+editables; lo escrito llega a los datos al salir del campo y no antes; Escape
+deshace; pegar HTML con formato entra limpio; un texto con salto de línea se
+guarda con `\n`; vaciarlo hace desaparecer su bloque; y con el modo encendido
+nada dentro de la invitación responde al clic.
+
 ---
 
 ## Idea 2 — Invitaciones con código propio (IA)
@@ -105,7 +145,7 @@ resalta su tarjeta.
 | **2A** | Plantilla tipo "código": pegar el HTML y guardarlo | ✅ Hecho |
 | **2B** | Servirla en `/i/<slug>` dentro de un iframe aislado | ✅ Hecho |
 | **2C** | Mantener vista previa al compartir, contador de visitas y borrador/publicada | ✅ Hecho |
-| **2D** | Puente para que el RSVP del sistema funcione dentro de ese HTML | ⏳ |
+| **2D** | Puente para que el RSVP del sistema funcione dentro de ese HTML | ✅ Hecho |
 
 **El aislamiento de 2B no es opcional.** Código pegado corriendo en el mismo
 origen que `/panel` podría leer la sesión del equipo. En un iframe con
@@ -153,6 +193,40 @@ frontera.
 **Por eso no se filtra ni se limpia el HTML:** el aislamiento es la frontera de
 seguridad, y limpiarlo solo rompería código legítimo.
 
+### ✅ 2D — Confirmaciones desde el código pegado
+
+Ese mismo aislamiento impedía que el HTML llamara a la API: desde un origen
+opaco no hay cookies ni peticiones al sistema. Lo único que sí puede hacer es
+mandarle un mensaje a la página que lo contiene, y que sea ella quien guarde.
+
+**Para quien escribe el HTML no hay que saber nada de eso.** Basta un formulario
+normal marcado con `data-invifty-rsvp` y campos llamados `nombre`, `asiste`,
+`cantidad` y `nota`. Cero JavaScript. Para flujos propios existe además
+`invifty.confirmar({…})`, que devuelve una promesa. El contrato está escrito en
+el editor, junto al campo del código, listo para copiárselo a la IA.
+
+Las confirmaciones caen en la misma tabla que las demás: mismo conteo, misma
+lista, misma exportación. Y en la vista previa del equipo no se guardan, igual
+que en las plantillas del sistema.
+
+#### Lo que sostiene la seguridad del puente
+
+El mensaje se acepta solo si viene de **nuestro propio iframe**
+(`event.source`). El origen no sirve para comprobarlo: en un iframe aislado
+siempre llega como `"null"`, así que cualquier página podría falsificarlo.
+
+Comprobado en el navegador, con la llamada a la API interceptada para ver
+exactamente qué le llega:
+
+| Origen del mensaje | Resultado |
+|---|---|
+| La propia página del sistema | **Ignorado** |
+| Otro iframe metido en la página | **Ignorado** |
+| El formulario de la invitación | **Aceptado**, con `{nombre, asiste, cantidad, nota}` correctos |
+
+Y el invitado ve dentro de su invitación el aviso «¡Gracias por confirmar!»
+sin salir de ella.
+
 ---
 
 ## Idea 3 — Variedad y nivel de ornamentación
@@ -165,7 +239,7 @@ seguridad, y limpiarlo solo rompería código legítimo.
 |---|---|---|
 | **3A** | Eje de ornamentación: sobrio / equilibrado / extravagante | ✅ Hecho |
 | **3B** | Familia nueva de ornamentos: florales, guirnaldas, marcos botánicos | ✅ Hecho |
-| **3C** | 2-3 plantillas nuevas realmente recargadas | ⏳ |
+| **3C** | 2-3 plantillas nuevas realmente recargadas | ✅ Hecho |
 | **3D** | Pregunta en el formulario para que el cliente elija cuánto adorno | ✅ Hecho |
 
 **Lo que ya existe no cambia.** El nivel por defecto es exactamente el aspecto
@@ -203,10 +277,43 @@ empresa.
 Verificado con capturas de los tres niveles: el extravagante enmarca sin tapar
 el texto, y el equilibrado sale **idéntico** al de siempre.
 
+### ✅ 3C — Jardín Encantado y Barroco
+
+El catálogo pasa de 10 a 12 plantillas. Las dos nuevas aportan **estructura**
+propia, no solo más adornos: eso ya lo da el eje de densidad.
+
+**Jardín Encantado** — el retrato en un óvalo, guirnaldas que lo coronan y lo
+cierran, y ramos que crecen desde las esquinas superiores. El follaje es la
+composición, no un añadido. Frente a Botánica, donde las ramas enmarcan cada
+sección, aquí todo converge sobre el retrato.
+*Bodas al aire libre · 15 años románticos · Baby showers.*
+
+**Barroco** — monograma dentro de un cartucho ovalado, volutas de acanto en las
+cuatro esquinas, doble marco y divisor de filigrana. Frente a Editorial, que
+respira, y a Art Déco, que es geometría de los años 20, aquí el ornamento es
+curvo, continuo y cubre los bordes.
+*Galas · 15 años de etiqueta · Aniversarios.*
+
+Ornamentos nuevos: `Voluta`, `Cartucho`, `DivisorBarroco` y `DivisorJardin`.
+
+También se afinaron las sugerencias automáticas: un cliente que pide estilo
+"romántico floral" recibe ahora Jardín en vez de Acuarela, y uno que pide
+"elegante / gala" recibe Barroco en vez de Art Déco.
+
+Verificado con capturas de las dos. Un detalle que destapó la revisión: en
+Jardín la fecha y la hora en una sola línea partían mal en celular, así que van
+en líneas separadas dentro de la píldora.
+
 ---
 
 ## Orden de trabajo
 
-**1A → 1B+1C → 2 → 3.** Cada paso hace el siguiente más fácil: con la vista
-previa en vivo, iterar las plantillas extravagantes (3C) es mucho más rápido
-que a ciegas.
+**1A → 1B+1C → 2 → 3 → 1D.** Cada paso hizo el siguiente más fácil: con la
+vista previa en vivo, iterar las plantillas extravagantes (3C) fue mucho más
+rápido que a ciegas, y 1D se apoyó en lo que 1C ya había resuelto — cubrir las
+doce plantillas tocando un solo archivo compartido.
+
+**Las tres ideas están completas.** Lo que queda abierto no es de este plan sino
+de la auditoría: rotar la clave de Supabase, corregir las vigencias que anuncia
+la web pública, las dos promesas del formulario que el sistema no cumple (video
+de portada en Luxury, dominio propio) y los slugs adivinables (§6.5).

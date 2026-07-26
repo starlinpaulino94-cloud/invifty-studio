@@ -1,12 +1,14 @@
 /**
- * Resuelve los imports del proyecto cuando las pruebas corren fuera de Next.
+ * Resuelve los imports del proyecto cuando el código corre fuera de Next:
+ * las pruebas y los scripts de mantenimiento.
  *
  * Hacen falta dos traducciones que el empaquetador hace solo y Node no:
  *  - el alias "@/…" que define tsconfig.json → la carpeta src/
  *  - los imports sin extensión ("./tipos") → el archivo .ts real, porque
  *    en ESM la extensión es obligatoria
  *
- * Se carga con --import desde el script `npm test`.
+ * Sin esto, `npm run vencimientos:simular` muere con ERR_MODULE_NOT_FOUND
+ * antes de conectarse a nada. Se carga con --import desde package.json.
  */
 
 import { registerHooks } from "node:module";

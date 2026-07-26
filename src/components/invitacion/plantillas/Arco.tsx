@@ -5,6 +5,8 @@ import Marco, { fechaCorta, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { DivisorMinimo } from "../base/Ornamentos";
+import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * ARCO
@@ -36,8 +38,7 @@ export default function Arco({
             >
               {portada?.url ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={portada.url} alt="" className="w-full h-full object-cover" />
+                  <MedioPortada medio={portada} className="w-full h-full object-cover" />
                 </>
               ) : (
                 <div
@@ -71,7 +72,7 @@ export default function Arco({
                 className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] uppercase tracking-[0.45em]"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </span>
             )}
           </div>
@@ -84,7 +85,7 @@ export default function Arco({
               className="text-4xl sm:text-6xl leading-[1.12] mb-5"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -114,7 +115,7 @@ export default function Arco({
                 className="text-xl sm:text-2xl mt-7 leading-relaxed"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

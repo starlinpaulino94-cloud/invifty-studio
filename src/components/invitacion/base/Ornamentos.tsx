@@ -182,8 +182,105 @@ export function DivisorBarra({ className = "" }: Props) {
 }
 
 /** Devuelve el divisor que corresponde a cada plantilla. */
+/* ---------- Barroco: volutas y filigranas densas ---------- */
+
+/** Voluta con hoja de acanto: la unidad del ornamento barroco. */
+export function Voluta({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 120 120" className={className} fill="none" aria-hidden>
+      <path
+        d="M4 4 C 52 10, 78 34, 84 74 C 86 96, 74 108, 60 106 C 46 104, 40 90, 48 80
+           C 55 71, 68 74, 70 84"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"
+      />
+      <path
+        d="M4 4 C 10 46, 30 70, 66 82"
+        stroke="currentColor" strokeWidth="1" opacity="0.55"
+      />
+      {/* Hoja de acanto que abraza la voluta */}
+      <path
+        d="M18 16 C 40 20, 52 36, 50 56 C 40 48, 26 36, 18 16 Z"
+        fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="0.9"
+      />
+      <path
+        d="M34 8 C 62 16, 76 36, 80 60"
+        stroke="currentColor" strokeWidth="0.8" opacity="0.4"
+      />
+      <circle cx="88" cy="24" r="2.6" fill="currentColor" opacity="0.7" />
+      <circle cx="24" cy="70" r="2" fill="currentColor" opacity="0.5" />
+    </svg>
+  );
+}
+
+/** Cartucho: el marco ovalado con volutas donde va el monograma. */
+export function Cartucho({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 240 200" className={className} fill="none" aria-hidden>
+      <ellipse cx="120" cy="100" rx="66" ry="80" stroke="currentColor" strokeWidth="1.4" />
+      <ellipse cx="120" cy="100" rx="58" ry="72" stroke="currentColor" strokeWidth="0.7" opacity="0.5" />
+
+      {/* Volutas a los lados del óvalo */}
+      <path d="M54 100 C 30 96, 16 78, 22 58 C 34 66, 46 80, 54 100 Z"
+        fill="currentColor" fillOpacity="0.16" stroke="currentColor" strokeWidth="1" />
+      <path d="M186 100 C 210 96, 224 78, 218 58 C 206 66, 194 80, 186 100 Z"
+        fill="currentColor" fillOpacity="0.16" stroke="currentColor" strokeWidth="1" />
+      <path d="M54 100 C 30 104, 16 122, 22 142 C 34 134, 46 120, 54 100 Z"
+        fill="currentColor" fillOpacity="0.16" stroke="currentColor" strokeWidth="1" />
+      <path d="M186 100 C 210 104, 224 122, 218 142 C 206 134, 194 120, 186 100 Z"
+        fill="currentColor" fillOpacity="0.16" stroke="currentColor" strokeWidth="1" />
+
+      {/* Remates superior e inferior */}
+      <path d="M120 20 L112 8 L120 2 L128 8 Z" fill="currentColor" opacity="0.75" />
+      <path d="M120 180 L112 192 L120 198 L128 192 Z" fill="currentColor" opacity="0.75" />
+      <path d="M96 16 C 110 10, 130 10, 144 16" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+      <path d="M96 184 C 110 190, 130 190, 144 184" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+    </svg>
+  );
+}
+
+/** Divisor barroco: volutas enfrentadas con un rombo al centro. */
+export function DivisorBarroco({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 220 32" className={className} fill="none" aria-hidden>
+      <path d="M6 16 C 40 16, 56 8, 76 16 C 62 24, 44 24, 22 20"
+        stroke="currentColor" strokeWidth="1.2" />
+      <path d="M214 16 C 180 16, 164 8, 144 16 C 158 24, 176 24, 198 20"
+        stroke="currentColor" strokeWidth="1.2" />
+      <path d="M88 16 C 96 8, 104 8, 110 16 C 104 24, 96 24, 88 16 Z"
+        fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="1" />
+      <path d="M132 16 C 124 8, 116 8, 110 16 C 116 24, 124 24, 132 16 Z"
+        fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="1" />
+      <circle cx="110" cy="16" r="3" fill="currentColor" />
+      <circle cx="76" cy="16" r="1.8" fill="currentColor" opacity="0.6" />
+      <circle cx="144" cy="16" r="1.8" fill="currentColor" opacity="0.6" />
+    </svg>
+  );
+}
+
+/** Divisor de jardín: tallo con hojas a ambos lados. */
+export function DivisorJardin({ className = "" }: Props) {
+  return (
+    <svg viewBox="0 0 200 30" className={className} fill="none" aria-hidden>
+      <path d="M14 15 C 60 15, 140 15, 186 15" stroke="currentColor" strokeWidth="1" opacity="0.6" />
+      {[46, 70, 130, 154].map((x, i) => (
+        <path
+          key={x}
+          d={`M${x} 15 C ${x + 6} ${i % 2 ? 24 : 6}, ${x + 16} ${i % 2 ? 24 : 6}, ${x + 20} 15`}
+          fill="currentColor" fillOpacity="0.14" stroke="currentColor" strokeWidth="0.9"
+        />
+      ))}
+      <circle cx="100" cy="15" r="4.5" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1" />
+      <circle cx="100" cy="15" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function Divisor({ variante, className }: { variante: string; className?: string }) {
   switch (variante) {
+    case "jardin":
+      return <DivisorJardin className={className} />;
+    case "barroco":
+      return <DivisorBarroco className={className} />
     case "botanica":
       return <DivisorBotanico className={className} />;
     case "moderna":
