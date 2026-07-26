@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { ManchasAcuarela, DivisorPincel } from "../base/Ornamentos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * ACUARELA
@@ -44,8 +45,7 @@ export default function Acuarela({
                   boxShadow: "0 18px 45px -20px rgba(0,0,0,.4)",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={portada.url} alt="" className="w-full h-full object-cover" />
+                <MedioPortada medio={portada} className="w-full h-full object-cover" />
               </div>
             </Revelar>
           )}

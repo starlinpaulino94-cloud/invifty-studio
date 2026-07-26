@@ -1,3 +1,4 @@
+import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion } from "@/lib/tipos";
 import { plantillaMeta } from "./plantillas";
 
@@ -69,7 +70,7 @@ export function datosMuestra(plantillaId: string): DatosInvitacion {
     hashtag: "#CamilaYLucas2026",
     musicaUrl: "",
     rsvp: { whatsapp: "18092693214", fechaLimite: proximaFecha(-30), acompanantes: true },
-    efectos: { sobre: true, textura: true, musica: false },
+    efectos: { ...EFECTOS_POR_DEFECTO },
     secciones: {
       historia: true,
       galeria: true,

@@ -8,6 +8,7 @@ import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import { escribirEnRuta } from "@/lib/rutas";
+import { normalizarDominio } from "@/lib/dominios";
 import {
   PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
 } from "@/lib/codigo";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/acciones-invitacion";
 import {
   Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
-  ClipboardList, Code2, AlertTriangle,
+  ClipboardList, Code2, AlertTriangle, Clapperboard, Link2,
 } from "lucide-react";
 
 const input =
@@ -26,21 +27,27 @@ const label = "block text-xs font-semibold text-gray-600 mb-1.5";
 export default function EditorInvitacion({
   invitacionId,
   slugInicial,
+  dominioInicial,
   plantillaInicial,
   datosIniciales,
   estado,
   urlPublica,
   fotos,
+  video,
   codigoInicial,
 }: {
   invitacionId: string;
   slugInicial: string;
+  /** Dominio propio del cliente, si compró el extra. */
+  dominioInicial: string | null;
   plantillaInicial: string;
   datosIniciales: DatosInvitacion;
   estado: EstadoInvitacion;
   urlPublica: string;
   /** Fotos que subió el cliente, sin ordenar ni filtrar. */
   fotos: FotoInvitacion[];
+  /** Video del cliente, si subió uno. Va de portada. */
+  video?: FotoInvitacion;
   /** HTML guardado si la invitación se hizo fuera del sistema. */
   codigoInicial: string | null;
 }) {
@@ -59,6 +66,7 @@ export default function EditorInvitacion({
     },
   });
   const [slug, setSlug] = useState(slugInicial);
+  const [dominio, setDominio] = useState(dominioInicial ?? "");
   const [plantilla, setPlantilla] = useState(
     plantillaInicial === "clasica" ? "editorial" : plantillaInicial
   );
@@ -73,7 +81,7 @@ export default function EditorInvitacion({
   const setSeccion = (clave: keyof DatosInvitacion["secciones"], valor: boolean) =>
     setDatos((d) => ({ ...d, secciones: { ...d.secciones, [clave]: valor } }));
 
-  const setEfecto = (clave: "sobre" | "textura" | "musica", valor: boolean) =>
+  const setEfecto = (clave: keyof typeof EFECTOS_POR_DEFECTO, valor: boolean) =>
     setDatos((d) => ({
       ...d,
       efectos: { ...EFECTOS_POR_DEFECTO, ...(d.efectos ?? {}), [clave]: valor },
@@ -91,7 +99,7 @@ export default function EditorInvitacion({
 
   const guardar = () =>
     startGuardar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml);
+      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
       setMensaje(
         res.ok
           ? { tipo: "ok", texto: "Cambios guardados. Abre la vista previa para verlos." }
@@ -102,7 +110,7 @@ export default function EditorInvitacion({
 
   const publicar = () =>
     startPublicar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml);
+      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
       if (!res.ok) {
         setMensaje({ tipo: "error", texto: res.error ?? "Error al guardar" });
         return;
@@ -472,6 +480,15 @@ export default function EditorInvitacion({
             activo={efectos.textura}
             onChange={(v) => setEfecto("textura", v)}
           />
+          {video && (
+            <Interruptor
+              icono={<Clapperboard className="w-4 h-4 text-[#D4AF37]" />}
+              titulo="Video en la portada"
+              detalle="El video que subió el cliente se ve en bucle y sin sonido detrás de la portada, por delante de las fotos. Es lo que promete el plan Luxury."
+              activo={efectos.videoPortada}
+              onChange={(v) => setEfecto("videoPortada", v)}
+            />
+          )}
           <Interruptor
             icono={<Music className="w-4 h-4 text-[#D4AF37]" />}
             titulo="Música de fondo"
@@ -541,6 +558,46 @@ export default function EditorInvitacion({
           <div className="sm:col-span-2">
             <label className={label}>Dirección web (slug): tu-dominio/i/…</label>
             <input value={slug} onChange={(e) => setSlug(e.target.value)} className={`${input} font-mono`} />
+          </div>
+
+          {/* Extra "Dominio Web Propio" del catálogo. Lo que hace el sistema
+              es saber de quién es cada dominio; el DNS se apunta aparte. */}
+          <div className="sm:col-span-2">
+            <label className={label}>
+              <span className="inline-flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+                Dominio propio del cliente (extra)
+              </span>
+            </label>
+            <input
+              value={dominio}
+              onChange={(e) => setDominio(e.target.value)}
+              className={`${input} font-mono`}
+              placeholder="bodacamila.com"
+              inputMode="url"
+              autoCapitalize="off"
+              spellCheck={false}
+            />
+            {dominio.trim() ? (
+              <div className="text-[11px] text-gray-500 mt-2 space-y-1 bg-gray-50 border border-gray-100 rounded-xl p-3">
+                <p className="font-semibold text-gray-700">
+                  Para que <span className="font-mono">{normalizarDominio(dominio)}</span> abra
+                  esta invitación faltan dos pasos fuera del sistema:
+                </p>
+                <p>1. Añadir el dominio en Vercel → el proyecto → Domains.</p>
+                <p>2. Apuntar el DNS del dominio a donde Vercel indique.</p>
+                <p className="text-gray-400 pt-1">
+                  Hecho eso, el dominio sirve esta invitación sin tocar nada más. Solo
+                  funciona con la invitación <strong>publicada</strong>: en el dominio del
+                  cliente no hay sesión del equipo, así que un borrador da 404.
+                </p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Déjalo vacío si el cliente no compró el extra. La invitación sigue
+                funcionando en su dirección de siempre aunque tenga dominio.
+              </p>
+            )}
           </div>
         </div>
       </Tarjeta>
@@ -723,6 +780,7 @@ export default function EditorInvitacion({
           plantilla={plantilla}
           datos={datos}
           fotos={fotos}
+          video={video}
           codigoHtml={codigoHtml}
           onSenalarCampo={irACampo}
           onEditarTexto={editarTexto}

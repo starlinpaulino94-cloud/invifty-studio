@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Renderizador from "@/components/invitacion/Renderizador";
 import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
-import { ordenarFotos } from "@/lib/fotos";
+import { conVideoDePortada, ordenarFotos } from "@/lib/fotos";
 import { urlFuentes } from "@/config/diseno";
 import { esInvitacionDeCodigo } from "@/lib/codigo";
 import CodigoPropio from "@/components/invitacion/CodigoPropio";
@@ -40,6 +40,7 @@ export default function VistaPreviaEnVivo({
   plantilla,
   datos,
   fotos,
+  video,
   codigoHtml,
   onSenalarCampo,
   onEditarTexto,
@@ -48,6 +49,8 @@ export default function VistaPreviaEnVivo({
   datos: DatosInvitacion;
   /** Fotos del pedido sin ordenar; aquí se aplica el orden en vivo. */
   fotos: FotoInvitacion[];
+  /** Video del cliente, si subió uno. */
+  video?: FotoInvitacion;
   /** HTML pegado, cuando la invitación se hizo fuera del sistema. */
   codigoHtml?: string | null;
   /** Se llama al señalar un bloque, con el campo del editor que lo controla. */
@@ -94,7 +97,13 @@ export default function VistaPreviaEnVivo({
     ? { ...datos, efectos: { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}), sobre: false } }
     : datos;
 
-  const fotosOrdenadas = ordenarFotos(fotos, datos.ordenFotos, datos.fotosOcultas);
+  // Se compone igual que la página pública para que la vista previa no
+  // mienta: mismo orden y el video de portada por delante si está activo.
+  const medios = conVideoDePortada(
+    ordenarFotos(fotos, datos.ordenFotos, datos.fotosOcultas),
+    video,
+    datosPrevia.efectos?.videoPortada !== false
+  );
 
   /**
    * En modo señalar, el clic lleva al campo que controla ese bloque en vez
@@ -197,9 +206,9 @@ export default function VistaPreviaEnVivo({
             onEditarTexto={editando ? onEditarTexto : undefined}
           >
             {esInvitacionDeCodigo(plantilla) ? (
-              <CodigoPropio html={codigoHtml ?? ""} datos={datosPrevia} fotos={fotosOrdenadas} />
+              <CodigoPropio html={codigoHtml ?? ""} datos={datosPrevia} fotos={medios} />
             ) : (
-              <Renderizador plantilla={plantilla} datos={datosPrevia} fotos={fotosOrdenadas} />
+              <Renderizador plantilla={plantilla} datos={datosPrevia} fotos={medios} />
             )}
           </ProveedorInvitacion>
         </div>

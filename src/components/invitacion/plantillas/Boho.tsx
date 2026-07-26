@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { SolRetro, DivisorOnda } from "../base/Ornamentos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * BOHO RETRO
@@ -59,8 +60,7 @@ export default function Boho({
                   boxShadow: "0 20px 50px -24px rgba(0,0,0,.45)",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={portada.url} alt="" className="w-full h-full object-cover" />
+                <MedioPortada medio={portada} className="w-full h-full object-cover" />
               </div>
             </Revelar>
           )}

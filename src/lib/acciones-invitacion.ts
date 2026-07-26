@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { derivarDatosInvitacion, slugificar } from "./invitacion";
+import { normalizarDominio, dominioValido } from "./dominios";
 import { calcularVencimiento } from "./vencimientos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
@@ -71,20 +72,37 @@ export async function guardarInvitacion(
   slug: string,
   plantilla: string,
   /** HTML de la invitación cuando se hizo fuera del sistema. */
-  codigoHtml?: string | null
+  codigoHtml?: string | null,
+  /** Dominio propio del cliente, si compró el extra. */
+  dominio?: string | null
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await crearClienteServidor();
+
+  // El dominio se guarda normalizado (sin https://, sin www, en
+  // minúsculas) para que la petición que llegue por él lo encuentre.
+  const dominioLimpio = normalizarDominio(dominio ?? "");
+  if (dominioLimpio && !dominioValido(dominioLimpio)) {
+    return { ok: false, error: `"${dominioLimpio}" no tiene forma de dominio (ej. bodacamila.com).` };
+  }
 
   const slugLimpio = slugificar(slug);
   const { error } = await supabase
     .from("invitaciones")
-    .update({ datos, slug: slugLimpio, plantilla, codigo_html: codigoHtml ?? null })
+    .update({
+      datos,
+      slug: slugLimpio,
+      plantilla,
+      codigo_html: codigoHtml ?? null,
+      dominio: dominioLimpio || null,
+    })
     .eq("id", invitacionId);
 
   if (error) {
-    const mensaje = error.message.includes("duplicate")
-      ? "Ese slug ya está en uso por otra invitación."
-      : error.message;
+    const mensaje = error.message.includes("invitaciones_dominio_unico")
+      ? "Ese dominio ya está asignado a otra invitación."
+      : error.message.includes("duplicate")
+        ? "Ese slug ya está en uso por otra invitación."
+        : error.message;
     return { ok: false, error: mensaje };
   }
 
@@ -114,8 +132,11 @@ export async function publicarInvitacion(invitacionId: string) {
   // Actualizar el pedido: URL entregada + estado entregada + vencimiento
   const pedido = invitacion.pedidos;
   const urlBase = resolverUrlBase();
+  // Si el cliente pagó su dominio, la dirección que se le entrega es esa.
   const cambios: Record<string, unknown> = {
-    url_entregada: `${urlBase}/i/${invitacion.slug}`,
+    url_entregada: invitacion.dominio
+      ? `https://${invitacion.dominio}`
+      : `${urlBase}/i/${invitacion.slug}`,
   };
 
   if (!["entregada", "activa", "vencida"].includes(pedido.estado)) {

@@ -353,7 +353,7 @@ Comparando `config/formularios.ts` con `derivarDatosInvitacion()`
 | `ambiente_musical` | Se pregunta el ambiente musical en 3 variantes por evento. No se usa **para nada** — ni siquiera queda anotado para el equipo. |
 | `mensaje_recordatorio` | No aparece en la invitación. |
 | `preferencias_diseno` | Los deseos de diseño en texto libre del cliente. Solo visibles en el brief. |
-| `video_fondo` | Se sube el video y no hay soporte para mostrarlo. |
+| `video_fondo` | ✅ Resuelto: el video va de portada en bucle, mudo, en las doce plantillas. |
 | `logo_empresa` | Se sube y no se usa en la invitación corporativa. |
 | `datos_registro` | Qué datos pedir en el registro. No se aplica al RSVP. |
 | `tipo_evento_corp` | Conferencia/gala/lanzamiento no influye en nada. |
@@ -436,11 +436,15 @@ de avisos públicos vacía. El corporativo elige Cinema por ser un lanzamiento y
 deja constancia de los colores de marca, mientras el aviso del QR sí se queda
 en las notas públicas, que es donde corresponde.
 
-**Sigue pendiente, y es decisión comercial, no técnica:** el formulario promete
-dos cosas que el sistema no sabe entregar — el **video de portada** del plan
-Luxury ("se verá en bucle en la portada") y el **dominio propio** (§6.4). Hoy
-ambos quedan anotados para el equipo, pero no existe el mecanismo. Hay que
-implementarlos o ajustar lo que se promete. Tampoco se implementaron los
+**✅ Las dos promesas ya se cumplen.** El **video de portada** del plan Luxury se
+dibuja en bucle, mudo y sin controles en las doce plantillas (`MedioPortada`),
+con la primera foto de respaldo mientras carga y para quien tiene activado
+"reducir movimiento"; no entra en la galería y se apaga desde el editor. El
+**dominio propio** (§6.4) es ahora una columna de la invitación: el proxy manda
+al dueño correcto lo que llega por un dominio ajeno. Siguen haciendo falta dos
+pasos fuera del sistema, una vez por dominio — darlo de alta en Vercel y apuntar
+el DNS —, porque ninguna plataforma deja que una aplicación reclame dominios por
+su cuenta. Tampoco se implementaron los
 **campos configurables de RSVP** que sugiere `datos_registro`: exigen ampliar la
 tabla `confirmaciones` y el formulario del invitado, y es una función aparte.
 
@@ -557,12 +561,21 @@ mensaje de renovación usaba `formatoFecha`, que en `es-DO` produce *"30 jun de
 La migración se validó contra un Postgres real y es **repetible**: correrla dos
 veces no da error.
 
-### 6.4 Se vende un extra que el sistema no sabe entregar
+### 6.4 ✅ Se vende un extra que el sistema no sabe entregar
 
 `EXTRAS` incluye **"Dominio Web Propio" (RD$ 1,500)** (`planes.ts:38`) y el formulario
-pregunta `dominio_deseado`. No hay ningún soporte de dominios personalizados en el
-código: las invitaciones viven todas en `/i/<slug>`. Se cobra un extra que hoy solo
-puede cumplirse configurando cosas a mano en Vercel, si es que se cumple.
+pregunta `dominio_deseado`. No había ningún soporte de dominios personalizados: las
+invitaciones vivían todas en `/i/<slug>`. Se cobraba un extra que solo podía cumplirse
+configurando cosas a mano, si es que se cumplía.
+
+**Resuelto.** `invitaciones.dominio` guarda de quién es cada dominio y el proxy
+reescribe a `/d/<dominio>` lo que llegue por un `Host` ajeno. En ese dominio solo
+existe esa invitación —el panel no—, los borradores dan 404 porque ahí no hay sesión
+del equipo, y la API sigue respondiendo para que las confirmaciones y el conteo de
+visitas funcionen. La dirección de siempre no se apaga. Dos invitaciones no pueden
+compartir dominio: lo impide un índice único. Lo que el código no puede hacer, y se
+documenta como paso manual una vez por dominio, es dar de alta el dominio en Vercel
+y apuntar el DNS.
 
 ### 6.5 Los enlaces son adivinables y exponen datos sensibles
 
@@ -581,9 +594,9 @@ antes de cambiarlo en invitaciones ya publicadas.
 - Se pueden **seguir subiendo fotos después de enviar el formulario**: la ruta de
   fotos no comprueba el estado, a diferencia del PATCH de respuestas que sí lo hace
   (`route.ts:68`). El diseñador puede estar trabajando con un set que cambia.
-- El comentario dice "los videos cuentan aparte, máx. 1"
-  (`fotos/route.ts:46`) pero **ese límite no se aplica en el código**. Se pueden subir
-  N videos de 50 MB.
+- ✅ El comentario decía "los videos cuentan aparte, máx. 1"
+  (`fotos/route.ts:46`) y **ese límite no se aplicaba en el código**: se podían subir
+  N videos de 50 MB. Ahora la subida rechaza el segundo con un mensaje claro.
 - Premium y Luxury son ilimitados sin tope global: nada impide 200 fotos × 6 MB en un
   solo pedido.
 - Las subidas son secuenciales (`Campos.tsx:330`): 15 fotos se suben una tras otra en

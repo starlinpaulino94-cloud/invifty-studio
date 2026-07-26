@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { DivisorPalma } from "../base/Ornamentos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * TROPICAL CARIBE
@@ -30,8 +31,7 @@ export default function Tropical({
       <header className="relative min-h-[100dvh] flex flex-col items-center justify-end text-center px-6 pb-24 pt-32 overflow-hidden">
         {portada?.url && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={portada.url} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.62 }} />
+            <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.62 }} />
             <div
               className="absolute inset-0"
               style={{

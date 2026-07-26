@@ -7,6 +7,7 @@ import { Revelar } from "../base/Efectos";
 import { inicialesDe } from "../base/Ornamentos";
 import { Guirnalda, RamoEsquina, RamaLateral } from "../base/OrnamentosFlorales";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * JARDÍN ENCANTADO
@@ -65,8 +66,7 @@ export default function Jardin({
                 }}
               >
                 {portada?.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={portada.url} alt="" className="w-full h-full object-cover" />
+                  <MedioPortada medio={portada} className="w-full h-full object-cover" />
                 ) : (
                   <span
                     className="absolute inset-0 flex items-center justify-center text-3xl tracking-[0.15em]"

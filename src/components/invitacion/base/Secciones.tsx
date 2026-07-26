@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import type { DatosInvitacion, DensidadOrnamental, FotoInvitacion } from "@/lib/tipos";
+import { esVideo } from "@/lib/fotos";
 import { Divisor } from "./Ornamentos";
 import Texto from "./Texto";
 import { Guirnalda, SeparadorFloral } from "./OrnamentosFlorales";
@@ -319,7 +320,10 @@ export function BloqueGaleria({
   variante: string;
   disposicion?: "mosaico" | "rejilla" | "tira";
 }) {
-  if (!datos.secciones.galeria || fotos.length < 2) return null;
+  // El video va de portada, no en la cuadrícula: ahí abriría el visor de
+  // fotos con un archivo que no es una foto.
+  const soloFotos = fotos.filter((f) => !esVideo(f.nombre));
+  if (!datos.secciones.galeria || soloFotos.length < 2) return null;
   return (
     <Seccion campo="galeria">
       <div className="max-w-3xl mx-auto">
@@ -327,7 +331,7 @@ export function BloqueGaleria({
           <TituloSeccion titulo="Galería" icono={<Camera className="w-4 h-4" />} variante={variante} densidad={datos.densidad} />
         </Revelar>
         <Revelar retraso={100}>
-          <Galeria fotos={fotos} disposicion={disposicion} />
+          <Galeria fotos={soloFotos} disposicion={disposicion} />
         </Revelar>
         <p className="text-center text-[10px] mt-4" style={{ color: "var(--inv-texto-suave)" }}>
           Toca cualquier fotografía para ampliarla

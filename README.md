@@ -27,6 +27,7 @@ Dos caras:
    - **¿Y antes del contador de visitas?** Ejecuta [`supabase/migracion-visitas.sql`](./supabase/migracion-visitas.sql), que agrega la tabla `visitas`. Sin ella el panel muestra el contador en cero, pero nada se rompe.
    - **¿Y antes de los avisos de vencimiento?** Ejecuta [`supabase/migracion-aviso-vencimiento.sql`](./supabase/migracion-aviso-vencimiento.sql), que agrega la columna `aviso_vencimiento_en` a `pedidos`.
    - **¿Y antes de las invitaciones con código propio?** Ejecuta [`supabase/migracion-codigo-propio.sql`](./supabase/migracion-codigo-propio.sql), que agrega la columna `codigo_html` a `invitaciones`.
+   - **¿Y antes del dominio propio?** Ejecuta [`supabase/migracion-dominio-propio.sql`](./supabase/migracion-dominio-propio.sql), que agrega la columna `dominio` a `invitaciones`. Sin ella, el editor no puede guardar el dominio del cliente.
    - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Las siete filas deben decir `OK`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
@@ -340,6 +341,62 @@ propios existe `invifty.confirmar({…})`, que devuelve una promesa.
 > El título y la fecha de la tarjeta **Portada** se siguen usando aunque el
 > diseño venga del código: de ahí salen la vista previa al compartir y la
 > dirección web.
+
+### Video de portada (lo que promete el plan Luxury)
+
+El plan Luxury dice que el video del cliente "se verá en bucle en la portada".
+El video se subía y se guardaba, pero **ninguna plantilla sabía dibujarlo**: se
+quedaba en el bucket ocupando 50 MB sin que nadie lo viera. Ahora, si el cliente
+subió un video, va de portada por delante de las fotos, en las doce plantillas.
+
+- **En bucle, mudo y sin controles.** Mudo no es opcional: ningún navegador deja
+  que un video con sonido arranque solo. La música de la invitación es aparte,
+  con su botón.
+- **La primera foto hace de respaldo**: es lo que se ve mientras el video carga.
+- Quien tenga activado **"reducir movimiento"** en su teléfono ve esa foto fija
+  en vez del bucle. Suele estar activado por mareos o migrañas.
+- **No entra en la galería**: ahí abriría el visor de fotos con un archivo que
+  no es una foto.
+- Se apaga desde el editor, en **Experiencia de apertura → Video en la portada**.
+  El interruptor solo aparece si hay video.
+
+Se admite **un solo video** por pedido. El tope se anunciaba en un comentario y
+no se aplicaba en ningún sitio; ahora la subida lo rechaza con un mensaje claro.
+
+Para el código: las plantillas piden su portada a `MedioPortada`
+(`src/components/invitacion/base/MedioPortada.tsx`) en vez de escribir un
+`<img>`, así que da igual si el cliente puso foto o video y una plantilla nueva
+lo hereda sin enterarse.
+
+### Dominio propio del cliente (extra de RD$ 1,500)
+
+El catálogo vende "Dominio Web Propio" y el formulario pregunta cuál quiere el
+cliente. No había nada detrás: todas las invitaciones vivían en `/i/<slug>` y el
+extra solo podía cumplirse a mano, si alguien se acordaba.
+
+Ahora el dominio es un dato de la invitación. En el editor, tarjeta **Portada**,
+campo **"Dominio propio del cliente"**. Da igual cómo lo escribas —
+`https://www.BodaCamila.com/` y `bodacamila.com` se guardan igual.
+
+**Faltan dos pasos que el código no puede dar** (ninguna plataforma deja que una
+aplicación reclame dominios por su cuenta):
+
+1. En **Vercel** → el proyecto → **Domains** → añadir el dominio.
+2. Apuntar el **DNS** del dominio a donde Vercel indique.
+
+Hecho eso, el dominio abre la invitación sin tocar nada más.
+
+| | |
+|---|---|
+| Qué se sirve en ese dominio | Solo esa invitación. `midominio.com/panel` también la muestra: ahí no hay panel. |
+| Borradores | 404. En el dominio del cliente no hay sesión del equipo. |
+| La API | Responde igual en el dominio del cliente — de ahí salen sus confirmaciones y su conteo de visitas. |
+| La dirección de siempre | Sigue funcionando. Tener dominio no apaga `/i/<slug>`. |
+| Al publicar | La URL que se guarda en la ficha del pedido pasa a ser la del dominio. |
+
+Dos invitaciones no pueden compartir dominio: la petición llega por el `Host` y
+no habría forma de saber cuál servir. La base de datos lo impide y el editor lo
+dice con un mensaje en vez de un error.
 
 ### Avisos de vencimiento y renovación
 

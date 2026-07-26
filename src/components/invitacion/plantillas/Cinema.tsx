@@ -5,6 +5,7 @@ import Marco, { fechaCorta, hora12, etiquetaDressCode } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * CINEMA
@@ -36,8 +37,7 @@ export default function Cinema({
       <header className="relative min-h-[100dvh] flex flex-col justify-end overflow-hidden">
         {portada?.url ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={portada.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" />
             <div
               className="absolute inset-0"
               style={{

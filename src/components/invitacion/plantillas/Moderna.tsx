@@ -5,6 +5,7 @@ import Marco, { fechaCorta, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * MODERNA
@@ -105,8 +106,7 @@ export default function Moderna({
         <div className="relative min-h-[52dvh] lg:min-h-full order-1 lg:order-2 overflow-hidden">
           {portada?.url ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={portada.url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" />
               <div
                 className="absolute inset-0 lg:hidden"
                 style={{ background: "linear-gradient(to bottom, transparent 55%, var(--inv-fondo) 100%)" }}

@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar, MonogramaPortada } from "../base/Efectos";
 import { EsquinaOrnamental, DivisorFiligrana, inicialesDe } from "../base/Ornamentos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * EDITORIAL LUXE
@@ -32,13 +33,7 @@ export default function Editorial({
         {/* Fotografía de fondo */}
         {portada?.url && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={portada.url}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ opacity: 0.32 }}
-            />
+            <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.32 }} />
             <div
               className="absolute inset-0"
               style={{

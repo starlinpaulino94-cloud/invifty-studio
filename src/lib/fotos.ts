@@ -148,6 +148,26 @@ export function ordenarFotos<T extends { nombre: string }>(
   return [...colocadas, ...resto];
 }
 
+/**
+ * Pone el video del cliente de portada, delante de las fotos.
+ *
+ * El plan Luxury promete que el video "se verá en bucle en la portada", y
+ * las doce plantillas usan `fotos[0]` como portada: basta con ponerlo ahí.
+ * Su miniatura pasa a ser la primera foto, que es lo que se enseña mientras
+ * el video carga.
+ *
+ * La galería descarta los videos por su cuenta, así que aparecer aquí no lo
+ * mete en la cuadrícula de fotos.
+ */
+export function conVideoDePortada<T extends { nombre: string; url?: string; urlMiniatura?: string }>(
+  fotos: T[],
+  video: T | undefined,
+  activo = true
+): T[] {
+  if (!activo || !video?.url) return fotos;
+  return [{ ...video, urlMiniatura: fotos[0]?.url ?? video.url }, ...fotos];
+}
+
 /** Borra un archivo y, si los tiene, sus derivados. */
 export async function borrarArchivo(
   admin: ClienteAdmin,

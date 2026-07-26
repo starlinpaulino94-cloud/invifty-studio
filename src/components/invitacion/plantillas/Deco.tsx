@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { MarcoDeco, DivisorDeco, inicialesDe } from "../base/Ornamentos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * ART DÉCO
@@ -43,8 +44,7 @@ export default function Deco({
 
         {portada?.url && (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={portada.url} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.22 }} />
+            <MedioPortada medio={portada} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.22 }} />
             <div
               className="absolute inset-0"
               style={{ background: "radial-gradient(ellipse at center, transparent 30%, var(--inv-fondo) 85%)" }}

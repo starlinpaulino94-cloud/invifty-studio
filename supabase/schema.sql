@@ -119,6 +119,9 @@ create table public.invitaciones (
   -- HTML de una invitación hecha fuera del sistema (por ejemplo con IA).
   -- Se usa cuando `plantilla` vale 'codigo'.
   codigo_html   text,
+  -- Dominio propio del cliente (extra del catálogo), sin protocolo ni www.
+  -- El DNS y el alta en Vercel se hacen aparte; esto es de quién es.
+  dominio       text,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
@@ -126,6 +129,12 @@ create table public.invitaciones (
 );
 
 create index invitaciones_pedido_idx on public.invitaciones (pedido_id);
+
+-- Dos invitaciones no pueden compartir dominio: la petición llega por el
+-- Host y no habría forma de saber cuál servir.
+create unique index invitaciones_dominio_unico
+  on public.invitaciones (lower(dominio))
+  where dominio is not null;
 
 create trigger invitaciones_tocar before update on public.invitaciones
   for each row execute function public.tocar_actualizado_en();

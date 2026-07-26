@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { DivisorMinimo } from "../base/Ornamentos";
 import Texto from "../base/Texto";
+import MedioPortada from "../base/MedioPortada";
 
 /**
  * ARCO
@@ -37,8 +38,7 @@ export default function Arco({
             >
               {portada?.url ? (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={portada.url} alt="" className="w-full h-full object-cover" />
+                  <MedioPortada medio={portada} className="w-full h-full object-cover" />
                 </>
               ) : (
                 <div

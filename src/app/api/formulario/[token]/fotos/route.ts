@@ -60,6 +60,16 @@ export async function POST(
     );
   }
 
+  // Un solo video: es el que va de portada, y los demás se quedarían
+  // ocupando 50 MB cada uno sin que nadie los vea. El tope se anunciaba en
+  // un comentario y no se aplicaba en ningún sitio.
+  if (archivoEsVideo && existentes.some((a) => a.esVideo)) {
+    return NextResponse.json(
+      { error: "Solo se puede subir un video. Elimina el que ya subiste para cambiarlo." },
+      { status: 400 }
+    );
+  }
+
   const extension = (archivo.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
   const prefijo = archivoEsVideo ? "video-" : "";
   const nombre = `${prefijo}${crypto.randomUUID()}.${extension}`;

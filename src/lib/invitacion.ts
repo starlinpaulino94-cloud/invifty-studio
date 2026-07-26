@@ -1,3 +1,4 @@
+import { EFECTOS_POR_DEFECTO } from "./tipos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida, densidad } from "@/config/diseno";
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
@@ -213,7 +214,7 @@ export function derivarDatosInvitacion(
       fechaLimite: rsvpRaw.fecha_limite ?? "",
       acompanantes: rsvpRaw.acompanantes !== "no",
     },
-    efectos: { sobre: true, textura: true, musica: false },
+    efectos: { ...EFECTOS_POR_DEFECTO },
     secciones: {
       historia: false,
       galeria: true,
