@@ -166,3 +166,30 @@ create policy "equipo acceso total confirmaciones" on public.confirmaciones
 -- Los invitados NO tocan la tabla: confirman por la ruta
 -- /api/invitacion/<slug>/rsvp, que valida en el servidor que la
 -- invitación existe y está publicada antes de guardar nada.
+
+-- ---------- VISITAS A LAS INVITACIONES ----------
+-- Para poder decirle al cliente cuántas veces se abrió su invitación.
+-- PRIVACIDAD: no se guarda ninguna IP ni cookie, solo un hash
+-- irreversible que además cambia de una invitación a otra.
+create table public.visitas (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  huella        text not null,
+  -- Hora redondeada hacia abajo: una fila por dispositivo y hora, para que
+  -- recargar la página no infle el conteo.
+  hora          timestamptz not null,
+  creado_en     timestamptz not null default now()
+);
+
+create unique index visitas_unicas_idx
+  on public.visitas (invitacion_id, huella, hora);
+
+create index visitas_invitacion_idx
+  on public.visitas (invitacion_id, creado_en desc);
+
+alter table public.visitas enable row level security;
+
+create policy "equipo acceso total visitas" on public.visitas
+  for all to authenticated using (true) with check (true);
+-- Los invitados NO tocan la tabla: la visita se registra desde
+-- /api/invitacion/<slug>/visita, en el servidor.

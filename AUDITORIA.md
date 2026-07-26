@@ -30,7 +30,7 @@ palanca de calidad disponible, y casi todo es trabajo de un día por punto.
 | 3 | Fotos sin optimizar (invitaciones de 50-90 MB) | 🟠 Alto | 1-2 días | ✅ Resuelto |
 | 4 | Las confirmaciones (RSVP) no se guardan | 🟠 Alto | 2 días | ✅ Resuelto (requiere correr la migración) |
 | 5 | Paletas y respuestas que se descartan en silencio | 🟠 Alto | 1 día | ✅ Resuelto |
-| 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ⏳ Pendiente |
+| 6 | Sin métrica de vistas para el cliente | 🟡 Medio | 1 día | ✅ Resuelto (requiere correr la migración) |
 | 7 | Deuda técnica (lint roto, sin tests, sin CI) | 🔵 Base | 1-2 días | ✅ Resuelto |
 
 ---
@@ -448,12 +448,37 @@ tabla `confirmaciones` y el formulario del invitado, y es una función aparte.
 
 ## 6. 🟡 Producto y operación
 
-### 6.1 Nadie sabe cuántas veces se abrió la invitación
+### 6.1 ✅ Nadie sabe cuántas veces se abrió la invitación — RESUELTO
 
 No hay registro de visitas. El equipo no puede decirle al cliente *"tu invitación se
 abrió 340 veces, la vieron 180 personas distintas"* — que es a la vez un argumento de
 venta, una prueba de valor entregado y el mejor gancho para renovar la vigencia.
 Una tabla de eventos ligera (o Vercel Analytics) resuelve esto en un día.
+
+**Lo implementado.** Tabla `visitas` con RLS (`supabase/migracion-visitas.sql`;
+**hay que correr la migración**, aunque sin ella el panel muestra ceros y nada se
+rompe). En la ficha del pedido, la tarjeta **"Cómo va la invitación"** con
+aperturas, personas, movimiento de los últimos 7 días, primera y última visita, y
+un botón para copiar el mensaje listo para el cliente.
+
+Tres decisiones que hacen que el número signifique algo:
+
+- **Se cuenta desde el navegador**, no al servir la página. Los rastreadores y las
+  vistas previas de WhatsApp piden el HTML pero no ejecutan JavaScript, así que no
+  inflan el dato. Contar en el servidor habría hecho que cada vez que alguien
+  comparte el enlace subiera el contador.
+- **Una apertura = un dispositivo por hora.** Recargar quince veces cuenta una.
+- **Los borradores no cuentan**: las pruebas del equipo no ensucian el número.
+
+**Privacidad.** No se guarda ninguna IP, ni cookies, ni identificadores que sigan a
+una persona entre invitaciones: solo un hash irreversible de (id de la invitación +
+IP + navegador). Como el id de la invitación no es público —lo que se comparte es
+el slug—, la misma persona produce huellas distintas en invitaciones distintas.
+Hay pruebas que fijan justamente eso: que la huella es estable dentro de una
+invitación, que **cambia** entre invitaciones y que no deja ver la IP.
+
+9 pruebas nuevas (27 en total). La ruta de registro devuelve siempre 200 y falla en
+silencio: contar visitas no puede estropearle la invitación a un invitado.
 
 ### 6.2 La política de vigencias es contradictoria
 

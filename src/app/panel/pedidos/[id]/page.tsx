@@ -11,6 +11,8 @@ import { construirFormulario } from "@/config/formularios";
 import { formatearValor, textoDeBloque } from "@/lib/respuestas";
 import { Cliente, Confirmacion, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import Confirmaciones from "@/components/panel/Confirmaciones";
+import Visitas from "@/components/panel/Visitas";
+import { resumirVisitas } from "@/lib/visitas";
 import { urlBase as resolverUrlBase } from "@/lib/url";
 import { BUCKET, HORAS_FIRMA, listarArchivos, rutaOriginal, urlsDeFoto } from "@/lib/fotos";
 import {
@@ -57,6 +59,12 @@ export default async function FichaPedido({
         .order("creado_en", { ascending: false })
     : { data: null };
   const confirmaciones = (confirmacionesData ?? []) as Confirmacion[];
+
+  // Cuánto se ha abierto la invitación
+  const { data: visitasData } = invitacion
+    ? await supabase.from("visitas").select("huella, creado_en").eq("invitacion_id", invitacion.id)
+    : { data: null };
+  const resumenVisitas = resumirVisitas(visitasData ?? []);
 
   const pedido = data as Pedido & {
     clientes: Cliente;
@@ -256,9 +264,12 @@ export default async function FichaPedido({
         </div>
       </div>
 
-      {/* Confirmaciones de asistencia (solo tiene sentido una vez publicada) */}
+      {/* Visitas y confirmaciones (solo tienen sentido una vez publicada) */}
       {invitacion?.estado === "publicada" && (
-        <Confirmaciones confirmaciones={confirmaciones} nombreEvento={cliente.nombre} />
+        <>
+          <Visitas resumen={resumenVisitas} nombreEvento={cliente.nombre} />
+          <Confirmaciones confirmaciones={confirmaciones} nombreEvento={cliente.nombre} />
+        </>
       )}
 
       {/* Respuestas */}

@@ -24,7 +24,8 @@ Dos caras:
 2. Abre el archivo [`supabase/schema.sql`](./supabase/schema.sql) de este repo, copia TODO su contenido, pégalo y presiona **Run**.
    - **¿Ya habías ejecutado el schema antes de la Fase 2?** Entonces ejecuta solo [`supabase/migracion-fase2-invitaciones.sql`](./supabase/migracion-fase2-invitaciones.sql), que agrega la tabla `invitaciones`.
    - **¿Ya lo habías ejecutado antes de las confirmaciones (RSVP)?** Ejecuta también [`supabase/migracion-rsvp-confirmaciones.sql`](./supabase/migracion-rsvp-confirmaciones.sql), que agrega la tabla `confirmaciones`. Sin ella, las confirmaciones de los invitados no se guardan.
-3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones` y `confirmaciones`, y en **Storage** que existe el bucket `fotos-pedidos`.
+   - **¿Y antes del contador de visitas?** Ejecuta [`supabase/migracion-visitas.sql`](./supabase/migracion-visitas.sql), que agrega la tabla `visitas`. Sin ella el panel muestra el contador en cero, pero nada se rompe.
+3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
 ### 1.3 Crear el primer usuario del panel
 
@@ -199,6 +200,28 @@ en Excel.
   ensuciar la lista del cliente con pruebas.
 - La confirmación se envía a `/api/invitacion/<slug>/rsvp`, que valida todo en
   el servidor. Los invitados nunca tocan la base de datos directamente.
+
+### Cuántas veces se abrió la invitación
+
+En la ficha del pedido, la tarjeta **"Cómo va la invitación"** muestra cuántas
+veces se abrió, cuánta gente la vio y el movimiento de los últimos 7 días, con
+un botón para **copiar el mensaje** listo para mandárselo al cliente. Es prueba
+del trabajo entregado y la mejor excusa para hablar de renovar la vigencia.
+
+- Una **apertura** es un dispositivo en una hora: si un invitado recarga quince
+  veces seguidas, cuenta una. Así el número significa algo.
+- **Personas** es una aproximación por dispositivo: una pareja que abre la
+  invitación desde el mismo celular cuenta como una.
+- Se cuenta **desde el navegador**, no al servir la página, para que los
+  rastreadores y las vistas previas de WhatsApp —que piden el HTML pero no
+  ejecutan JavaScript— no inflen el número.
+- Los **borradores no cuentan**: las pruebas del equipo no ensucian el dato.
+
+**Privacidad:** no se guarda ninguna IP, ni cookies, ni identificadores que
+sigan a una persona entre invitaciones. Solo se guarda un hash irreversible de
+(id de la invitación + IP + navegador). Como el id de la invitación no es
+público —lo que se comparte es el slug—, la misma persona produce huellas
+distintas en invitaciones distintas y no se la puede seguir de una a otra.
 
 ### Fotos ligeras
 
