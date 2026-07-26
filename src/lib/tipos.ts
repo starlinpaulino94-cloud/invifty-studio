@@ -120,6 +120,14 @@ export interface DatosInvitacion {
 
   /** Pareja tipográfica (ver config/diseno.ts) */
   tipografia?: string;
+  /**
+   * Orden en que se muestran las fotos, por nombre de archivo. La primera
+   * es la PORTADA. Las que no estén aquí van después, en el orden en que
+   * las subió el cliente. Si se omite, manda ese orden de subida.
+   */
+  ordenFotos?: string[];
+  /** Fotos que el cliente subió pero que no salen en la invitación. */
+  fotosOcultas?: string[];
   /** Iniciales del monograma; si se omite se derivan del título */
   monograma?: string;
   /** Etiqueta social del evento, ej. "#CamilaYLucas2026" */

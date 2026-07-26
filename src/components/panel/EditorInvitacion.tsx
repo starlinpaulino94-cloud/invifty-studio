@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { DatosInvitacion, EstadoInvitacion, EFECTOS_POR_DEFECTO } from "@/lib/tipos";
+import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
+import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/tipos";
+import GestorFotos from "./GestorFotos";
 import { PALETAS, TIPOGRAFIAS } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import {
@@ -23,6 +25,7 @@ export default function EditorInvitacion({
   datosIniciales,
   estado,
   urlPublica,
+  fotos,
 }: {
   invitacionId: string;
   slugInicial: string;
@@ -30,12 +33,16 @@ export default function EditorInvitacion({
   datosIniciales: DatosInvitacion;
   estado: EstadoInvitacion;
   urlPublica: string;
+  /** Fotos que subió el cliente, sin ordenar ni filtrar. */
+  fotos: FotoInvitacion[];
 }) {
   const [datos, setDatos] = useState<DatosInvitacion>({
     ...datosIniciales,
     padrinos: datosIniciales.padrinos ?? [],
     notas: datosIniciales.notas ?? [],
     notasEquipo: datosIniciales.notasEquipo ?? [],
+    ordenFotos: datosIniciales.ordenFotos ?? [],
+    fotosOcultas: datosIniciales.fotosOcultas ?? [],
     efectos: { ...EFECTOS_POR_DEFECTO, ...(datosIniciales.efectos ?? {}) },
     secciones: {
       padrinos: false,
@@ -439,12 +446,21 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Galería de fotos"
+        titulo="Fotos, portada y orden"
+        subtitulo="Elige cuál es la portada, en qué orden se ven y cuáles no salen."
         toggle={{ activo: datos.secciones.galeria, onChange: (v) => setSeccion("galeria", v) }}
       >
-        <p className="text-xs text-gray-400">
-          Usa las fotos que el cliente subió en su formulario (la primera es la portada).
-          Para cambiarlas, gestiónalas desde la ficha del pedido.
+        <GestorFotos
+          fotos={fotos}
+          orden={datos.ordenFotos ?? []}
+          ocultas={datos.fotosOcultas ?? []}
+          onCambiar={(orden, ocultas) =>
+            setDatos((d) => ({ ...d, ordenFotos: orden, fotosOcultas: ocultas }))
+          }
+        />
+        <p className="text-[11px] text-gray-400 mt-4">
+          Las fotos las sube el cliente desde su formulario. Para añadir o borrar
+          archivos, ve a la ficha del pedido.
         </p>
       </Tarjeta>
 
