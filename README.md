@@ -26,6 +26,7 @@ Dos caras:
    - **¿Ya lo habías ejecutado antes de las confirmaciones (RSVP)?** Ejecuta también [`supabase/migracion-rsvp-confirmaciones.sql`](./supabase/migracion-rsvp-confirmaciones.sql), que agrega la tabla `confirmaciones`. Sin ella, las confirmaciones de los invitados no se guardan.
    - **¿Y antes del contador de visitas?** Ejecuta [`supabase/migracion-visitas.sql`](./supabase/migracion-visitas.sql), que agrega la tabla `visitas`. Sin ella el panel muestra el contador en cero, pero nada se rompe.
    - **¿Y antes de los avisos de vencimiento?** Ejecuta [`supabase/migracion-aviso-vencimiento.sql`](./supabase/migracion-aviso-vencimiento.sql), que agrega la columna `aviso_vencimiento_en` a `pedidos`.
+   - **¿Y antes de las invitaciones con código propio?** Ejecuta [`supabase/migracion-codigo-propio.sql`](./supabase/migracion-codigo-propio.sql), que agrega la columna `codigo_html` a `invitaciones`.
    - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Las siete filas deben decir `OK`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
@@ -232,6 +233,40 @@ en Excel.
   ensuciar la lista del cliente con pruebas.
 - La confirmación se envía a `/api/invitacion/<slug>/rsvp`, que valida todo en
   el servidor. Los invitados nunca tocan la base de datos directamente.
+
+### Invitaciones con código propio (por ejemplo hechas con IA)
+
+Si una invitación se diseña fuera del sistema, en el editor se elige la opción
+**"Código propio"** y se pega el HTML. A partir de ahí se administra igual que
+las demás: misma dirección `tu-dominio/i/<slug>`, misma vista previa al
+compartir por WhatsApp, mismo contador de visitas, mismo borrador/publicada y
+mismo vencimiento.
+
+**Marcadores.** Para no tener que pegar a mano las direcciones de las fotos
+—que además caducan—, el código puede llevar estos marcadores y el sistema pone
+el dato real al mostrarla:
+
+| Marcador | Se reemplaza por |
+|---|---|
+| `{{PORTADA}}` | Dirección de la foto de portada |
+| `{{FOTO_1}}`, `{{FOTO_2}}`… | Las fotos del cliente, en el orden del editor |
+| `{{TITULO}}` | Título de la invitación |
+| `{{FECHA}}` | Fecha del evento, en palabras |
+
+**Seguridad: por qué va aislado.** Ese HTML lo escribe una herramienta externa y
+puede traer JavaScript. Servido tal cual compartiría origen con `/panel`, así que
+un script podría leer la sesión del equipo. Por eso se muestra dentro de un
+iframe con `sandbox` **sin** `allow-same-origin`: el navegador le asigna un
+origen opaco y desde ahí no puede tocar cookies, ni almacenamiento, ni la página
+que lo contiene. Puede pintar y animar lo que quiera, y nada más.
+
+Como consecuencia, el código **no puede usar rutas relativas** (`/foto.jpg`,
+`./estilo.css`): las direcciones tienen que ir completas, o usar los marcadores.
+El editor avisa de esto y de otros descuidos habituales antes de publicar.
+
+> El título y la fecha de la tarjeta **Portada** se siguen usando aunque el
+> diseño venga del código: de ahí salen la vista previa al compartir y la
+> dirección web.
 
 ### Avisos de vencimiento y renovación
 

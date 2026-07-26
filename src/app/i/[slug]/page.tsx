@@ -5,6 +5,8 @@ import { crearClienteServidor } from "@/lib/supabase/servidor";
 import Renderizador from "@/components/invitacion/Renderizador";
 import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
 import RegistroVisita from "@/components/invitacion/base/RegistroVisita";
+import CodigoPropio from "@/components/invitacion/CodigoPropio";
+import { esInvitacionDeCodigo } from "@/lib/codigo";
 import { DatosInvitacion } from "@/lib/tipos";
 import { urlFuentes, paleta } from "@/config/diseno";
 import { fechaLarga } from "@/lib/fechas";
@@ -145,12 +147,21 @@ export default async function PaginaInvitacion({
 
       <ProveedorInvitacion slug={slug} esBorrador={esBorrador}>
         <RegistroVisita />
-        <Renderizador
-          plantilla={invitacion.plantilla as string}
-          datos={datos}
-          fotos={fotos}
-          esBorrador={esBorrador}
-        />
+        {esInvitacionDeCodigo(invitacion.plantilla as string) ? (
+          <CodigoPropio
+            html={invitacion.codigo_html as string | null}
+            datos={datos}
+            fotos={fotos}
+            esBorrador={esBorrador}
+          />
+        ) : (
+          <Renderizador
+            plantilla={invitacion.plantilla as string}
+            datos={datos}
+            fotos={fotos}
+            esBorrador={esBorrador}
+          />
+        )}
       </ProveedorInvitacion>
     </>
   );

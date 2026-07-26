@@ -177,6 +177,11 @@ export interface Invitacion {
   slug: string;
   plantilla: string;
   datos: DatosInvitacion;
+  /**
+   * HTML de una invitación hecha fuera del sistema (por ejemplo con IA).
+   * Solo se usa cuando `plantilla` es PLANTILLA_CODIGO.
+   */
+  codigo_html: string | null;
   estado: EstadoInvitacion;
   publicada_en: string | null;
   creado_en: string;

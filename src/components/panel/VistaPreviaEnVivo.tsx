@@ -5,6 +5,8 @@ import Renderizador from "@/components/invitacion/Renderizador";
 import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
 import { ordenarFotos } from "@/lib/fotos";
 import { urlFuentes } from "@/config/diseno";
+import { esInvitacionDeCodigo } from "@/lib/codigo";
+import CodigoPropio from "@/components/invitacion/CodigoPropio";
 import type { DatosInvitacion, FotoInvitacion } from "@/lib/tipos";
 import { Smartphone, Monitor, RotateCcw, MousePointerClick } from "lucide-react";
 
@@ -37,12 +39,15 @@ export default function VistaPreviaEnVivo({
   plantilla,
   datos,
   fotos,
+  codigoHtml,
   onSenalarCampo,
 }: {
   plantilla: string;
   datos: DatosInvitacion;
   /** Fotos del pedido sin ordenar; aquí se aplica el orden en vivo. */
   fotos: FotoInvitacion[];
+  /** HTML pegado, cuando la invitación se hizo fuera del sistema. */
+  codigoHtml?: string | null;
   /** Se llama al señalar un bloque, con el campo del editor que lo controla. */
   onSenalarCampo?: (campo: string) => void;
 }) {
@@ -138,7 +143,11 @@ export default function VistaPreviaEnVivo({
           }}
         >
           <ProveedorInvitacion slug="" esBorrador>
-            <Renderizador plantilla={plantilla} datos={datos} fotos={fotosOrdenadas} />
+            {esInvitacionDeCodigo(plantilla) ? (
+              <CodigoPropio html={codigoHtml ?? ""} datos={datos} fotos={fotosOrdenadas} />
+            ) : (
+              <Renderizador plantilla={plantilla} datos={datos} fotos={fotosOrdenadas} />
+            )}
           </ProveedorInvitacion>
         </div>
       </div>

@@ -102,9 +102,9 @@ resalta su tarjeta.
 
 | | Qué | Estado |
 |---|---|---|
-| **2A** | Plantilla tipo "código": pegar el HTML y guardarlo | ⏳ |
-| **2B** | Servirla en `/i/<slug>` dentro de un iframe aislado | ⏳ |
-| **2C** | Mantener vista previa al compartir, contador de visitas y borrador/publicada | ⏳ |
+| **2A** | Plantilla tipo "código": pegar el HTML y guardarlo | ✅ Hecho |
+| **2B** | Servirla en `/i/<slug>` dentro de un iframe aislado | ✅ Hecho |
+| **2C** | Mantener vista previa al compartir, contador de visitas y borrador/publicada | ✅ Hecho |
 | **2D** | Puente para que el RSVP del sistema funcione dentro de ese HTML | ⏳ |
 
 **El aislamiento de 2B no es opcional.** Código pegado corriendo en el mismo
@@ -112,6 +112,46 @@ origen que `/panel` podría leer la sesión del equipo. En un iframe con
 `sandbox` sin `allow-same-origin` no puede tocar cookies ni la página padre.
 Por eso 2D es un paso aparte: el RSVP tendrá que comunicarse por `postMessage`
 en vez de llamar a la API directamente.
+
+### ✅ 2A, 2B y 2C — Módulo de código propio
+
+En el editor aparece una opción **"Código propio"** junto a las diez plantillas.
+Al elegirla se muestra un campo para pegar el HTML, y las tarjetas de diseño y
+de contenido se ocultan porque ya no aplican. La tarjeta **Portada** se queda:
+de ahí salen el título y la fecha de la vista previa al compartir, y la
+dirección web.
+
+Se administra igual que cualquier otra invitación: misma dirección, misma
+tarjeta al compartir por WhatsApp, mismo contador de visitas, mismo
+borrador/publicada y mismo vencimiento. La vista previa en vivo del editor
+también la muestra.
+
+**Marcadores** para no pegar a mano direcciones de fotos que además caducan:
+`{{PORTADA}}`, `{{FOTO_1}}`, `{{TITULO}}`, `{{FECHA}}`. Un marcador de foto que
+no existe se sustituye por vacío en vez de quedarse escrito — es preferible una
+imagen que no carga a que el invitado lea `{{FOTO_7}}` en su invitación.
+
+**Revisión antes de publicar:** el editor avisa de rutas relativas (que no
+resuelven dentro del iframe), recursos por `http://` sin cifrar, y de imágenes
+sin marcador por si se olvidó usar las fotos del cliente. Son avisos, no
+bloqueos.
+
+#### El aislamiento, comprobado
+
+Se pegó una invitación con un script que **intenta** salirse, y se cargó la
+página con una cookie de sesión falsa. El resultado dentro del iframe:
+
+```
+cookies: BLOQUEADO · localStorage: BLOQUEADO · origen: OPACO · panel: BLOQUEADO
+```
+
+La invitación se veía completa y con los marcadores sustituidos, pero el script
+no pudo leer nada. Hay además una prueba que falla si alguien añade
+`allow-same-origin` al sandbox, que es el único cambio capaz de tirar abajo esa
+frontera.
+
+**Por eso no se filtra ni se limpia el HTML:** el aislamiento es la frontera de
+seguridad, y limpiarlo solo rompería código legítimo.
 
 ---
 

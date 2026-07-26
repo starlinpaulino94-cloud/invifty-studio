@@ -116,6 +116,9 @@ create table public.invitaciones (
   slug          text not null unique,          -- URL pública: /i/<slug>
   plantilla     text not null default 'clasica',
   datos         jsonb not null default '{}'::jsonb,  -- contenido editable de la invitación
+  -- HTML de una invitación hecha fuera del sistema (por ejemplo con IA).
+  -- Se usa cuando `plantilla` vale 'codigo'.
+  codigo_html   text,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
