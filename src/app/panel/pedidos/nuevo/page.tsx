@@ -1,5 +1,5 @@
 import { crearPedido } from "@/lib/acciones";
-import { PLANES, EXTRAS, TIPOS_EVENTO } from "@/lib/planes";
+import { PLANES, EXTRAS, TIPOS_EVENTO, VIGENCIA_MESES } from "@/lib/planes";
 import { Plan, TipoEvento } from "@/lib/tipos";
 import { Sparkles } from "lucide-react";
 
@@ -66,10 +66,17 @@ export default function CrearPedido() {
               <select id="plan" name="plan" required defaultValue="popular" className={inputBase}>
                 {(Object.keys(PLANES) as Plan[]).map((p) => (
                   <option key={p} value={p}>
-                    {PLANES[p].nombre} — RD$ {PLANES[p].precioDOP.toLocaleString()}
+                    {PLANES[p].nombre} — RD$ {PLANES[p].precioDOP.toLocaleString()} ·{" "}
+                    {VIGENCIA_MESES[p]} meses en línea
                   </option>
                 ))}
               </select>
+              {/* La vigencia se ve aquí para que nadie tenga que abrir el código
+                  ni prometerle al cliente un plazo distinto del que se aplica. */}
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                La invitación queda en línea los meses que indica el plan, contados
+                desde la entrega.
+              </p>
             </div>
             <div>
               <label htmlFor="fecha_evento" className={labelBase}>Fecha del evento</label>

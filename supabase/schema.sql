@@ -30,6 +30,7 @@ create table public.pedidos (
   url_entregada text,                                -- URL de la invitación publicada
   fecha_entrega date,                                -- cuándo se entregó (base del vencimiento)
   fecha_vencimiento date,                            -- calculada al entregar según el plan
+  aviso_vencimiento_en timestamptz,                  -- cuándo se avisó al equipo de que vence
   notas         text,
   creado_en     timestamptz not null default now(),
   actualizado_en timestamptz not null default now()
@@ -37,6 +38,9 @@ create table public.pedidos (
 
 create index pedidos_cliente_idx on public.pedidos (cliente_id);
 create index pedidos_estado_idx  on public.pedidos (estado);
+-- El repaso diario de vencimientos solo mira las que tienen fecha.
+create index pedidos_vencimiento_idx on public.pedidos (fecha_vencimiento)
+  where fecha_vencimiento is not null;
 
 -- ---------- PAGOS (abonos) ----------
 -- El "monto abonado" del pedido es la suma de sus pagos; así queda
@@ -129,3 +133,67 @@ create policy "equipo acceso total invitaciones" on public.invitaciones
   for all to authenticated using (true) with check (true);
 -- El público NO accede a la tabla: la página /i/<slug> se sirve desde el
 -- servidor con la clave secreta y solo muestra invitaciones publicadas.
+
+-- ---------- CONFIRMACIONES DE ASISTENCIA (RSVP) ----------
+-- La confirmación del invitado queda guardada aquí, además de abrirse en
+-- WhatsApp: así el anfitrión tiene una lista real con su conteo.
+create table public.confirmaciones (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,
+  -- Nombre en minúsculas y sin espacios sobrantes: sirve para reconocer
+  -- que un invitado está corrigiendo su respuesta en vez de duplicarla.
+  nombre_normalizado text not null,
+  asiste        boolean not null,
+  -- Personas que asistirán en total, incluyendo al invitado.
+  -- 0 cuando la respuesta es "no podré ir", para poder sumar la columna.
+  cantidad      integer not null default 1 check (cantidad >= 0 and cantidad <= 20),
+  nota          text,
+  creado_en     timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+create index confirmaciones_invitacion_idx
+  on public.confirmaciones (invitacion_id, creado_en desc);
+
+-- Una fila por invitado: si vuelve a confirmar, se actualiza su respuesta.
+create unique index confirmaciones_invitado_idx
+  on public.confirmaciones (invitacion_id, nombre_normalizado);
+
+create trigger confirmaciones_tocar before update on public.confirmaciones
+  for each row execute function public.tocar_actualizado_en();
+
+alter table public.confirmaciones enable row level security;
+
+create policy "equipo acceso total confirmaciones" on public.confirmaciones
+  for all to authenticated using (true) with check (true);
+-- Los invitados NO tocan la tabla: confirman por la ruta
+-- /api/invitacion/<slug>/rsvp, que valida en el servidor que la
+-- invitación existe y está publicada antes de guardar nada.
+
+-- ---------- VISITAS A LAS INVITACIONES ----------
+-- Para poder decirle al cliente cuántas veces se abrió su invitación.
+-- PRIVACIDAD: no se guarda ninguna IP ni cookie, solo un hash
+-- irreversible que además cambia de una invitación a otra.
+create table public.visitas (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  huella        text not null,
+  -- Hora redondeada hacia abajo: una fila por dispositivo y hora, para que
+  -- recargar la página no infle el conteo.
+  hora          timestamptz not null,
+  creado_en     timestamptz not null default now()
+);
+
+create unique index visitas_unicas_idx
+  on public.visitas (invitacion_id, huella, hora);
+
+create index visitas_invitacion_idx
+  on public.visitas (invitacion_id, creado_en desc);
+
+alter table public.visitas enable row level security;
+
+create policy "equipo acceso total visitas" on public.visitas
+  for all to authenticated using (true) with check (true);
+-- Los invitados NO tocan la tabla: la visita se registra desde
+-- /api/invitacion/<slug>/visita, en el servidor.

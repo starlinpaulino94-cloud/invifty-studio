@@ -151,12 +151,32 @@ export const PALETAS: Record<string, Paleta> = {
     fondo: "#F7F4FA", tarjeta: "#FFFFFF", acento: "#B08FBF", acentoClaro: "#D3BFDD",
     texto: "#322A38", textoSuave: "#8B8291", oscura: false,
   },
+  vino_nude: {
+    nombre: "Vino & Nude",
+    fondo: "#FBF4F0", tarjeta: "#FFFFFF", acento: "#7B2D3B", acentoClaro: "#B5707C",
+    texto: "#362227", textoSuave: "#92787D", oscura: false,
+  },
 };
 
 export const PALETA_POR_DEFECTO = "dorado_negro";
 
 export function paleta(id?: string): Paleta {
   return PALETAS[id ?? ""] ?? PALETAS[PALETA_POR_DEFECTO];
+}
+
+/** true si el id corresponde a una paleta que el sistema sabe aplicar. */
+export function esPaletaValida(id?: string): boolean {
+  return !!id && id in PALETAS;
+}
+
+/**
+ * Los tres colores que representan la paleta en una muestra visual.
+ * Se derivan de la paleta real: así lo que el cliente ve al elegir es
+ * exactamente lo que recibe en su invitación.
+ */
+export function muestraDePaleta(id: string): string[] {
+  const p = paleta(id);
+  return [p.acento, p.acentoClaro, p.fondo];
 }
 
 /* ============================================================

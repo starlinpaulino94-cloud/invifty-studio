@@ -1,14 +1,14 @@
 "use client";
 
 import { ReactNode } from "react";
-import { DatosInvitacion } from "@/lib/tipos";
+import { DatosInvitacion, FotoInvitacion } from "@/lib/tipos";
 import { Divisor } from "./Ornamentos";
 import { Revelar } from "./Efectos";
 import { Contador, BotonesMapa, BotonCalendario, CopiarDetalle, Galeria, Rsvp } from "./Piezas";
 import { etiquetaDressCode, hora12 } from "./Marco";
 import { Clock, Gift, Heart, MapPin, Shirt, Sparkles, Users, Info, Camera } from "lucide-react";
 
-type Foto = { nombre: string; url?: string };
+type Foto = FotoInvitacion;
 
 /* ============================================================
    Encabezado de sección (con ornamento según la plantilla)
@@ -66,11 +66,9 @@ export function Seccion({
 
 export function BloqueContador({
   datos,
-  variante,
   estiloContador = "tarjetas",
 }: {
   datos: DatosInvitacion;
-  variante: string;
   estiloContador?: "tarjetas" | "lineal" | "circulos";
 }) {
   if (!datos.fechaEvento) return null;
@@ -429,7 +427,7 @@ export function CuerpoEstandar({
   return (
     <main className="relative z-10">
       <Seccion className="pb-4">
-        <BloqueContador datos={datos} variante={variante} estiloContador={estiloContador} />
+        <BloqueContador datos={datos} estiloContador={estiloContador} />
       </Seccion>
       <BloqueHistoria datos={datos} variante={variante} />
       <BloqueLugares datos={datos} variante={variante} />

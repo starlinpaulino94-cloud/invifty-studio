@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
-import { VIGENCIA_MESES } from "./planes";
-import { EstadoPedido, Plan } from "./tipos";
+import { calcularVencimiento } from "./vencimientos";
+import type { EstadoPedido, Plan } from "./tipos";
 
 /** Normaliza un teléfono a solo dígitos (formato WhatsApp: 18091234567). */
 function normalizarTelefono(t: string): string {
@@ -92,11 +92,9 @@ export async function cambiarEstado(pedidoId: string, estado: EstadoPedido) {
       .single();
 
     if (pedido && !pedido.fecha_entrega) {
-      const hoy = new Date();
-      const vencimiento = new Date(hoy);
-      vencimiento.setMonth(vencimiento.getMonth() + VIGENCIA_MESES[pedido.plan as Plan]);
-      cambios.fecha_entrega = hoy.toISOString().slice(0, 10);
-      cambios.fecha_vencimiento = vencimiento.toISOString().slice(0, 10);
+      const hoy = new Date().toISOString().slice(0, 10);
+      cambios.fecha_entrega = hoy;
+      cambios.fecha_vencimiento = calcularVencimiento(hoy, pedido.plan as Plan);
     }
   }
 

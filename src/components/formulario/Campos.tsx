@@ -103,9 +103,9 @@ export function CampoSeleccion({
             >
               {op.colores ? (
                 <span className="flex gap-1 mt-1 shrink-0">
-                  {op.colores.map((c) => (
+                  {op.colores.map((c, i) => (
                     <span
-                      key={c}
+                      key={`${c}-${i}`}
                       className="w-5 h-5 rounded-full border border-white/20"
                       style={{ backgroundColor: c }}
                     />
@@ -327,6 +327,11 @@ export function CampoFotos({
     if (!archivos?.length) return;
     setError("");
     setSubiendo(true);
+
+    // Se acumulan en una lista local: al subir varias fotos seguidas, cada
+    // vuelta necesita ver las anteriores, y las props no se pueden reasignar.
+    let acumuladas = fotos;
+
     for (const archivo of Array.from(archivos)) {
       const data = new FormData();
       data.append("archivo", archivo);
@@ -341,13 +346,14 @@ export function CampoFotos({
         const prev = await fetch(
           `/api/formulario/${token}/fotos?ruta=${encodeURIComponent(json.foto.ruta)}`
         ).then((r) => r.json());
-        setFotos([...fotos, { ...json.foto, url: prev.url }]);
-        fotos = [...fotos, { ...json.foto, url: prev.url }];
+        acumuladas = [...acumuladas, { ...json.foto, url: prev.url }];
+        setFotos(acumuladas);
       } catch {
         setError("Error de conexión. Intenta de nuevo.");
         break;
       }
     }
+
     setSubiendo(false);
     if (inputRef.current) inputRef.current.value = "";
   };

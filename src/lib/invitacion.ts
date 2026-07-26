@@ -1,5 +1,5 @@
-import { DatosInvitacion, Plan, TipoEvento } from "./tipos";
-import { PALETAS, PALETA_POR_DEFECTO } from "@/config/diseno";
+import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
+import { PALETAS, PALETA_POR_DEFECTO, esPaletaValida } from "@/config/diseno";
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
 
 /**
@@ -21,8 +21,52 @@ function lista(r: Record<string, unknown>, id: string): Record<string, string>[]
   return Array.isArray(v) ? (v as Record<string, string>[]) : [];
 }
 
-function paletaValida(id: string, respaldo: string): string {
-  return PALETAS[id] ? id : respaldo;
+/** Respuesta de una pregunta de selección múltiple. */
+function seleccionMultiple(r: Record<string, unknown>, id: string): string[] {
+  const v = r[id];
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+}
+
+/* ---------- Etiquetas legibles para las notas del equipo ----------
+   Las respuestas se guardan por su identificador ("instrumental_romantico");
+   en las notas del editor se lee mejor el nombre que vio el cliente. */
+
+const AMBIENTES_MUSICALES: Record<string, string> = {
+  instrumental_romantico: "Instrumental romántico (piano y cuerdas)",
+  instrumental: "Instrumental elegante",
+  balada: "Balada",
+  acustico: "Acústico (guitarra y voz)",
+  festiva: "Festiva / alegre",
+  cancion_propia: "Su canción (ver abajo)",
+};
+
+function etiquetaAmbienteMusical(valor: string): string {
+  return AMBIENTES_MUSICALES[valor] ?? valor;
+}
+
+const DATOS_REGISTRO: Record<string, string> = {
+  nombre: "nombre completo",
+  empresa: "empresa",
+  cargo: "cargo",
+  email: "correo electrónico",
+  telefono: "teléfono",
+};
+
+function etiquetaDatoRegistro(valor: string): string {
+  return DATOS_REGISTRO[valor] ?? valor;
+}
+
+/**
+ * Etiqueta legible de una respuesta de paleta que el sistema no puede aplicar
+ * tal cual (ej. "Los colores de nuestra marca", o una paleta de una versión
+ * anterior del formulario). Se usa para avisar al equipo en vez de descartarla.
+ */
+const PALETAS_SIN_EQUIVALENTE: Record<string, string> = {
+  colores_marca: "Los colores de su marca (tomarlos del logo que subió)",
+};
+
+function etiquetaPaletaPedida(id: string): string {
+  return PALETAS_SIN_EQUIVALENTE[id] ?? `"${id}"`;
 }
 
 /** Convierte texto a slug de URL: "Camila & Lucas" → "camila-y-lucas" */
@@ -47,6 +91,19 @@ export function slugificar(t: string): string {
  */
 export function sugerirPlantilla(tipoEvento: TipoEvento, respuestas: Record<string, unknown>): string {
   const estilo = texto(respuestas, "estilo_diseno") || texto(respuestas, "tema_fiesta");
+
+  // En eventos corporativos no se pregunta el estilo, pero sí el tipo de
+  // evento: una gala y un lanzamiento no piden la misma plantilla.
+  const porTipoCorporativo: Record<string, string> = {
+    conferencia: "moderna",
+    gala: "editorial",
+    aniversario: "deco",
+    lanzamiento: "cinema",
+  };
+  const tipoCorp = texto(respuestas, "tipo_evento_corp");
+  if (tipoEvento === "empresarial" && porTipoCorporativo[tipoCorp]) {
+    return porTipoCorporativo[tipoCorp];
+  }
 
   const porEstilo: Record<string, string> = {
     // Bodas
@@ -117,6 +174,12 @@ export function derivarDatosInvitacion(
 
   const rsvpRaw = (r["config_rsvp"] ?? {}) as { fecha_limite?: string; acompanantes?: string };
 
+  // La paleta que pidió el cliente. Si el sistema no sabe aplicarla tal cual
+  // (colores de marca, respuesta antigua), se usa la de la plantilla PERO se
+  // deja constancia para el equipo: nunca se descarta en silencio.
+  const paletaPedida = texto(r, "paleta_colores");
+  const paletaAplicable = esPaletaValida(paletaPedida);
+
   const datos: DatosInvitacion = {
     titulo: "",
     subtitulo: "",
@@ -125,7 +188,7 @@ export function derivarDatosInvitacion(
     horaEvento: "",
     lugares: [],
     dressCode: texto(r, "dress_code"),
-    paleta: paletaValida(texto(r, "paleta_colores"), meta.paletaSugerida),
+    paleta: paletaAplicable ? paletaPedida : meta.paletaSugerida,
     tipografia: meta.tipografiaSugerida,
     historia: "",
     cronograma: lista(r, "hitos_dia")
@@ -134,10 +197,13 @@ export function derivarDatosInvitacion(
     regalos: lista(r, "mesa_regalos")
       .filter((g) => g.titulo || g.detalle)
       .map((g) => ({ titulo: g.titulo ?? "", detalle: g.detalle ?? "" })),
-    padrinos: [],
+    padrinos: lista(r, "personas_especiales")
+      .filter((p) => p.nombre)
+      .map((p) => ({ rol: p.rol ?? "", nombre: p.nombre ?? "" })),
     notas: [],
+    notasEquipo: [],
     mensajeFinal: mensajeFinalPorEvento(tipoEvento),
-    hashtag: "",
+    hashtag: texto(r, "hashtag"),
     musicaUrl: "",
     rsvp: {
       whatsapp: telefonoCliente,
@@ -217,11 +283,62 @@ export function derivarDatosInvitacion(
     }
   }
 
-  // La canción indicada por el cliente queda anotada para que el equipo
-  // suba el audio y pegue el enlace en el editor.
+  /* ---------- Lo que el equipo tiene que aplicar a mano ----------
+     Todo lo que el cliente respondió y el sistema no puede convertir solo
+     en invitación queda aquí, a la vista en el editor. Antes varias de
+     estas respuestas se recogían y no llegaban a ningún sitio. */
+
+  const anotar = (titulo: string, texto: string) => {
+    if (texto.trim()) datos.notasEquipo!.push({ titulo, texto: texto.trim() });
+  };
+
+  // Si la paleta pedida no se puede aplicar tal cual, el equipo se entera.
+  if (paletaPedida && !paletaAplicable) {
+    anotar(
+      "Paleta pedida por el cliente",
+      `El cliente eligió ${etiquetaPaletaPedida(paletaPedida)}. Se aplicó ` +
+        `"${PALETAS[meta.paletaSugerida]?.nombre ?? meta.paletaSugerida}" como base: ` +
+        `ajústala en el editor antes de publicar.`
+    );
+  }
+
+  // Música: el cliente eligió un ambiente y una canción, pero el audio lo
+  // sube el equipo. Se deja activado el efecto para que el editor lo pida;
+  // el reproductor no aparece en la invitación hasta que haya un enlace.
+  const ambiente = texto(r, "ambiente_musical");
   const cancion = texto(r, "cancion_propia");
-  if (cancion) {
-    datos.notas!.push({ titulo: "Canción solicitada (interno)", texto: cancion });
+  if (ambiente || cancion) {
+    datos.efectos!.musica = true;
+    anotar(
+      "Música que pidió el cliente",
+      [
+        ambiente ? `Ambiente: ${etiquetaAmbienteMusical(ambiente)}.` : "",
+        cancion ? `Canción: ${cancion}.` : "",
+        "Sube el audio y pega el enlace en «Música de fondo» para activarlo.",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    );
+  }
+
+  // Referencias de diseño del plan Luxury: es el brief del diseñador.
+  anotar("Cómo la imagina el cliente", texto(r, "preferencias_diseno"));
+
+  // No va en la invitación: es el mensaje que el equipo enviará por
+  // WhatsApp a quienes confirmen, días antes del evento.
+  anotar("Recordatorio para enviar días antes", texto(r, "mensaje_recordatorio"));
+
+  // Dominio propio: lo gestiona el equipo, no el generador.
+  anotar("Dominio que pidió el cliente", texto(r, "dominio_deseado"));
+
+  // Datos que el cliente quiere recoger al registrarse (evento corporativo).
+  const registro = seleccionMultiple(r, "datos_registro");
+  if (registro.length) {
+    anotar(
+      "Datos a pedir en el registro",
+      `${registro.map(etiquetaDatoRegistro).join(", ")}. ` +
+        "La confirmación estándar recoge nombre, asistencia y acompañantes."
+    );
   }
 
   // Activar secciones según lo que el cliente completó

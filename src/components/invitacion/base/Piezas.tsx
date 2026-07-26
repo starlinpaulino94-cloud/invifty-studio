@@ -1,15 +1,36 @@
 "use client";
 
-import { useEffect, useState, FormEvent, useCallback } from "react";
+import { useEffect, useState, FormEvent, useCallback, useSyncExternalStore } from "react";
 import {
   Check, Copy, MessageCircle, CalendarPlus, MapPin, Navigation, X,
-  ChevronLeft, ChevronRight, Heart,
+  ChevronLeft, ChevronRight, Heart, Loader2,
 } from "lucide-react";
 import { fechaLarga } from "./Marco";
+import { useInvitacion } from "./Contexto";
+import { FotoInvitacion } from "@/lib/tipos";
 
 /* ============================================================
    CUENTA REGRESIVA
    ============================================================ */
+
+/**
+ * El paso del tiempo como fuente externa, para leerlo con
+ * useSyncExternalStore. `leerReloj` devuelve el mismo valor durante todo un
+ * segundo a propósito: React compara la lectura con la anterior y volvería
+ * a renderizar sin parar si cambiara en cada llamada.
+ */
+function suscribirseAlReloj(alCambiar: () => void): () => void {
+  const i = setInterval(alCambiar, 1000);
+  return () => clearInterval(i);
+}
+
+function leerReloj(): number {
+  return Math.floor(Date.now() / 1000) * 1000;
+}
+
+function leerRelojEnServidor(): null {
+  return null;
+}
 
 export function Contador({
   fecha,
@@ -21,30 +42,22 @@ export function Contador({
   variante?: "tarjetas" | "lineal" | "circulos";
 }) {
   const objetivo = new Date(`${fecha}T${hora || "18:00"}:00`).getTime();
-  const [t, setT] = useState({ d: 0, h: 0, m: 0, s: 0 });
-  const [montado, setMontado] = useState(false);
-  const [llego, setLlego] = useState(false);
 
-  useEffect(() => {
-    const tick = () => {
-      const diff = objetivo - Date.now();
-      if (diff <= 0) {
-        setLlego(true);
-        setT({ d: 0, h: 0, m: 0, s: 0 });
-        return;
-      }
-      setT({
-        d: Math.floor(diff / 86400000),
-        h: Math.floor((diff % 86400000) / 3600000),
-        m: Math.floor((diff % 3600000) / 60000),
-        s: Math.floor((diff % 60000) / 1000),
-      });
-    };
-    tick();
-    setMontado(true);
-    const i = setInterval(tick, 1000);
-    return () => clearInterval(i);
-  }, [objetivo]);
+  // El reloj es un dato externo a React, así que se lee con
+  // useSyncExternalStore en vez de meter setState dentro de un efecto.
+  // En el servidor devuelve null y se pinta "––": el HTML del servidor y el
+  // del navegador coinciden y no hay salto al hidratar.
+  const ahora = useSyncExternalStore(suscribirseAlReloj, leerReloj, leerRelojEnServidor);
+  const montado = ahora !== null;
+  const diff = montado ? objetivo - ahora : 0;
+  const llego = montado && diff <= 0;
+
+  const t = {
+    d: Math.max(Math.floor(diff / 86400000), 0),
+    h: Math.max(Math.floor((diff % 86400000) / 3600000), 0),
+    m: Math.max(Math.floor((diff % 3600000) / 60000), 0),
+    s: Math.max(Math.floor((diff % 60000) / 1000), 0),
+  };
 
   if (llego) {
     return (
@@ -258,7 +271,7 @@ export function Galeria({
   fotos,
   disposicion = "mosaico",
 }: {
-  fotos: { nombre: string; url?: string }[];
+  fotos: FotoInvitacion[];
   disposicion?: "mosaico" | "rejilla" | "tira";
 }) {
   const [abierta, setAbierta] = useState<number | null>(null);
@@ -311,11 +324,14 @@ export function Galeria({
             style={{ border: "1px solid var(--inv-linea)" }}
             aria-label={`Ampliar foto ${i + 1}`}
           >
+            {/* La cuadrícula usa la miniatura; la foto grande solo se
+                descarga al abrir el visor. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={foto.url}
+              src={foto.urlMiniatura ?? foto.url}
               alt=""
               loading="lazy"
+              decoding="async"
               className={`w-full transition-transform duration-700 hover:scale-105 ${
                 disposicion === "mosaico" ? "h-auto" : "h-full object-cover"
               }`}
@@ -389,31 +405,68 @@ export function Rsvp({
   fechaLimite: string;
   acompanantes: boolean;
 }) {
+  const { slug, esBorrador } = useInvitacion();
   const [nombre, setNombre] = useState("");
   const [asiste, setAsiste] = useState<"si" | "no">("si");
   const [cantidad, setCantidad] = useState(1);
   const [nota, setNota] = useState("");
   const [enviado, setEnviado] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState("");
 
-  const enviar = (e: FormEvent) => {
+  const mensajeWhatsApp = [
+    "💌 *CONFIRMACIÓN DE ASISTENCIA*",
+    `Evento: *${titulo}*`,
+    "--------------------------------",
+    `👤 *Nombre:* ${nombre}`,
+    `📌 *Asistencia:* ${asiste === "si" ? "CONFIRMADO ✓" : "No podré asistir"}`,
+    asiste === "si" && acompanantes ? `👥 *Total de personas:* ${cantidad}` : "",
+    nota ? `📝 *Nota:* ${nota}` : "",
+    "--------------------------------",
+    "Enviado desde la invitación digital.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const urlWhatsApp = `https://wa.me/${whatsapp}?text=${encodeURIComponent(mensajeWhatsApp)}`;
+
+  /**
+   * Primero se guarda la confirmación y luego se ofrece avisar por WhatsApp
+   * como un enlace aparte. Antes se abría WhatsApp directamente y no se
+   * guardaba nada: quien no llegaba a pulsar "enviar" desaparecía sin rastro.
+   *
+   * El aviso por WhatsApp es un <a> que el invitado pulsa él mismo, y no un
+   * window.open después de un await, porque los navegadores móviles bloquean
+   * las ventanas que no salen de un gesto directo.
+   */
+  const enviar = async (e: FormEvent) => {
     e.preventDefault();
-    if (!nombre.trim()) return;
-    const mensaje = [
-      "💌 *CONFIRMACIÓN DE ASISTENCIA*",
-      `Evento: *${titulo}*`,
-      "--------------------------------",
-      `👤 *Nombre:* ${nombre}`,
-      `📌 *Asistencia:* ${asiste === "si" ? "CONFIRMADO ✓" : "No podré asistir"}`,
-      asiste === "si" && acompanantes ? `👥 *Total de personas:* ${cantidad}` : "",
-      nota ? `📝 *Nota:* ${nota}` : "",
-      "--------------------------------",
-      "Enviado desde la invitación digital.",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    if (!nombre.trim() || guardando) return;
 
-    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(mensaje)}`, "_blank", "noopener,noreferrer");
-    setEnviado(true);
+    // En la vista previa del equipo no se guardan confirmaciones de prueba.
+    if (esBorrador) {
+      setEnviado(true);
+      return;
+    }
+
+    setGuardando(true);
+    setErrorGuardado("");
+    try {
+      const res = await fetch(`/api/invitacion/${slug}/rsvp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, asiste: asiste === "si", cantidad, nota }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setErrorGuardado(json.error ?? "No pudimos registrar tu confirmación.");
+      }
+    } catch {
+      setErrorGuardado("No pudimos registrar tu confirmación. Revisa tu conexión.");
+    } finally {
+      setGuardando(false);
+      setEnviado(true);
+    }
   };
 
   const estiloCampo: React.CSSProperties = {
@@ -425,6 +478,7 @@ export function Rsvp({
   const campo = "w-full rounded-lg px-4 py-3.5 text-sm focus:outline-none border transition-colors";
 
   if (enviado) {
+    const guardada = !errorGuardado;
     return (
       <div
         className="rounded-lg p-8 text-center"
@@ -432,13 +486,42 @@ export function Rsvp({
       >
         <Heart className="w-8 h-8 mx-auto mb-3" style={{ color: "var(--inv-acento)" }} />
         <p className="text-2xl mb-2" style={{ fontFamily: "var(--inv-script)", color: "var(--inv-acento)" }}>
-          ¡Gracias por confirmar!
+          {guardada ? "¡Gracias por confirmar!" : "Casi listo"}
         </p>
-        <p className="text-xs" style={{ color: "var(--inv-texto-suave)" }}>
-          Tu confirmación se abrió en WhatsApp. Si no llegó a enviarse, inténtalo de nuevo.
+
+        <p className="text-xs leading-relaxed" style={{ color: "var(--inv-texto-suave)" }}>
+          {esBorrador
+            ? "Vista previa: en la invitación publicada esta confirmación quedaría registrada."
+            : guardada
+            ? "Tu respuesta quedó registrada. Si quieres, avísale también por WhatsApp."
+            : `${errorGuardado} Puedes avisar por WhatsApp para que tu confirmación no se pierda.`}
         </p>
+
+        {!esBorrador && (
+          <a
+            href={urlWhatsApp}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 w-full rounded-lg py-3.5 text-xs uppercase tracking-[0.22em] flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+            style={
+              guardada
+                ? { border: "1px solid var(--inv-acento)", color: "var(--inv-acento)" }
+                : { backgroundColor: "var(--inv-acento)", color: "var(--inv-fondo)" }
+            }
+          >
+            <MessageCircle className="w-4 h-4" />
+            {guardada ? "Avisar por WhatsApp" : "Enviar por WhatsApp"}
+          </a>
+        )}
+
         <button
-          onClick={() => { setEnviado(false); setNombre(""); }}
+          onClick={() => {
+            setEnviado(false);
+            setErrorGuardado("");
+            setNombre("");
+            setNota("");
+            setCantidad(1);
+          }}
           className="mt-5 text-[11px] uppercase tracking-[0.2em] underline underline-offset-4"
           style={{ color: "var(--inv-acento)" }}
         >
@@ -518,11 +601,21 @@ export function Rsvp({
 
       <button
         type="submit"
-        className="w-full rounded-lg py-4 text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+        disabled={guardando}
+        className="w-full rounded-lg py-4 text-xs uppercase tracking-[0.25em] flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-70"
         style={{ backgroundColor: "var(--inv-acento)", color: "var(--inv-fondo)" }}
       >
-        <MessageCircle className="w-4 h-4" />
-        Confirmar por WhatsApp
+        {guardando ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Enviando…
+          </>
+        ) : (
+          <>
+            <Check className="w-4 h-4" />
+            Confirmar asistencia
+          </>
+        )}
       </button>
     </form>
   );

@@ -1,4 +1,4 @@
-import { DatosInvitacion } from "@/lib/tipos";
+import { DatosInvitacion, FotoInvitacion } from "@/lib/tipos";
 import { plantillaMeta } from "@/config/plantillas";
 import Editorial from "./plantillas/Editorial";
 import Botanica from "./plantillas/Botanica";
@@ -11,11 +11,9 @@ import Acuarela from "./plantillas/Acuarela";
 import Cinema from "./plantillas/Cinema";
 import Boho from "./plantillas/Boho";
 
-type Foto = { nombre: string; url?: string };
-
 interface Props {
   datos: DatosInvitacion;
-  fotos: Foto[];
+  fotos: FotoInvitacion[];
   esBorrador?: boolean;
 }
 

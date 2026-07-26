@@ -101,55 +101,13 @@ export default function Marco({
 /* ============================================================
    Utilidades de formato compartidas por las plantillas
 
-   Formateamos las fechas a mano (sin toLocaleDateString) para que el
-   servidor y el navegador produzcan exactamente el mismo texto, y para
-   que el español sea siempre correcto sin depender de los datos de
-   idioma que tenga instalado el servidor.
+   El formateo de fechas vive en lib/fechas.ts (módulo sin "use client")
+   para que también lo puedan usar los metadatos y la tarjeta de vista
+   previa, que se generan en el servidor. Se reexporta aquí para no
+   cambiar los imports de las diez plantillas.
    ============================================================ */
 
-const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-const MESES = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-];
-
-/** Interpreta "YYYY-MM-DD" como fecha local, sin desfases de zona horaria. */
-function partes(fecha: string): { d: number; m: number; a: number; diaSemana: number } | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha ?? "");
-  if (!m) return null;
-  const anio = Number(m[1]);
-  const mes = Number(m[2]);
-  const dia = Number(m[3]);
-  const referencia = new Date(Date.UTC(anio, mes - 1, dia));
-  return { d: dia, m: mes - 1, a: anio, diaSemana: referencia.getUTCDay() };
-}
-
-export function fechaLarga(fecha: string): string {
-  const p = partes(fecha);
-  if (!p) return "";
-  return `${DIAS[p.diaSemana]}, ${p.d} de ${MESES[p.m]} de ${p.a}`;
-}
-
-export function fechaCorta(fecha: string): { dia: string; mes: string; anio: string; diaSemana: string } {
-  const p = partes(fecha);
-  if (!p) return { dia: "", mes: "", anio: "", diaSemana: "" };
-  return {
-    dia: String(p.d).padStart(2, "0"),
-    mes: MESES[p.m],
-    anio: String(p.a),
-    diaSemana: DIAS[p.diaSemana],
-  };
-}
-
-export function hora12(hora: string): string {
-  const m = /^(\d{1,2}):(\d{2})/.exec(hora ?? "");
-  if (!m) return hora ?? "";
-  const h24 = Number(m[1]);
-  const minutos = m[2];
-  const sufijo = h24 >= 12 ? "p. m." : "a. m.";
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${h12}:${minutos} ${sufijo}`;
-}
+export { fechaLarga, fechaCorta, hora12 } from "@/lib/fechas";
 
 export function etiquetaDressCode(valor: string): string {
   const mapa: Record<string, string> = {

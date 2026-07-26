@@ -1,4 +1,4 @@
-import { DatosInvitacion } from "@/lib/tipos";
+import type { DatosInvitacion } from "@/lib/tipos";
 import { plantillaMeta } from "./plantillas";
 
 /**

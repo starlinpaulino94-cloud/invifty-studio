@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
-import { PLANES, TIPOS_EVENTO, formatoFecha } from "@/lib/planes";
-import { PedidoConCliente, Plan, TipoEvento } from "@/lib/tipos";
+import { PLANES, TIPOS_EVENTO, formatoFecha, mensajeWhatsAppRenovacion } from "@/lib/planes";
+import type { PedidoConCliente, Plan, TipoEvento } from "@/lib/tipos";
+import {
+  estadoVigencia, textoVigencia, DIAS_DE_AVISO, type EstadoVigencia,
+} from "@/lib/vencimientos";
+import { BotonCopiar } from "@/components/panel/Interactivos";
 import { CalendarClock, ExternalLink } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -16,14 +20,11 @@ export default async function PaginaVencimientos() {
 
   const pedidos = (data ?? []) as PedidoConCliente[];
   const hoy = new Date();
-  const en30dias = new Date(hoy);
-  en30dias.setDate(en30dias.getDate() + 30);
 
-  const clasificar = (fecha: string) => {
-    const f = new Date(fecha + "T12:00:00");
-    if (f < hoy) return { texto: "Vencida", clase: "bg-red-100 text-red-600" };
-    if (f <= en30dias) return { texto: "Vence pronto", clase: "bg-amber-100 text-amber-700" };
-    return { texto: "Activa", clase: "bg-emerald-100 text-emerald-700" };
+  const ETIQUETAS: Record<EstadoVigencia, { texto: string; clase: string }> = {
+    vencida: { texto: "Vencida", clase: "bg-red-100 text-red-600" },
+    por_vencer: { texto: "Vence pronto", clase: "bg-amber-100 text-amber-700" },
+    vigente: { texto: "Activa", clase: "bg-emerald-100 text-emerald-700" },
   };
 
   return (
@@ -33,8 +34,9 @@ export default async function PaginaVencimientos() {
           <CalendarClock className="w-6 h-6 text-[#D4AF37]" /> Vencimientos
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          Invitaciones entregadas con su fecha de vencimiento — el momento ideal para
-          ofrecer la renovación es 2-4 semanas antes.
+          Invitaciones entregadas con su fecha de vencimiento. El sistema avisa por
+          correo {DIAS_DE_AVISO} días antes; aquí puedes copiar el mensaje de
+          renovación ya escrito para mandárselo al cliente.
         </p>
       </div>
 
@@ -45,7 +47,8 @@ export default async function PaginaVencimientos() {
       ) : (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm divide-y divide-gray-50">
           {pedidos.map((p) => {
-            const etiqueta = clasificar(p.fecha_vencimiento!);
+            const vigencia = estadoVigencia(p.fecha_vencimiento!, hoy);
+            const etiqueta = ETIQUETAS[vigencia];
             return (
               <div key={p.id} className="flex items-center justify-between gap-4 p-5 flex-wrap">
                 <div className="min-w-0">
@@ -68,11 +71,29 @@ export default async function PaginaVencimientos() {
                       </a>
                     )}
                   </p>
+                  {p.aviso_vencimiento_en && (
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Avisado el {formatoFecha(p.aviso_vencimiento_en)}
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+                  {vigencia !== "vigente" && (
+                    <BotonCopiar
+                      texto={mensajeWhatsAppRenovacion(
+                        p.clientes.nombre,
+                        p.plan as Plan,
+                        p.fecha_vencimiento!,
+                        p.url_entregada
+                      )}
+                      etiqueta="Copiar renovación"
+                    />
+                  )}
                   <div className="text-right">
                     <p className="text-sm font-bold text-gray-900">{formatoFecha(p.fecha_vencimiento)}</p>
-                    <p className="text-[11px] text-gray-400">Entregada {formatoFecha(p.fecha_entrega)}</p>
+                    <p className="text-[11px] text-gray-400">
+                      {textoVigencia(p.fecha_vencimiento!, hoy)}
+                    </p>
                   </div>
                   <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${etiqueta.clase}`}>
                     {etiqueta.texto}

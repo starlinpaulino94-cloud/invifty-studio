@@ -36,6 +36,8 @@ export interface Pedido {
   url_entregada: string | null;
   fecha_entrega: string | null;
   fecha_vencimiento: string | null;
+  /** Cuándo se avisó al equipo de que esta invitación está por vencer. */
+  aviso_vencimiento_en: string | null;
   notas: string | null;
   creado_en: string;
   actualizado_en: string;
@@ -69,6 +71,18 @@ export interface FotoSubida {
   nombre: string;
   ruta: string;
   url?: string;
+}
+
+/**
+ * Foto ya lista para mostrarse en una invitación, con sus dos tamaños:
+ * `url` es la versión a pantalla completa y `urlMiniatura` la de la
+ * cuadrícula. En fotos subidas antes de las versiones ligeras, ambas
+ * apuntan al mismo original.
+ */
+export interface FotoInvitacion {
+  nombre: string;
+  url?: string;
+  urlMiniatura?: string;
 }
 
 export type EstadoInvitacion = "borrador" | "publicada";
@@ -118,6 +132,12 @@ export interface DatosInvitacion {
   padrinos?: { rol: string; nombre: string }[];
   /** Avisos para los invitados: parqueo, niños, hospedaje, etc. */
   notas?: { titulo: string; texto: string }[];
+  /**
+   * Lo que pidió el cliente en su formulario y el equipo tiene que aplicar
+   * a mano (canción, ambiente musical, referencias de diseño…).
+   * NUNCA se publica: solo se ve en el editor del panel.
+   */
+  notasEquipo?: { titulo: string; texto: string }[];
   /** Efectos de la experiencia */
   efectos?: {
     sobre: boolean;      // apertura tipo sobre lacrado
@@ -128,6 +148,20 @@ export interface DatosInvitacion {
 
 /** Valores por defecto de los campos nuevos (compatibilidad hacia atrás). */
 export const EFECTOS_POR_DEFECTO = { sobre: true, textura: true, musica: false };
+
+/** Confirmación de asistencia enviada por un invitado desde la invitación. */
+export interface Confirmacion {
+  id: string;
+  invitacion_id: string;
+  nombre: string;
+  nombre_normalizado: string;
+  asiste: boolean;
+  /** Personas en total, incluyendo al invitado. 0 si no asiste. */
+  cantidad: number;
+  nota: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
 
 export interface Invitacion {
   id: string;

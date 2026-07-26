@@ -4,6 +4,7 @@ import { construirFormulario } from "@/config/formularios";
 import { LIMITE_FOTOS } from "@/lib/planes";
 import { Plan, TipoEvento } from "@/lib/tipos";
 import { notificarFormularioCompletado } from "@/lib/notificaciones";
+import { listarArchivos, rutaOriginal } from "@/lib/fotos";
 
 /**
  * API pública del formulario del cliente, autenticada por el token único
@@ -37,11 +38,10 @@ export async function GET(
   const bloques = construirFormulario(pedido.tipo_evento as TipoEvento, pedido.plan as Plan);
   const limiteFotos = LIMITE_FOTOS[pedido.plan as Plan];
 
-  // Fotos ya subidas
+  // Fotos ya subidas (sin la subcarpeta de derivados: el cliente solo
+  // debe ver los archivos que él mismo subió)
   const supabase = crearClienteAdmin();
-  const { data: archivos } = await supabase.storage
-    .from("fotos-pedidos")
-    .list(pedido.id, { limit: 200 });
+  const archivos = await listarArchivos(supabase, pedido.id, 200);
 
   return NextResponse.json({
     estado: formulario.estado,
@@ -51,7 +51,7 @@ export async function GET(
     plan: pedido.plan,
     tipoEvento: pedido.tipo_evento,
     nombreCliente: pedido.clientes?.nombre ?? "",
-    fotos: (archivos ?? []).map((a) => ({ nombre: a.name, ruta: `${pedido.id}/${a.name}` })),
+    fotos: archivos.map((a) => ({ nombre: a.nombre, ruta: rutaOriginal(pedido.id, a.nombre) })),
   });
 }
 

@@ -1,4 +1,5 @@
-import { Plan, TipoEvento, EstadoPedido } from "./tipos";
+import type { Plan, TipoEvento, EstadoPedido } from "./tipos";
+import { fechaSinDiaSemana } from "./fechas";
 
 /**
  * CONFIGURACIÓN COMERCIAL DE INVIFTY
@@ -13,15 +14,28 @@ export const PLANES: Record<Plan, { nombre: string; precioDOP: number }> = {
 };
 
 /**
- * Vigencia de la invitación (en meses) desde la fecha de entrega.
- * OJO: la página pública anuncia 3/6/9/12 meses; aquí está configurado
- * 3 meses para Esencial/Popular/Premium y 12 para Luxury según la
- * instrucción interna. Alinear ambos cuando se decida la política final.
+ * VIGENCIA DE LA INVITACIÓN (meses desde la entrega)
+ * ===================================================
+ * ESTE ES EL ÚNICO SITIO DONDE SE CAMBIA. Manda lo que diga este archivo:
+ * el repaso diario (lib/vencimientos.ts) apaga las invitaciones solo.
+ *
+ * Política vigente: la misma que anuncia la página pública, 3/6/9/12.
+ * Antes el sistema aplicaba 3/3/3/12 mientras la web prometía 3/6/9/12, así
+ * que un cliente Premium se quedaba sin invitación a los 3 meses.
+ *
+ * Si vuelve a cambiar:
+ *   1. Alinea la página pública para que anuncie lo mismo.
+ *   2. Los pedidos YA entregados llevan su fecha congelada; para
+ *      aplicarles la política nueva ejecuta:
+ *        node --experimental-strip-types --env-file=.env.local \
+ *          scripts/recalcular-vencimientos.mts
+ *      (primero sin argumentos para simular, luego con --aplicar).
+ *      Ese script solo alarga, nunca acorta.
  */
 export const VIGENCIA_MESES: Record<Plan, number> = {
   esencial: 3,
-  popular: 3,
-  premium: 3,
+  popular: 6,
+  premium: 9,
   luxury: 12,
 };
 
@@ -74,6 +88,30 @@ export function formatoFecha(fecha: string | null | undefined): string {
   if (!fecha) return "—";
   const d = new Date(fecha.includes("T") ? fecha : fecha + "T12:00:00");
   return d.toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/**
+ * Mensaje para ofrecerle al cliente la renovación antes de que su
+ * invitación deje de estar en línea. Se copia desde la vista Vencimientos.
+ */
+export function mensajeWhatsAppRenovacion(
+  nombreCliente: string,
+  plan: Plan,
+  fechaVencimiento: string,
+  urlInvitacion: string | null
+): string {
+  const primerNombre = nombreCliente.split(" ")[0];
+  return (
+    `¡Hola ${primerNombre}! 💛 Te escribimos de Invifty.\n\n` +
+    // fechaSinDiaSemana en vez de formatoFecha: este mensaje lo lee el
+    // cliente, y "30 de junio de 2026" se lee mejor que "30 jun de 2026".
+    `Tu invitación digital estará en línea hasta el *${fechaSinDiaSemana(fechaVencimiento)}*. ` +
+    `Después de esa fecha el enlace deja de funcionar.\n\n` +
+    (urlInvitacion ? `${urlInvitacion}\n\n` : "") +
+    `Si quieres conservarla más tiempo —para que tus invitados sigan viendo las fotos ` +
+    `y los recuerdos del evento— podemos renovarla. Cuéntanos y te pasamos las opciones. ` +
+    `Tu plan actual es *${PLANES[plan].nombre}*. ¡Fue un placer ser parte de tu celebración! ✨`
+  );
 }
 
 /** Mensaje amigable para enviar el link del formulario por WhatsApp. */

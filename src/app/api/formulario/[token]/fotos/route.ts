@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { LIMITE_FOTOS } from "@/lib/planes";
 import { Plan } from "@/lib/tipos";
+import { generarDerivados } from "@/lib/imagenes";
+import {
+  BUCKET, borrarArchivo, listarArchivos, rutaMiniatura, rutaOriginal, rutaWeb, urlsDeFoto,
+} from "@/lib/fotos";
 
 const TIPOS_PERMITIDOS = [
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif",
@@ -45,13 +49,11 @@ export async function POST(
 
   // Límite de fotos según el plan (los videos cuentan aparte, máx. 1)
   const limite = LIMITE_FOTOS[pedido.plan as Plan];
-  const { data: existentes } = await supabase.storage
-    .from("fotos-pedidos")
-    .list(pedido.id, { limit: 500 });
-  const cantidadImagenes = (existentes ?? []).filter((a) => !a.name.startsWith("video-")).length;
+  const existentes = await listarArchivos(supabase, pedido.id, 500);
+  const cantidadImagenes = existentes.filter((a) => !a.esVideo).length;
 
-  const esVideo = archivo.type.startsWith("video/");
-  if (!esVideo && Number.isFinite(limite) && cantidadImagenes >= limite) {
+  const archivoEsVideo = archivo.type.startsWith("video/");
+  if (!archivoEsVideo && Number.isFinite(limite) && cantidadImagenes >= limite) {
     return NextResponse.json(
       { error: `Tu plan permite hasta ${limite} fotos. Elimina alguna para subir otra.` },
       { status: 400 }
@@ -59,16 +61,54 @@ export async function POST(
   }
 
   const extension = (archivo.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const prefijo = esVideo ? "video-" : "";
+  const prefijo = archivoEsVideo ? "video-" : "";
   const nombre = `${prefijo}${crypto.randomUUID()}.${extension}`;
-  const ruta = `${pedido.id}/${nombre}`;
 
   const { error } = await supabase.storage
-    .from("fotos-pedidos")
-    .upload(ruta, archivo, { contentType: archivo.type });
+    .from(BUCKET)
+    .upload(rutaOriginal(pedido.id, nombre), archivo, { contentType: archivo.type });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, foto: { nombre, ruta } });
+
+  /**
+   * Versiones ligeras para la invitación. El original se queda intacto
+   * para el equipo de diseño. Si la conversión falla (formato raro), la
+   * foto sirve igual desde el original: no se corta la subida.
+   */
+  if (!archivoEsVideo) {
+    const derivados = await generarDerivados(Buffer.from(await archivo.arrayBuffer()));
+    if (derivados) {
+      await Promise.all([
+        supabase.storage
+          .from(BUCKET)
+          .upload(rutaWeb(pedido.id, nombre), derivados.web, { contentType: "image/webp" }),
+        supabase.storage
+          .from(BUCKET)
+          .upload(rutaMiniatura(pedido.id, nombre), derivados.miniatura, {
+            contentType: "image/webp",
+          }),
+      ]);
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    foto: { nombre, ruta: rutaOriginal(pedido.id, nombre) },
+  });
+}
+
+/**
+ * Extrae el nombre del archivo a partir de la ruta que manda el cliente,
+ * comprobando que sea un archivo directo de SU pedido. Rechaza cualquier
+ * cosa con subcarpetas o saltos de directorio ("pedido/../otro/foto.jpg"),
+ * para que el token de un pedido no pueda alcanzar los archivos de otro.
+ */
+function nombreDeRuta(ruta: string, pedidoId: string): string | null {
+  const prefijo = `${pedidoId}/`;
+  if (!ruta.startsWith(prefijo)) return null;
+  const nombre = ruta.slice(prefijo.length);
+  if (!nombre || nombre.includes("/") || nombre.includes("..")) return null;
+  return nombre;
 }
 
 // DELETE → eliminar un archivo subido (?ruta=pedidoId/nombre)
@@ -82,15 +122,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Formulario no encontrado" }, { status: 404 });
   }
 
-  const ruta = req.nextUrl.searchParams.get("ruta") || "";
-  // Solo puede borrar archivos de SU pedido
-  if (!ruta.startsWith(`${formulario.pedidos.id}/`)) {
-    return NextResponse.json({ error: "Ruta inválida" }, { status: 403 });
-  }
+  const pedidoId = formulario.pedidos.id as string;
+  const nombre = nombreDeRuta(req.nextUrl.searchParams.get("ruta") || "", pedidoId);
+  if (!nombre) return NextResponse.json({ error: "Ruta inválida" }, { status: 403 });
 
-  const supabase = crearClienteAdmin();
-  const { error } = await supabase.storage.from("fotos-pedidos").remove([ruta]);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Se borra también la versión web y la miniatura, para no dejar huérfanos.
+  const { error } = await borrarArchivo(crearClienteAdmin(), pedidoId, nombre);
+  if (error) return NextResponse.json({ error }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
@@ -105,16 +143,18 @@ export async function GET(
     return NextResponse.json({ error: "Formulario no encontrado" }, { status: 404 });
   }
 
-  const ruta = req.nextUrl.searchParams.get("ruta") || "";
-  if (!ruta.startsWith(`${formulario.pedidos.id}/`)) {
-    return NextResponse.json({ error: "Ruta inválida" }, { status: 403 });
-  }
+  const pedidoId = formulario.pedidos.id as string;
+  const nombre = nombreDeRuta(req.nextUrl.searchParams.get("ruta") || "", pedidoId);
+  if (!nombre) return NextResponse.json({ error: "Ruta inválida" }, { status: 403 });
 
+  // La vista previa del formulario usa la miniatura: el cliente está en el
+  // celular y no necesita descargar su propia foto a tamaño completo.
   const supabase = crearClienteAdmin();
-  const { data, error } = await supabase.storage
-    .from("fotos-pedidos")
-    .createSignedUrl(ruta, 60 * 60); // 1 hora
+  const archivos = await listarArchivos(supabase, pedidoId, 500);
+  const archivo = archivos.find((a) => a.nombre === nombre);
+  if (!archivo) return NextResponse.json({ error: "No disponible" }, { status: 404 });
 
-  if (error || !data) return NextResponse.json({ error: "No disponible" }, { status: 500 });
-  return NextResponse.json({ url: data.signedUrl });
+  const { urlMiniatura } = await urlsDeFoto(supabase, pedidoId, archivo);
+  if (!urlMiniatura) return NextResponse.json({ error: "No disponible" }, { status: 500 });
+  return NextResponse.json({ url: urlMiniatura });
 }

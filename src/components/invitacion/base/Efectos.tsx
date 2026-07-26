@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, ReactNode } from "react";
 import { Music, Volume2, VolumeX } from "lucide-react";
 import { Monograma } from "./Ornamentos";
 
@@ -141,11 +141,14 @@ export function Revelar({
   desde?: "abajo" | "izquierda" | "derecha" | "escala";
   className?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    const el = ref.current;
+  /**
+   * Se observa desde la propia referencia en lugar de un efecto: React 19
+   * admite que un callback de ref devuelva su limpieza, y así el observador
+   * se crea justo cuando el nodo existe, sin renders en cascada.
+   */
+  const referencia = useCallback((el: HTMLDivElement | null) => {
     if (!el) return;
 
     // Si el navegador no soporta el observador, mostramos sin animación
@@ -176,7 +179,7 @@ export function Revelar({
 
   return (
     <div
-      ref={ref}
+      ref={referencia}
       className={className}
       style={{
         opacity: visible ? 1 : 0,

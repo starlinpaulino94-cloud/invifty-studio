@@ -8,6 +8,7 @@ import {
 import { construirFormulario } from "@/config/formularios";
 import { formatearValor } from "@/lib/respuestas";
 import { Cliente, Formulario, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { listarArchivos, urlsDeFoto } from "@/lib/fotos";
 import BotonImprimir from "@/components/panel/BotonImprimir";
 import { ArrowLeft } from "lucide-react";
 
@@ -47,19 +48,11 @@ export default async function ExportarPedido({
   const abonado = (pedido.pagos ?? []).reduce((s, p) => s + Number(p.monto), 0);
   const saldo = Number(pedido.precio) - abonado;
 
+  // El brief se imprime: con la versión web basta y el PDF pesa mucho menos.
   const admin = crearClienteAdmin();
-  const { data: archivos } = await admin.storage
-    .from("fotos-pedidos")
-    .list(pedido.id, { limit: 200 });
+  const archivos = await listarArchivos(admin, pedido.id, 200);
   const fotos = await Promise.all(
-    (archivos ?? [])
-      .filter((a) => !a.name.startsWith("video-"))
-      .map(async (a) => {
-        const { data: firmada } = await admin.storage
-          .from("fotos-pedidos")
-          .createSignedUrl(`${pedido.id}/${a.name}`, 3600);
-        return { nombre: a.name, url: firmada?.signedUrl };
-      })
+    archivos.filter((a) => !a.esVideo).map((a) => urlsDeFoto(admin, pedido.id, a))
   );
 
   const generado = new Date().toLocaleString("es-DO", {

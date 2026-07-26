@@ -1,4 +1,5 @@
-import { Plan, TipoEvento } from "@/lib/tipos";
+import type { Plan, TipoEvento } from "@/lib/tipos";
+import { PALETAS, muestraDePaleta } from "@/config/diseno";
 
 /**
  * MOTOR DE FORMULARIOS DINÁMICOS DE INVIFTY
@@ -90,14 +91,51 @@ export function preguntasDelFormulario(tipoEvento: TipoEvento, plan: Plan): { bl
 // OPCIONES REUTILIZABLES
 // ============================================================
 
-const PALETAS_COMUNES: OpcionVisual[] = [
-  { valor: "dorado_negro", etiqueta: "Dorado & Negro", colores: ["#D4AF37", "#0F0F0F", "#FFFFFF"] },
-  { valor: "blanco_verde", etiqueta: "Blanco & Verde Olivo", colores: ["#FAF8F5", "#6B7F5E", "#C9A96A"] },
-  { valor: "rosa_dorado", etiqueta: "Rose Gold & Crema", colores: ["#E8B4B8", "#D4AF37", "#FFF7F0"] },
-  { valor: "azul_plata", etiqueta: "Azul Noche & Plata", colores: ["#1B2A4A", "#C0C0C0", "#F5F5F5"] },
-  { valor: "terracota", etiqueta: "Terracota & Beige", colores: ["#C1683C", "#E8D5C4", "#7A4A2B"] },
-  { valor: "vino_nude", etiqueta: "Vino & Nude", colores: ["#722F37", "#E3C9B8", "#F8F1EC"] },
-];
+/**
+ * PALETAS OFRECIDAS AL CLIENTE
+ * =============================
+ * Las opciones se construyen a partir del catálogo real (`config/diseno.ts`):
+ * el nombre y las muestras de color salen de la paleta que se va a aplicar.
+ * Así el cliente ve exactamente los colores que va a recibir, y es imposible
+ * ofrecer una paleta que el sistema no sepa pintar.
+ */
+function opcionesPaleta(ids: string[]): OpcionVisual[] {
+  return ids
+    .filter((id) => id in PALETAS)
+    .map((id) => ({
+      valor: id,
+      etiqueta: PALETAS[id].nombre,
+      descripcion: PALETAS[id].oscura ? "Fondo oscuro" : "Fondo claro",
+      colores: muestraDePaleta(id),
+    }));
+}
+
+/** Bodas: del oro clásico a los tonos tierra y vino. */
+const PALETAS_BODA = opcionesPaleta([
+  "dorado_negro", "marfil_oro", "champan_perla", "blanco_verde",
+  "rosa_dorado", "vino_nude", "borgona_rosa", "azul_plata",
+  "malva_perla", "bosque_crema", "terracota", "blanco_negro",
+]);
+
+/** Cumpleaños y 15 años: más brillo, joya y color. */
+const PALETAS_FIESTA = opcionesPaleta([
+  "dorado_negro", "azul_rey_oro", "esmeralda_oro", "onix_oro_rosa",
+  "rosa_dorado", "lila_dorado", "lavanda_perla", "coral_palma",
+  "turquesa_arena", "grafito_plata", "vino_nude", "champan_perla",
+]);
+
+/** Eventos corporativos: sobrias y de alto contraste. */
+const PALETAS_CORPORATIVAS = opcionesPaleta([
+  "blanco_negro", "grafito_plata", "azul_plata", "azul_rey_oro",
+  "dorado_negro", "esmeralda_oro", "marfil_oro", "cobre_noche",
+]);
+
+/** Baby showers, bautizos y celebraciones en general: suaves y luminosas. */
+const PALETAS_SUAVES = opcionesPaleta([
+  "blanco_verde", "durazno_crema", "celeste_nube", "menta_blanco",
+  "lavanda_perla", "coral_palma", "marfil_oro", "mostaza_tierra",
+  "malva_perla", "turquesa_arena", "rosa_dorado", "champan_perla",
+]);
 
 const DRESS_CODES: OpcionVisual[] = [
   { valor: "formal", etiqueta: "Formal / Etiqueta", emoji: "🤵", descripcion: "Traje y vestido largo" },
@@ -187,7 +225,8 @@ const BLOQUES_BODA: Bloque[] = [
         id: "paleta_colores",
         tipo: "seleccion",
         titulo: "¿Qué paleta de colores prefieren?",
-        opciones: PALETAS_COMUNES,
+        subtitulo: "Los círculos muestran los colores exactos de su invitación.",
+        opciones: PALETAS_BODA,
         requerida: true,
       },
       {
@@ -221,6 +260,25 @@ const BLOQUES_BODA: Bloque[] = [
     ],
   },
   {
+    id: "personas",
+    titulo: "Padrinos y corte de honor",
+    desdePlan: "popular",
+    descripcion: "Las personas que los acompañan en el altar tienen su propia sección.",
+    preguntas: [
+      {
+        id: "personas_especiales",
+        tipo: "lista",
+        titulo: "¿A quiénes quieren nombrar en la invitación?",
+        subtitulo: "Padrinos, madrinas, damas de honor, padrinos de velación… Agrega los que quieras. Si prefieres no incluir esta sección, continúa sin llenar nada.",
+        campos: [
+          { id: "rol", etiqueta: "Rol", placeholder: "Ej. Padrino de anillos" },
+          { id: "nombre", etiqueta: "Nombre", placeholder: "Ej. Luis Herrera" },
+        ],
+        textoAgregar: "Agregar persona",
+      },
+    ],
+  },
+  {
     id: "fotos",
     titulo: "Sus fotos",
     desdePlan: "popular",
@@ -231,6 +289,13 @@ const BLOQUES_BODA: Bloque[] = [
         tipo: "fotos",
         titulo: "Suban sus fotos favoritas",
         subtitulo: "Recomendamos fotos en buena resolución, verticales u horizontales. La primera será la portada.",
+      },
+      {
+        id: "hashtag",
+        tipo: "texto",
+        titulo: "¿Tienen un hashtag para la boda?",
+        subtitulo: "Aparecerá al final de la invitación, para que los invitados etiqueten sus fotos. Si no tienen, continúa.",
+        placeholder: "Ej. #CamilaYLucas2026",
       },
     ],
   },
@@ -414,7 +479,8 @@ const BLOQUES_CUMPLEANOS: Bloque[] = [
         id: "paleta_colores",
         tipo: "seleccion",
         titulo: "¿Qué paleta de colores prefieres?",
-        opciones: PALETAS_COMUNES,
+        subtitulo: "Los círculos muestran los colores exactos de tu invitación.",
+        opciones: PALETAS_FIESTA,
         requerida: true,
       },
       {
@@ -429,6 +495,25 @@ const BLOQUES_CUMPLEANOS: Bloque[] = [
     ],
   },
   {
+    id: "personas",
+    titulo: "Corte de honor",
+    desdePlan: "popular",
+    descripcion: "Si hay corte de honor, padrinos o personas especiales, tienen su propia sección.",
+    preguntas: [
+      {
+        id: "personas_especiales",
+        tipo: "lista",
+        titulo: "¿A quiénes quieres nombrar en la invitación?",
+        subtitulo: "Chambelanes, damas, padrinos, madrinas… Agrega los que quieras. Si prefieres no incluir esta sección, continúa sin llenar nada.",
+        campos: [
+          { id: "rol", etiqueta: "Rol", placeholder: "Ej. Chambelán de honor" },
+          { id: "nombre", etiqueta: "Nombre", placeholder: "Ej. Diego Martínez" },
+        ],
+        textoAgregar: "Agregar persona",
+      },
+    ],
+  },
+  {
     id: "fotos",
     titulo: "Fotos",
     desdePlan: "popular",
@@ -438,6 +523,13 @@ const BLOQUES_CUMPLEANOS: Bloque[] = [
         tipo: "fotos",
         titulo: "Sube las fotos para la invitación",
         subtitulo: "La primera será la portada. Fotos recientes y en buena calidad lucen mejor.",
+      },
+      {
+        id: "hashtag",
+        tipo: "texto",
+        titulo: "¿Tienes un hashtag para la fiesta?",
+        subtitulo: "Aparecerá al final de la invitación, para que tus invitados etiqueten sus fotos. Si no tienes, continúa.",
+        placeholder: "Ej. #Los15DeValeria",
       },
     ],
   },
@@ -614,8 +706,13 @@ const BLOQUES_EMPRESARIAL: Bloque[] = [
         titulo: "¿Qué paleta usamos?",
         subtitulo: "Podemos seguir la identidad de tu marca o proponer una elegante.",
         opciones: [
-          { valor: "colores_marca", etiqueta: "Los colores de nuestra marca", emoji: "🏢", descripcion: "Los tomamos del logo" },
-          ...PALETAS_COMUNES.slice(0, 4),
+          {
+            valor: "colores_marca",
+            etiqueta: "Los colores de nuestra marca",
+            emoji: "🏢",
+            descripcion: "Los tomamos del logo que subiste",
+          },
+          ...PALETAS_CORPORATIVAS,
         ],
       },
     ],
@@ -798,7 +895,8 @@ const BLOQUES_OTRO: Bloque[] = [
         id: "paleta_colores",
         tipo: "seleccion",
         titulo: "¿Paleta de colores?",
-        opciones: PALETAS_COMUNES,
+        subtitulo: "Los círculos muestran los colores exactos de tu invitación.",
+        opciones: PALETAS_SUAVES,
       },
       {
         id: "dress_code",
@@ -812,6 +910,24 @@ const BLOQUES_OTRO: Bloque[] = [
     ],
   },
   {
+    id: "personas",
+    titulo: "Personas especiales",
+    desdePlan: "popular",
+    preguntas: [
+      {
+        id: "personas_especiales",
+        tipo: "lista",
+        titulo: "¿Hay personas que quieras nombrar en la invitación?",
+        subtitulo: "Padrinos, madrinas, homenajeados… Si no aplica, continúa sin llenar nada.",
+        campos: [
+          { id: "rol", etiqueta: "Rol", placeholder: "Ej. Madrina" },
+          { id: "nombre", etiqueta: "Nombre", placeholder: "Ej. Rosa Jiménez" },
+        ],
+        textoAgregar: "Agregar persona",
+      },
+    ],
+  },
+  {
     id: "fotos",
     titulo: "Fotos",
     desdePlan: "popular",
@@ -820,6 +936,13 @@ const BLOQUES_OTRO: Bloque[] = [
         id: "fotos_evento",
         tipo: "fotos",
         titulo: "Sube las fotos para la invitación",
+      },
+      {
+        id: "hashtag",
+        tipo: "texto",
+        titulo: "¿Tienes un hashtag para el evento?",
+        subtitulo: "Aparecerá al final de la invitación. Si no tienes, continúa.",
+        placeholder: "Ej. #BautizoDeSofia",
       },
     ],
   },
