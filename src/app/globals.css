@@ -49,6 +49,19 @@ body {
   max-height: calc(var(--alto-previa) * 0.85);
 }
 
+/* Modo señalar: se marca el bloque bajo el cursor y nada responde al clic,
+   para que tocar la invitación lleve al campo en vez de abrir un mapa. */
+.vista-previa--senalando,
+.vista-previa--senalando * {
+  cursor: crosshair !important;
+}
+
+.vista-previa--senalando [data-campo]:hover {
+  outline: 2px dashed #d4af37;
+  outline-offset: -4px;
+  background-color: rgb(212 175 55 / 0.07);
+}
+
 /* Scrollbar sobria para el panel */
 ::-webkit-scrollbar {
   width: 8px;

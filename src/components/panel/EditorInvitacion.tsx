@@ -102,6 +102,34 @@ export default function EditorInvitacion({
     });
 
   const despublicar = () => startPublicar(() => despublicarInvitacion(invitacionId));
+
+  /**
+   * Qué tarjeta del editor controla cada bloque de la invitación. Los
+   * bloques se marcan en Secciones.tsx, común a las diez plantillas.
+   */
+  const TARJETA_DE_CAMPO: Record<string, string> = {
+    portada: "portada",
+    lugares: "lugares",
+    dresscode: "lugares", // el código de vestimenta se edita junto a los lugares
+    historia: "historia",
+    cronograma: "cronograma",
+    padrinos: "padrinos",
+    galeria: "galeria",
+    regalos: "regalos",
+    notas: "notas",
+    rsvp: "rsvp",
+    cierre: "cierre",
+  };
+
+  /** Tarjeta a la que saltó la vista previa; se resalta un momento. */
+  const [resaltada, setResaltada] = useState<string | null>(null);
+
+  const irACampo = (campo: string) => {
+    const id = TARJETA_DE_CAMPO[campo] ?? "portada";
+    document.getElementById(`tarjeta-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setResaltada(id);
+    setTimeout(() => setResaltada((actual) => (actual === id ? null : actual)), 2000);
+  };
   const efectos = { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}) };
 
   return (
@@ -317,7 +345,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       {/* ---------- CONTENIDO ---------- */}
-      <Tarjeta titulo="Portada">
+      <Tarjeta titulo="Portada" id="portada" resaltada={resaltada === "portada"}>
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
             <label className={label}>Título principal</label>
@@ -360,7 +388,7 @@ export default function EditorInvitacion({
         </div>
       </Tarjeta>
 
-      <Tarjeta titulo="Lugares">
+      <Tarjeta titulo="Lugares" id="lugares" resaltada={resaltada === "lugares"}>
         <ListaEditable
           items={datos.lugares}
           onChange={(v) => set("lugares", v as DatosInvitacion["lugares"])}
@@ -377,7 +405,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Historia"
+        titulo="Historia" id="historia" resaltada={resaltada === "historia"}
         toggle={{ activo: datos.secciones.historia, onChange: (v) => setSeccion("historia", v) }}
       >
         <textarea
@@ -390,7 +418,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Programa del día"
+        titulo="Programa del día" id="cronograma" resaltada={resaltada === "cronograma"}
         toggle={{ activo: datos.secciones.cronograma, onChange: (v) => setSeccion("cronograma", v) }}
       >
         <ListaEditable
@@ -405,7 +433,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Personas especiales"
+        titulo="Personas especiales" id="padrinos" resaltada={resaltada === "padrinos"}
         subtitulo="Padrinos, corte de honor, damas, ponentes…"
         toggle={{ activo: !!datos.secciones.padrinos, onChange: (v) => setSeccion("padrinos", v) }}
       >
@@ -421,7 +449,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Mesa de regalos"
+        titulo="Mesa de regalos" id="regalos" resaltada={resaltada === "regalos"}
         toggle={{ activo: datos.secciones.regalos, onChange: (v) => setSeccion("regalos", v) }}
       >
         <ListaEditable
@@ -436,7 +464,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Detalles a tener en cuenta"
+        titulo="Detalles a tener en cuenta" id="notas" resaltada={resaltada === "notas"}
         subtitulo="Parqueo, hospedaje, si es solo adultos, indicaciones especiales…"
         toggle={{ activo: !!datos.secciones.notas, onChange: (v) => setSeccion("notas", v) }}
       >
@@ -452,7 +480,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Fotos, portada y orden"
+        titulo="Fotos, portada y orden" id="galeria" resaltada={resaltada === "galeria"}
         subtitulo="Elige cuál es la portada, en qué orden se ven y cuáles no salen."
         toggle={{ activo: datos.secciones.galeria, onChange: (v) => setSeccion("galeria", v) }}
       >
@@ -471,7 +499,7 @@ export default function EditorInvitacion({
       </Tarjeta>
 
       <Tarjeta
-        titulo="Confirmación de asistencia (RSVP)"
+        titulo="Confirmación de asistencia (RSVP)" id="rsvp" resaltada={resaltada === "rsvp"}
         toggle={{ activo: datos.secciones.rsvp, onChange: (v) => setSeccion("rsvp", v) }}
       >
         <div className="grid sm:grid-cols-3 gap-4">
@@ -507,7 +535,7 @@ export default function EditorInvitacion({
         </div>
       </Tarjeta>
 
-      <Tarjeta titulo="Cierre">
+      <Tarjeta titulo="Cierre" id="cierre" resaltada={resaltada === "cierre"}>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className={label}>Mensaje final</label>
@@ -532,7 +560,12 @@ export default function EditorInvitacion({
 
         </div>
 
-        <VistaPreviaEnVivo plantilla={plantilla} datos={datos} fotos={fotos} />
+        <VistaPreviaEnVivo
+          plantilla={plantilla}
+          datos={datos}
+          fotos={fotos}
+          onSenalarCampo={irACampo}
+        />
       </div>
     </div>
   );
@@ -545,14 +578,24 @@ function Tarjeta({
   subtitulo,
   toggle,
   children,
+  id,
+  resaltada,
 }: {
   titulo: string;
   subtitulo?: string;
   toggle?: { activo: boolean; onChange: (v: boolean) => void };
   children: React.ReactNode;
+  /** Destino al que salta la vista previa cuando se señala su bloque. */
+  id?: string;
+  resaltada?: boolean;
 }) {
   return (
-    <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+    <section
+      id={id ? `tarjeta-${id}` : undefined}
+      className={`bg-white border rounded-2xl p-6 shadow-sm transition-colors scroll-mt-24 ${
+        resaltada ? "border-[#D4AF37] ring-2 ring-[#D4AF37]/40" : "border-gray-100"
+      }`}
+    >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h2 className="font-serif text-lg text-gray-900">{titulo}</h2>

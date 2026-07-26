@@ -14,8 +14,8 @@ Se marcan aquí a medida que se cierran.
 |---|---|---|
 | **1A** | Elegir portada, reordenar y ocultar fotos | ✅ Hecho |
 | **1B** | Vista previa en vivo dentro del editor, sin guardar ni recargar | ✅ Hecho |
-| **1C** | Clic en la vista previa → salta al campo que lo controla | ⏳ |
-| **1D** | Edición literal encima del diseño | 🤔 Decidir después de 1B/1C |
+| **1C** | Clic en la vista previa → salta al campo que lo controla | ✅ Hecho |
+| **1D** | Edición literal encima del diseño | 🤔 Decidir ahora, ya con 1B y 1C funcionando |
 
 **Sobre 1D.** La edición inline real hay que cablearla en cada una de las diez
 plantillas, y en cada plantilla nueva que se haga: es coste permanente, no una
@@ -70,6 +70,28 @@ declara borrador, igual que la vista previa pública.
 Verificado con capturas reales del navegador: sobre cerrado, invitación abierta,
 desplazamiento dentro del marco y vista de escritorio. Nada se escapa al panel y
 la portada encaja exacta.
+
+### ✅ 1C — Señalar en la vista previa
+
+Un botón de puntero enciende el **modo señalar**: al pasar por encima se marca
+el bloque, y al tocarlo el editor se desplaza a la tarjeta que lo controla y la
+resalta un par de segundos.
+
+Mientras está encendido, el clic **no activa lo que hay debajo** — no se abre el
+sobre, ni un mapa, ni se envía una confirmación. Por eso es un modo y no el
+comportamiento normal: la vista previa sigue siendo usable como invitación real
+cuando el modo está apagado.
+
+**Cómo cubre las diez plantillas con un solo archivo.** Los bloques del cuerpo se
+marcan en `Secciones.tsx`, que todas las plantillas comparten. Lo que no está
+marcado es la portada, que es justo la parte que cada plantilla compone a su
+manera: cualquier clic fuera de un bloque marcado lleva a la tarjeta "Portada".
+Así una plantilla nueva funciona sin tocar nada.
+
+Verificado con el navegador: se marcan los once bloques (portada, historia,
+lugares, código de vestimenta, programa, personas especiales, galería, regalos,
+avisos, confirmación y cierre), y señalar la historia desplaza el editor y
+resalta su tarjeta.
 
 ---
 

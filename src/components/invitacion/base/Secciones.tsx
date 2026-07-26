@@ -53,11 +53,23 @@ export function TituloSeccion({
 export function Seccion({
   children,
   className = "",
+  campo,
 }: {
   children: ReactNode;
   className?: string;
+  /**
+   * Qué parte del editor controla esta sección. Solo se usa en la vista
+   * previa del panel: al señalar un bloque, el editor salta a su tarjeta.
+   * Marcarlo aquí cubre las diez plantillas de una vez, porque todas
+   * componen su cuerpo con estos mismos bloques.
+   */
+  campo?: string;
 }) {
-  return <section className={`px-5 py-14 sm:py-16 ${className}`}>{children}</section>;
+  return (
+    <section className={`px-5 py-14 sm:py-16 ${className}`} data-campo={campo}>
+      {children}
+    </section>
+  );
 }
 
 /* ============================================================
@@ -98,7 +110,7 @@ export function BloqueContador({
 export function BloqueHistoria({ datos, variante }: { datos: DatosInvitacion; variante: string }) {
   if (!datos.secciones.historia || !datos.historia) return null;
   return (
-    <Seccion>
+    <Seccion campo="historia">
       <div className="max-w-xl mx-auto">
         <Revelar>
           <TituloSeccion titulo="Nuestra Historia" icono={<Heart className="w-4 h-4" />} variante={variante} />
@@ -127,7 +139,7 @@ export function BloqueLugares({
 }) {
   if (!datos.lugares.length) return null;
   return (
-    <Seccion>
+    <Seccion campo="lugares">
       <div className="max-w-3xl mx-auto">
         <Revelar>
           <TituloSeccion titulo="Dónde y cuándo" icono={<MapPin className="w-4 h-4" />} variante={variante} />
@@ -181,7 +193,7 @@ export function BloqueLugares({
 export function BloqueDressCode({ datos, variante }: { datos: DatosInvitacion; variante: string }) {
   if (!datos.dressCode) return null;
   return (
-    <Seccion>
+    <Seccion campo="dresscode">
       <Revelar>
         <div className="max-w-md mx-auto text-center">
           <TituloSeccion titulo="Código de vestimenta" icono={<Shirt className="w-4 h-4" />} variante={variante} />
@@ -200,7 +212,7 @@ export function BloqueDressCode({ datos, variante }: { datos: DatosInvitacion; v
 export function BloqueCronograma({ datos, variante }: { datos: DatosInvitacion; variante: string }) {
   if (!datos.secciones.cronograma || !datos.cronograma.length) return null;
   return (
-    <Seccion>
+    <Seccion campo="cronograma">
       <div className="max-w-lg mx-auto">
         <Revelar>
           <TituloSeccion titulo="Programa del día" icono={<Clock className="w-4 h-4" />} variante={variante} />
@@ -246,7 +258,7 @@ export function BloquePadrinos({ datos, variante }: { datos: DatosInvitacion; va
   const lista = datos.padrinos ?? [];
   if (!datos.secciones.padrinos || !lista.length) return null;
   return (
-    <Seccion>
+    <Seccion campo="padrinos">
       <div className="max-w-2xl mx-auto">
         <Revelar>
           <TituloSeccion titulo="Personas especiales" icono={<Users className="w-4 h-4" />} variante={variante} />
@@ -286,7 +298,7 @@ export function BloqueGaleria({
 }) {
   if (!datos.secciones.galeria || fotos.length < 2) return null;
   return (
-    <Seccion>
+    <Seccion campo="galeria">
       <div className="max-w-3xl mx-auto">
         <Revelar>
           <TituloSeccion titulo="Galería" icono={<Camera className="w-4 h-4" />} variante={variante} />
@@ -305,7 +317,7 @@ export function BloqueGaleria({
 export function BloqueRegalos({ datos, variante }: { datos: DatosInvitacion; variante: string }) {
   if (!datos.secciones.regalos || !datos.regalos.length) return null;
   return (
-    <Seccion>
+    <Seccion campo="regalos">
       <div className="max-w-lg mx-auto">
         <Revelar>
           <TituloSeccion titulo="Mesa de regalos" icono={<Gift className="w-4 h-4" />} variante={variante} />
@@ -343,7 +355,7 @@ export function BloqueNotas({ datos, variante }: { datos: DatosInvitacion; varia
   const lista = datos.notas ?? [];
   if (!datos.secciones.notas || !lista.length) return null;
   return (
-    <Seccion>
+    <Seccion campo="notas">
       <div className="max-w-2xl mx-auto">
         <Revelar>
           <TituloSeccion titulo="Detalles a tener en cuenta" icono={<Info className="w-4 h-4" />} variante={variante} />
@@ -376,7 +388,7 @@ export function BloqueNotas({ datos, variante }: { datos: DatosInvitacion; varia
 export function BloqueRsvp({ datos, variante }: { datos: DatosInvitacion; variante: string }) {
   if (!datos.secciones.rsvp || !datos.rsvp.whatsapp) return null;
   return (
-    <Seccion>
+    <Seccion campo="rsvp">
       <div className="max-w-md mx-auto">
         <Revelar>
           <TituloSeccion titulo="Confirma tu asistencia" icono={<Sparkles className="w-4 h-4" />} variante={variante} />
@@ -397,7 +409,7 @@ export function BloqueRsvp({ datos, variante }: { datos: DatosInvitacion; varian
 export function BloqueMensajeFinal({ datos }: { datos: DatosInvitacion }) {
   if (!datos.mensajeFinal) return null;
   return (
-    <Seccion className="pt-4">
+    <Seccion className="pt-4" campo="cierre">
       <Revelar>
         <p
           className="max-w-lg mx-auto text-center text-2xl sm:text-3xl leading-snug"
@@ -426,7 +438,9 @@ export function CuerpoEstandar({
 }) {
   return (
     <main className="relative z-10">
-      <Seccion className="pb-4">
+      {/* La cuenta regresiva se alimenta de la fecha y la hora, que se
+          editan en la tarjeta "Portada". */}
+      <Seccion className="pb-4" campo="portada">
         <BloqueContador datos={datos} estiloContador={estiloContador} />
       </Seccion>
       <BloqueHistoria datos={datos} variante={variante} />

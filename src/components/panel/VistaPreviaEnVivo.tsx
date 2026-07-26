@@ -6,7 +6,7 @@ import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
 import { ordenarFotos } from "@/lib/fotos";
 import { urlFuentes } from "@/config/diseno";
 import type { DatosInvitacion, FotoInvitacion } from "@/lib/tipos";
-import { Smartphone, Monitor, RotateCcw } from "lucide-react";
+import { Smartphone, Monitor, RotateCcw, MousePointerClick } from "lucide-react";
 
 /**
  * VISTA PREVIA EN VIVO
@@ -37,13 +37,17 @@ export default function VistaPreviaEnVivo({
   plantilla,
   datos,
   fotos,
+  onSenalarCampo,
 }: {
   plantilla: string;
   datos: DatosInvitacion;
   /** Fotos del pedido sin ordenar; aquí se aplica el orden en vivo. */
   fotos: FotoInvitacion[];
+  /** Se llama al señalar un bloque, con el campo del editor que lo controla. */
+  onSenalarCampo?: (campo: string) => void;
 }) {
   const [ancho, setAncho] = useState(ANCHO_CELULAR);
+  const [senalando, setSenalando] = useState(false);
   // Cambiar esta clave vuelve a montar la invitación: sirve para volver a
   // ver la apertura del sobre después de haberla abierto.
   const [reinicio, setReinicio] = useState(0);
@@ -54,6 +58,23 @@ export default function VistaPreviaEnVivo({
   const escala = esCelular ? 0.72 : 0.5;
 
   const fotosOrdenadas = ordenarFotos(fotos, datos.ordenFotos, datos.fotosOcultas);
+
+  /**
+   * En modo señalar, el clic lleva al campo que controla ese bloque en vez
+   * de activar lo que haya debajo. Se intercepta en fase de captura para
+   * que no se abra el sobre, ni un mapa, ni se envíe una confirmación.
+   *
+   * Los bloques del cuerpo se marcan con data-campo en Secciones.tsx, que
+   * es común a las diez plantillas. Lo que no está marcado es la portada:
+   * es la única parte que cada plantilla compone a su manera.
+   */
+  const senalar = (e: React.MouseEvent) => {
+    if (!senalando) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const bloque = (e.target as HTMLElement).closest<HTMLElement>("[data-campo]");
+    onSenalarCampo?.(bloque?.dataset.campo || "portada");
+  };
 
   return (
     <div className="xl:sticky xl:top-4 shrink-0">
@@ -81,6 +102,13 @@ export default function VistaPreviaEnVivo({
             <Monitor className="w-3.5 h-3.5" />
           </BotonMarco>
           <BotonMarco
+            activo={senalando}
+            onClick={() => setSenalando((v) => !v)}
+            titulo="Señalar: toca una parte de la invitación para ir a su campo"
+          >
+            <MousePointerClick className="w-3.5 h-3.5" />
+          </BotonMarco>
+          <BotonMarco
             activo={false}
             onClick={() => setReinicio((n) => n + 1)}
             titulo="Volver a empezar (ver la apertura del sobre)"
@@ -98,7 +126,10 @@ export default function VistaPreviaEnVivo({
       >
         <div
           key={reinicio}
-          className="vista-previa origin-top-left overflow-y-auto"
+          onClickCapture={senalar}
+          className={`vista-previa origin-top-left overflow-y-auto ${
+            senalando ? "vista-previa--senalando" : ""
+          }`}
           style={{
             width: ancho,
             height: ALTO,
@@ -113,8 +144,9 @@ export default function VistaPreviaEnVivo({
       </div>
 
       <p className="text-[10px] text-gray-400 mt-2 leading-relaxed" style={{ width: ancho * escala }}>
-        Se actualiza mientras editas. Las confirmaciones enviadas desde aquí no se
-        guardan.
+        {senalando
+          ? "Toca cualquier parte de la invitación y el editor salta a su campo."
+          : "Se actualiza mientras editas. Las confirmaciones enviadas desde aquí no se guardan."}
       </p>
     </div>
   );
