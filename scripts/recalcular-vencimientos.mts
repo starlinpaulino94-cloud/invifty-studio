@@ -11,6 +11,10 @@
  * (La decisión vive en `planificarRecalculo`, en src/lib/vencimientos.ts,
  * que tiene sus propias pruebas.)
  *
+ * LA VÍA NORMAL ES EL PANEL: Panel → Mantenimiento tiene esto mismo como
+ * botón, con la lógica compartida en src/lib/. Este script existe para
+ * quien prefiera la terminal.
+ *
  * NO es SQL: no se pega en Supabase. Es un programa que se ejecuta en la
  * terminal de tu computadora, dentro de la carpeta del proyecto:
  *

@@ -57,8 +57,10 @@ npm run dev                    # abre http://localhost:3000
 
 ### Tareas de mantenimiento
 
-Se ejecutan **en la terminal de tu computadora**, dentro de la carpeta del
-proyecto y con el `.env.local` puesto. No son SQL: no se pegan en Supabase.
+Están en **Panel → Mantenimiento** como botones, que es la vía normal. Los
+mismos trabajos existen como comandos de terminal, con la misma lógica
+compartida en `src/lib/`; se ejecutan dentro de la carpeta del proyecto y con
+el `.env.local` puesto. No son SQL: no se pegan en Supabase.
 
 ```bash
 npm run fotos:ligeras          # versiones ligeras de fotos ya subidas
@@ -148,6 +150,9 @@ cliente Premium se quedaba sin invitación a los 3 meses.
 
 **Si vuelve a cambiar:** los pedidos ya entregados llevan su fecha congelada con
 la política vieja. Para aplicarles la nueva:
+
+Desde **Panel → Mantenimiento**: "Ver qué cambiaría" enseña la tabla y
+"Aplicar" la guarda. O desde la terminal, que hace exactamente lo mismo:
 
 ```bash
 # Ver qué cambiaría, sin tocar nada
@@ -377,6 +382,9 @@ guarda igual y se sirve desde el original: la subida del cliente nunca se rompe.
 
 **Fotos subidas antes de esta mejora:** siguen funcionando desde el original, pero
 no se benefician. Para procesarlas una sola vez:
+
+Desde **Panel → Mantenimiento**, con el botón "Revisar fotos", o desde la
+terminal:
 
 ```bash
 npm run fotos:ligeras

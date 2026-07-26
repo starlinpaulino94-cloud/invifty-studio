@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { cerrarSesion } from "@/lib/acciones";
 import {
-  LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut, Palette,
+  LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut, Palette, Wrench,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,7 @@ const NAV = [
   { href: "/panel/clientes", etiqueta: "Clientes", Icono: Users },
   { href: "/panel/vencimientos", etiqueta: "Vencimientos", Icono: CalendarClock },
   { href: "/panel/metricas", etiqueta: "Métricas", Icono: BarChart3 },
+  { href: "/panel/mantenimiento", etiqueta: "Mantenimiento", Icono: Wrench },
 ];
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
