@@ -25,6 +25,8 @@ Dos caras:
    - **¿Ya habías ejecutado el schema antes de la Fase 2?** Entonces ejecuta solo [`supabase/migracion-fase2-invitaciones.sql`](./supabase/migracion-fase2-invitaciones.sql), que agrega la tabla `invitaciones`.
    - **¿Ya lo habías ejecutado antes de las confirmaciones (RSVP)?** Ejecuta también [`supabase/migracion-rsvp-confirmaciones.sql`](./supabase/migracion-rsvp-confirmaciones.sql), que agrega la tabla `confirmaciones`. Sin ella, las confirmaciones de los invitados no se guardan.
    - **¿Y antes del contador de visitas?** Ejecuta [`supabase/migracion-visitas.sql`](./supabase/migracion-visitas.sql), que agrega la tabla `visitas`. Sin ella el panel muestra el contador en cero, pero nada se rompe.
+   - **¿Y antes de los avisos de vencimiento?** Ejecuta [`supabase/migracion-aviso-vencimiento.sql`](./supabase/migracion-aviso-vencimiento.sql), que agrega la columna `aviso_vencimiento_en` a `pedidos`.
+   - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Las siete filas deben decir `OK`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
 ### 1.3 Crear el primer usuario del panel
@@ -200,6 +202,37 @@ en Excel.
   ensuciar la lista del cliente con pruebas.
 - La confirmación se envía a `/api/invitacion/<slug>/rsvp`, que valida todo en
   el servidor. Los invitados nunca tocan la base de datos directamente.
+
+### Avisos de vencimiento y renovación
+
+Cada plan incluye la invitación en línea durante unos meses. Antes ese
+vencimiento llegaba sin que nadie avisara, y ningún pedido pasaba nunca al
+estado *Vencida* por sí solo: se quedaban en *Entregada* para siempre.
+
+Ahora una tarea programada repasa las invitaciones **una vez al día**:
+
+1. Marca como **Vencida** toda invitación cuya fecha ya pasó.
+2. Manda **un solo correo** al equipo con las que vencen en los próximos
+   **15 días**, con el enlace directo a cada ficha. Cada pedido se avisa una
+   vez, no todas las mañanas.
+
+En **Panel → Vencimientos** cada invitación muestra cuántos días le quedan y,
+si está cerca o ya venció, un botón **"Copiar renovación"** con el mensaje ya
+escrito para mandárselo al cliente por WhatsApp.
+
+**Para activarlo en Vercel:**
+
+1. En **Settings → Environment Variables** agrega `CRON_SECRET` con una cadena
+   larga al azar. Vercel la enviará sola en cada ejecución.
+2. El horario ya está en [`vercel.json`](./vercel.json): todos los días a las
+   9:00 de la mañana (hora de RD). Se aplica en el siguiente despliegue.
+3. Los avisos por correo usan la misma configuración de Resend de la sección
+   anterior. Sin `RESEND_API_KEY` el repaso igual marca las vencidas, pero no
+   manda correo — y no las da por avisadas, así que lo reintenta al día
+   siguiente.
+
+> Sin `CRON_SECRET` la ruta responde 401 y el repaso no corre. Es a propósito:
+> escribe en la base de datos y no puede quedar abierta.
 
 ### Cuántas veces se abrió la invitación
 

@@ -1,0 +1,9 @@
+{
+  "crons": [
+    {
+      "//": "Repaso de vencimientos. 13:00 UTC = 9:00 de la mañana en RD, así el día natural coincide con el que calcula el código.",
+      "path": "/api/cron/vencimientos",
+      "schedule": "0 13 * * *"
+    }
+  ]
+}

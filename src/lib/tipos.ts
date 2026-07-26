@@ -36,6 +36,8 @@ export interface Pedido {
   url_entregada: string | null;
   fecha_entrega: string | null;
   fecha_vencimiento: string | null;
+  /** Cuándo se avisó al equipo de que esta invitación está por vencer. */
+  aviso_vencimiento_en: string | null;
   notas: string | null;
   creado_en: string;
   actualizado_en: string;

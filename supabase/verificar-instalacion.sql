@@ -9,7 +9,7 @@
 with esperado(tabla, columnas, indices, politicas) as (
   values
     ('clientes',       6, 2, 1),
-    ('pedidos',       14, 3, 1),
+    ('pedidos',       15, 4, 1),
     ('pagos',          6, 2, 1),
     ('formularios',    8, 3, 1),
     ('invitaciones',   9, 3, 1),

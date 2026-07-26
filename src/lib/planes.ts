@@ -1,4 +1,5 @@
 import type { Plan, TipoEvento, EstadoPedido } from "./tipos";
+import { fechaSinDiaSemana } from "./fechas";
 
 /**
  * CONFIGURACIÓN COMERCIAL DE INVIFTY
@@ -74,6 +75,30 @@ export function formatoFecha(fecha: string | null | undefined): string {
   if (!fecha) return "—";
   const d = new Date(fecha.includes("T") ? fecha : fecha + "T12:00:00");
   return d.toLocaleDateString("es-DO", { day: "numeric", month: "short", year: "numeric" });
+}
+
+/**
+ * Mensaje para ofrecerle al cliente la renovación antes de que su
+ * invitación deje de estar en línea. Se copia desde la vista Vencimientos.
+ */
+export function mensajeWhatsAppRenovacion(
+  nombreCliente: string,
+  plan: Plan,
+  fechaVencimiento: string,
+  urlInvitacion: string | null
+): string {
+  const primerNombre = nombreCliente.split(" ")[0];
+  return (
+    `¡Hola ${primerNombre}! 💛 Te escribimos de Invifty.\n\n` +
+    // fechaSinDiaSemana en vez de formatoFecha: este mensaje lo lee el
+    // cliente, y "30 de junio de 2026" se lee mejor que "30 jun de 2026".
+    `Tu invitación digital estará en línea hasta el *${fechaSinDiaSemana(fechaVencimiento)}*. ` +
+    `Después de esa fecha el enlace deja de funcionar.\n\n` +
+    (urlInvitacion ? `${urlInvitacion}\n\n` : "") +
+    `Si quieres conservarla más tiempo —para que tus invitados sigan viendo las fotos ` +
+    `y los recuerdos del evento— podemos renovarla. Cuéntanos y te pasamos las opciones. ` +
+    `Tu plan actual es *${PLANES[plan].nombre}*. ¡Fue un placer ser parte de tu celebración! ✨`
+  );
 }
 
 /** Mensaje amigable para enviar el link del formulario por WhatsApp. */

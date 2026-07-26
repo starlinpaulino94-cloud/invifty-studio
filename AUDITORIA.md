@@ -488,11 +488,39 @@ Premium que pagó esperando 9 meses **se queda sin invitación al tercer mes**. 
 reclamo garantizado en cuanto pase el tiempo suficiente. Hay que decidir la política y
 alinear ambos lados; es un cambio de una línea una vez decidido.
 
-### 6.3 El vencimiento llega sin aviso
+### 6.3 ✅ El vencimiento llega sin aviso — RESUELTO
 
 Existe la vista `/panel/vencimientos`, pero es pasiva: alguien tiene que entrar a
 mirarla. No hay recordatorio automático al equipo ni al cliente. Un aviso a los 15
 días es a la vez buen servicio y la oportunidad natural de renovación.
+
+**Lo implementado.** Una tarea programada (`vercel.json` → `/api/cron/vencimientos`)
+que corre a diario a las 9:00 de la mañana hora de RD:
+
+- **Marca como "Vencida"** toda invitación cuya fecha ya pasó. Al revisarlo salió
+  otro hallazgo que la auditoría no había registrado: **ningún pedido llegaba nunca
+  a ese estado por sí solo**. La vista de vencimientos lo calculaba solo para
+  pintar la etiqueta, pero en la base de datos se quedaban en "entregada" para
+  siempre, así que el estado `vencida` del pipeline era papel mojado.
+- **Un solo correo** al equipo con lo que vence en 15 días, no uno por pedido.
+  Cada pedido se avisa una vez (columna `aviso_vencimiento_en`), y **solo se da
+  por avisado si el correo salió de verdad**: si Resend no está configurado o
+  falla, se reintenta al día siguiente en vez de perderse.
+- **Panel → Vencimientos**: días restantes en palabras ("vence en 12 días") y un
+  botón **"Copiar renovación"** con el mensaje ya escrito para el cliente.
+
+**Seguridad.** La ruta escribe en la base de datos, así que va protegida con
+`CRON_SECRET` y **falla cerrada**: sin la variable configurada responde 401 en vez
+de quedar abierta. Verificado contra el servidor real, sin cabecera y con un token
+inventado.
+
+11 pruebas nuevas (38 en total). Una destapó un detalle de cara al cliente: el
+mensaje de renovación usaba `formatoFecha`, que en `es-DO` produce *"30 jun de
+2026"*. Se cambió por el formateador propio del proyecto, que da *"30 de junio de
+2026"*.
+
+La migración se validó contra un Postgres real y es **repetible**: correrla dos
+veces no da error.
 
 ### 6.4 Se vende un extra que el sistema no sabe entregar
 

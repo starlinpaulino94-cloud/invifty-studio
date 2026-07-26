@@ -30,6 +30,7 @@ create table public.pedidos (
   url_entregada text,                                -- URL de la invitación publicada
   fecha_entrega date,                                -- cuándo se entregó (base del vencimiento)
   fecha_vencimiento date,                            -- calculada al entregar según el plan
+  aviso_vencimiento_en timestamptz,                  -- cuándo se avisó al equipo de que vence
   notas         text,
   creado_en     timestamptz not null default now(),
   actualizado_en timestamptz not null default now()
@@ -37,6 +38,9 @@ create table public.pedidos (
 
 create index pedidos_cliente_idx on public.pedidos (cliente_id);
 create index pedidos_estado_idx  on public.pedidos (estado);
+-- El repaso diario de vencimientos solo mira las que tienen fecha.
+create index pedidos_vencimiento_idx on public.pedidos (fecha_vencimiento)
+  where fecha_vencimiento is not null;
 
 -- ---------- PAGOS (abonos) ----------
 -- El "monto abonado" del pedido es la suma de sus pagos; así queda
