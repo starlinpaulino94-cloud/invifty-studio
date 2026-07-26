@@ -7,7 +7,14 @@ import type { Plan } from "@/lib/tipos";
 /**
  * REPASO DIARIO DE VENCIMIENTOS
  * ==============================
- * Lo llama Vercel una vez al día (ver vercel.json). Hace dos cosas:
+ * Lo llama Vercel una vez al día. El horario está en `vercel.json`:
+ * 13:00 UTC, que son las 9:00 de la mañana en República Dominicana. Se
+ * eligió esa hora para que el día natural en RD coincida con el día UTC
+ * que usan los cálculos de `lib/vencimientos.ts`.
+ * (Ese archivo no admite comentarios: Vercel valida su esquema y rechaza
+ * cualquier propiedad de más, incluida una clave "//".)
+ *
+ * Hace dos cosas:
  *
  *  1. Marca como "vencida" toda invitación cuya fecha ya pasó. Antes ningún
  *     pedido llegaba nunca a ese estado por sí solo: se quedaban en
