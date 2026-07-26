@@ -85,22 +85,62 @@ create trigger formularios_tocar before update on public.formularios
   for each row execute function public.tocar_actualizado_en();
 
 -- ---------- Seguridad (RLS) ----------
--- El panel entra como usuario autenticado (acceso total).
 -- El formulario público NUNCA toca la base de datos directamente:
 -- pasa por las rutas API del servidor, que usan la service_role key.
+--
+-- OJO con "authenticated": no quiere decir "del equipo Invifty", quiere
+-- decir "cualquiera con una sesión en este proyecto de Supabase". La clave
+-- anon viaja en el navegador, así que cualquiera puede registrarse y quedar
+-- autenticado. Por eso las políticas piden además estar en la lista blanca
+-- `equipo` — ver migracion-cerrar-acceso-equipo.sql.
+create table if not exists public.equipo (
+  usuario_id  uuid primary key references auth.users(id) on delete cascade,
+  email       text,
+  creado_en   timestamptz not null default now()
+);
+
+alter table public.equipo enable row level security;
+
+create policy "cada uno se ve a si mismo" on public.equipo
+  for select to authenticated using (usuario_id = (select auth.uid()));
+
+-- `security definer` para poder leer `equipo` sin que su propia RLS lo
+-- impida; `search_path` fijo para que nadie cuele otra tabla `equipo`.
+create or replace function public.es_del_equipo()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (select 1 from public.equipo where usuario_id = auth.uid());
+$$;
+
+revoke all on function public.es_del_equipo() from public, anon;
+grant execute on function public.es_del_equipo() to authenticated;
+
 alter table public.clientes     enable row level security;
 alter table public.pedidos      enable row level security;
 alter table public.pagos        enable row level security;
 alter table public.formularios  enable row level security;
 
 create policy "equipo acceso total clientes" on public.clientes
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 create policy "equipo acceso total pedidos" on public.pedidos
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 create policy "equipo acceso total pagos" on public.pagos
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 create policy "equipo acceso total formularios" on public.formularios
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- INSTALACIÓN NUEVA: crea tu usuario en Authentication → Users y añádelo
+-- aquí, o el panel se verá vacío:
+--   insert into public.equipo (usuario_id, email)
+--   select id, email from auth.users;
 
 -- ---------- Storage (fotos de los clientes) ----------
 -- Bucket privado; las subidas y descargas pasan por el servidor.
@@ -109,7 +149,8 @@ values ('fotos-pedidos', 'fotos-pedidos', false)
 on conflict (id) do nothing;
 
 create policy "equipo lee fotos" on storage.objects
-  for select to authenticated using (bucket_id = 'fotos-pedidos');
+  for select to authenticated
+  using (bucket_id = 'fotos-pedidos' and public.es_del_equipo());
 create table public.invitaciones (
   id            uuid primary key default gen_random_uuid(),
   pedido_id     uuid not null references public.pedidos(id) on delete cascade,
@@ -142,7 +183,8 @@ create trigger invitaciones_tocar before update on public.invitaciones
 alter table public.invitaciones enable row level security;
 
 create policy "equipo acceso total invitaciones" on public.invitaciones
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 -- El público NO accede a la tabla: la página /i/<slug> se sirve desde el
 -- servidor con la clave secreta y solo muestra invitaciones publicadas.
 
@@ -178,7 +220,8 @@ create trigger confirmaciones_tocar before update on public.confirmaciones
 alter table public.confirmaciones enable row level security;
 
 create policy "equipo acceso total confirmaciones" on public.confirmaciones
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 -- Los invitados NO tocan la tabla: confirman por la ruta
 -- /api/invitacion/<slug>/rsvp, que valida en el servidor que la
 -- invitación existe y está publicada antes de guardar nada.
@@ -206,6 +249,7 @@ create index visitas_invitacion_idx
 alter table public.visitas enable row level security;
 
 create policy "equipo acceso total visitas" on public.visitas
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 -- Los invitados NO tocan la tabla: la visita se registra desde
 -- /api/invitacion/<slug>/visita, en el servidor.

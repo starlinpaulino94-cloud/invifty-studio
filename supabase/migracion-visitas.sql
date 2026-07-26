@@ -34,8 +34,12 @@ create index visitas_invitacion_idx
 alter table public.visitas enable row level security;
 
 -- El equipo lee las visitas desde el panel.
+-- NOTA: esta política se endureció después. "authenticated" no quiere decir
+-- "del equipo": la clave anon es pública y cualquiera puede registrarse.
+-- Ver migracion-cerrar-acceso-equipo.sql.
 create policy "equipo acceso total visitas" on public.visitas
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 
 -- Los invitados NO tocan la tabla: la visita se registra desde
 -- /api/invitacion/<slug>/visita, en el servidor.

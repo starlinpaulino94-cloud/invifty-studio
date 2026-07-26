@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
+import { esDelEquipo } from "@/lib/sesion";
 import { cerrarSesion } from "@/lib/acciones";
 import {
   LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut, Palette, Wrench,
@@ -24,6 +25,37 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  /**
+   * Tener sesión no es ser del equipo: la clave anon es pública y
+   * cualquiera puede registrarse contra nuestro proyecto de Supabase.
+   * La RLS ya no le dejaría leer nada (vería el panel vacío); esto le
+   * dice a la cara que no le toca.
+   *
+   * Aquí NO se redirige a /login: el proxy manda a /panel a quien ya
+   * tiene sesión, así que redirigir daría un bucle. Se le enseña la
+   * puerta de salida en su lugar.
+   */
+  if (!(await esDelEquipo(supabase, user.id))) {
+    return (
+      <div className="min-h-dvh bg-[#0D0D0F] flex items-center justify-center px-5 text-center">
+        <div className="max-w-sm">
+          <p className="text-white text-sm mb-2">Esta cuenta no tiene acceso al panel.</p>
+          <p className="text-white/40 text-xs mb-6">
+            El panel es solo para el equipo Invifty. Si crees que es un error, escríbenos.
+          </p>
+          <form action={cerrarSesion}>
+            <button
+              type="submit"
+              className="text-[#D4AF37] text-xs uppercase tracking-[0.2em] font-semibold"
+            >
+              Cerrar sesión
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col lg:flex-row">

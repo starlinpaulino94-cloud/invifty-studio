@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { limitar } from "@/lib/limite";
 import { construirFormulario } from "@/config/formularios";
 import { LIMITE_FOTOS } from "@/lib/planes";
 import { Plan, TipoEvento } from "@/lib/tipos";
@@ -11,6 +12,16 @@ import { listarArchivos, rutaOriginal } from "@/lib/fotos";
  * del link. Usa la service_role key en el servidor; el cliente nunca
  * habla con Supabase directamente.
  */
+
+/**
+ * El autosave guarda 800 ms después de cada cambio (components/formulario/
+ * Asistente.tsx), así que un cliente escribiendo sin parar durante diez
+ * minutos no llega ni de lejos a 300 guardados. Un bucle sí.
+ *
+ * Se cuenta por token y no por IP: una boda entera rellenando el formulario
+ * desde el mismo wifi de la casa no tiene por qué compartir cupo.
+ */
+const FRENO_GUARDADO = { max: 300, ventanaMs: 10 * 60 * 1000 };
 
 async function buscarFormulario(token: string) {
   const supabase = crearClienteAdmin();
@@ -61,6 +72,15 @@ export async function PATCH(
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+
+  const freno = limitar(`formulario:${token}`, FRENO_GUARDADO);
+  if (!freno.ok) {
+    return NextResponse.json(
+      { error: "Demasiados guardados seguidos. Espera un momento." },
+      { status: 429, headers: { "Retry-After": String(freno.esperaS) } }
+    );
+  }
+
   const formulario = await buscarFormulario(token);
   if (!formulario) {
     return NextResponse.json({ error: "Formulario no encontrado" }, { status: 404 });

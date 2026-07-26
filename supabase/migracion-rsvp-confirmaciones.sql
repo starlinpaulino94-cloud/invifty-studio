@@ -38,8 +38,12 @@ create trigger confirmaciones_tocar before update on public.confirmaciones
 alter table public.confirmaciones enable row level security;
 
 -- El equipo lee y administra las confirmaciones desde el panel.
+-- NOTA: esta política se endureció después. "authenticated" no quiere decir
+-- "del equipo": la clave anon es pública y cualquiera puede registrarse.
+-- Ver migracion-cerrar-acceso-equipo.sql.
 create policy "equipo acceso total confirmaciones" on public.confirmaciones
-  for all to authenticated using (true) with check (true);
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 
 -- Los invitados NO tocan la tabla: confirman por la ruta
 -- /api/invitacion/<slug>/rsvp, que valida en el servidor que la
