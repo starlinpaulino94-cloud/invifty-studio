@@ -55,6 +55,19 @@ cp .env.example .env.local     # pega los 3 valores de Supabase
 npm run dev                    # abre http://localhost:3000
 ```
 
+### Tareas de mantenimiento
+
+Se ejecutan **en la terminal de tu computadora**, dentro de la carpeta del
+proyecto y con el `.env.local` puesto. No son SQL: no se pegan en Supabase.
+
+```bash
+npm run fotos:ligeras          # versiones ligeras de fotos ya subidas
+npm run vencimientos:simular   # qué pasaría al recalcular vigencias
+npm run vencimientos:aplicar   # aplicarlo de verdad
+```
+
+Cada una está explicada en su sección más abajo.
+
 ### Comprobaciones antes de subir un cambio
 
 ```bash
@@ -138,10 +151,10 @@ la política vieja. Para aplicarles la nueva:
 
 ```bash
 # Ver qué cambiaría, sin tocar nada
-node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts
+npm run vencimientos:simular
 
 # Si el listado convence, aplicarlo
-node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts --aplicar
+npm run vencimientos:aplicar
 ```
 
 El script **solo alarga, nunca acorta**: si la política nueva diera una fecha
@@ -366,7 +379,7 @@ guarda igual y se sirve desde el original: la subida del cliente nunca se rompe.
 no se benefician. Para procesarlas una sola vez:
 
 ```bash
-node --experimental-strip-types --env-file=.env.local scripts/generar-derivados.mts
+npm run fotos:ligeras
 ```
 
 Es seguro repetirlo: salta las que ya están hechas y nunca modifica el original.

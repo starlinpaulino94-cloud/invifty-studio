@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./pruebas/alias.mjs --test 'pruebas/**/*.prueba.ts'"
+    "fotos:ligeras": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local --import ./scripts/resolver-imports.mjs scripts/generar-derivados.mts",
+    "vencimientos:simular": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local --import ./scripts/resolver-imports.mjs scripts/recalcular-vencimientos.mts",
+    "vencimientos:aplicar": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --env-file=.env.local --import ./scripts/resolver-imports.mjs scripts/recalcular-vencimientos.mts --aplicar",
+    "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/resolver-imports.mjs --test 'pruebas/**/*.prueba.ts'"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

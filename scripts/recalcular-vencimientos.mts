@@ -11,16 +11,17 @@
  * (La decisión vive en `planificarRecalculo`, en src/lib/vencimientos.ts,
  * que tiene sus propias pruebas.)
  *
- * Cómo usarlo (desde la raíz del proyecto):
+ * NO es SQL: no se pega en Supabase. Es un programa que se ejecuta en la
+ * terminal de tu computadora, dentro de la carpeta del proyecto:
  *
  *   # 1. Ver qué cambiaría, sin tocar nada
- *   node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts
+ *   npm run vencimientos:simular
  *
  *   # 2. Si el listado te convence, aplicarlo
- *   node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts --aplicar
+ *   npm run vencimientos:aplicar
  *
  * Sin --aplicar no escribe nada: solo enseña la tabla de cambios.
- * Requiere Node 22.6 o superior.
+ * Requiere Node 22.6 o superior y un .env.local con las claves.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -35,8 +36,8 @@ const clave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECR
 
 if (!url || !clave) {
   console.error(
-    "Faltan las variables de entorno. Ejecuta con:\n" +
-      "  node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts"
+    "Falta el archivo .env.local con NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SECRET_KEY.\n" +
+      "Ponlo en la raíz del proyecto y ejecuta:  npm run vencimientos:simular"
   );
   process.exit(1);
 }
