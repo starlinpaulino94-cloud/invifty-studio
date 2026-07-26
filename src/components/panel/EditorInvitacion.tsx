@@ -7,6 +7,7 @@ import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
+import { escribirEnRuta } from "@/lib/rutas";
 import {
   PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
 } from "@/lib/codigo";
@@ -138,6 +139,18 @@ export default function EditorInvitacion({
     setResaltada(id);
     setTimeout(() => setResaltada((actual) => (actual === id ? null : actual)), 2000);
   };
+
+  /**
+   * Un texto cambiado encima del diseño. La ruta la pone el propio texto en
+   * la invitación ("titulo", "lugares.0.nombre"…) y aquí solo se aplica.
+   *
+   * Queda igual que si se hubiera escrito en la tarjeta: el campo del
+   * formulario se actualiza solo y hay que darle a Guardar. Escribir encima
+   * es otra forma de llenar el mismo formulario, no un atajo que se salta
+   * el guardado.
+   */
+  const editarTexto = (ruta: string, valor: string) =>
+    setDatos((d) => escribirEnRuta(d, ruta, valor));
   const efectos = { ...EFECTOS_POR_DEFECTO, ...(datos.efectos ?? {}) };
   const esCodigo = esInvitacionDeCodigo(plantilla);
   const avisosCodigo = esCodigo ? revisarCodigo(codigoHtml) : [];
@@ -712,6 +725,7 @@ export default function EditorInvitacion({
           fotos={fotos}
           codigoHtml={codigoHtml}
           onSenalarCampo={irACampo}
+          onEditarTexto={editarTexto}
         />
       </div>
     </div>

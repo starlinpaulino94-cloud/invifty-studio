@@ -230,6 +230,39 @@ vestimenta, historia, programa del día, galería (las fotos que subió el
 cliente), mesa de regalos con botón de copiar, y confirmación de asistencia
 que queda registrada en el sistema.
 
+### La vista previa en vivo del editor
+
+El editor tiene la invitación real al lado, dibujada con lo que hay escrito en
+ese momento. Cuatro botones encima del marco:
+
+| Botón | Qué hace |
+|---|---|
+| Celular / Computadora | Cambia el marco. |
+| Señalar | Tocar una parte de la invitación desplaza el editor a la tarjeta que la controla. |
+| Editar | Escribe los textos **encima del diseño**, ahí mismo. |
+| Reiniciar | Vuelve a ver la apertura del sobre. |
+
+**Modo editar.** Los textos que se pueden cambiar aparecen con un subrayado
+tenue. El cambio se guarda al salir del campo (no en cada tecla, o el cursor
+saltaría al principio en cada letra), Escape deshace, y lo que se pegue entra
+como texto plano. Mientras está encendido la invitación no responde a los clics
+y el marco pasa a celular a tamaño real.
+
+Se edita encima **lo que se guarda tal cual**: título, subtítulo, frase,
+historia, nombre de cada lugar, actividades del programa, personas especiales,
+regalos, avisos y mensaje de cierre. Lo que el sistema arma solo —la hora en
+formato de 12, la fecha larga, la etiqueta del código de vestimenta— se sigue
+editando en su tarjeta, porque escribir encima no tendría dónde guardarse.
+
+Escribir encima **no guarda en la base de datos**: llena el formulario, igual
+que escribir en la tarjeta. Hay que darle a **Guardar cambios**.
+
+Para el código: el componente `Texto` (`src/components/invitacion/base/Texto.tsx`)
+envuelve el texto y lleva su ruta dentro de los datos. En la invitación
+publicada **no dibuja nada** — devuelve lo que envuelve. Los textos del cuerpo
+se marcan una sola vez en `Secciones.tsx`; en una plantilla nueva solo hay que
+marcar el título y el subtítulo de la portada, y una prueba avisa si se olvida.
+
 ### Confirmaciones de asistencia (RSVP)
 
 Cuando un invitado confirma, su respuesta **queda guardada** y aparece en la

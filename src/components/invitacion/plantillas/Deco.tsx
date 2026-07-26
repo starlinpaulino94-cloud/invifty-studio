@@ -5,6 +5,7 @@ import Marco, { fechaLarga, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { MarcoDeco, DivisorDeco, inicialesDe } from "../base/Ornamentos";
+import Texto from "../base/Texto";
 
 /**
  * ART DÉCO
@@ -84,7 +85,7 @@ export default function Deco({
                   className="text-[10px] uppercase tracking-[0.5em] mb-6"
                   style={{ color: "var(--inv-acento)" }}
                 >
-                  {datos.subtitulo}
+                  <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
                 </p>
               )}
 
@@ -92,7 +93,7 @@ export default function Deco({
                 className="text-4xl sm:text-5xl leading-tight mb-6 uppercase"
                 style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)", letterSpacing: "0.06em" }}
               >
-                {datos.titulo}
+                <Texto ruta="titulo">{datos.titulo}</Texto>
               </h1>
 
               <div className="flex justify-center mb-6" style={{ color: "var(--inv-acento)" }}>
@@ -104,7 +105,7 @@ export default function Deco({
                   className="text-lg sm:text-xl mb-7 leading-relaxed"
                   style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
                 >
-                  {datos.frase}
+                  <Texto ruta="frase">{datos.frase}</Texto>
                 </p>
               )}
 

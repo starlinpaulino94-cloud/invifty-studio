@@ -5,6 +5,7 @@ import Marco, { fechaCorta, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { DivisorPalma } from "../base/Ornamentos";
+import Texto from "../base/Texto";
 
 /**
  * TROPICAL CARIBE
@@ -67,7 +68,7 @@ export default function Tropical({
                 className="text-[10px] uppercase tracking-[0.5em] mb-6"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -77,7 +78,7 @@ export default function Tropical({
               className="text-5xl sm:text-7xl leading-[1.05] mb-6"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -93,7 +94,7 @@ export default function Tropical({
                 className="text-xl sm:text-2xl mb-8 leading-relaxed"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

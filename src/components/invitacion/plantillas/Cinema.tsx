@@ -4,6 +4,7 @@ import { DatosInvitacion } from "@/lib/tipos";
 import Marco, { fechaCorta, hora12, etiquetaDressCode } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
+import Texto from "../base/Texto";
 
 /**
  * CINEMA
@@ -60,7 +61,7 @@ export default function Cinema({
         >
           <span className="inline-flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: "var(--inv-acento)" }} />
-            {datos.subtitulo || "Estás invitado"}
+            <Texto ruta="subtitulo">{datos.subtitulo || "Estás invitado"}</Texto>
           </span>
           <span>{fc.anio}</span>
         </div>
@@ -75,7 +76,7 @@ export default function Cinema({
                 letterSpacing: "-0.01em",
               }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -85,7 +86,7 @@ export default function Cinema({
                 className="text-sm sm:text-base max-w-md mb-8 leading-relaxed"
                 style={{ color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

@@ -6,6 +6,7 @@ import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { inicialesDe } from "../base/Ornamentos";
 import { Guirnalda, RamoEsquina, RamaLateral } from "../base/OrnamentosFlorales";
+import Texto from "../base/Texto";
 
 /**
  * JARDÍN ENCANTADO
@@ -47,7 +48,7 @@ export default function Jardin({
                 className="text-[10px] uppercase tracking-[0.5em] mb-6"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -90,7 +91,7 @@ export default function Jardin({
               className="text-4xl sm:text-6xl leading-[1.1] mb-5"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -100,7 +101,7 @@ export default function Jardin({
                 className="text-xl sm:text-2xl mb-7 px-4 leading-relaxed"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

@@ -15,13 +15,16 @@ Se marcan aquí a medida que se cierran.
 | **1A** | Elegir portada, reordenar y ocultar fotos | ✅ Hecho |
 | **1B** | Vista previa en vivo dentro del editor, sin guardar ni recargar | ✅ Hecho |
 | **1C** | Clic en la vista previa → salta al campo que lo controla | ✅ Hecho |
-| **1D** | Edición literal encima del diseño | 🤔 Decidir ahora, ya con 1B y 1C funcionando |
+| **1D** | Edición literal encima del diseño | ✅ Hecho |
 
-**Sobre 1D.** La edición inline real hay que cablearla en cada una de las diez
-plantillas, y en cada plantilla nueva que se haga: es coste permanente, no una
-vez. 1B + 1C dan casi todo ese control a una fracción del coste — se ve el
-cambio al instante y se llega al campo con un clic. Conviene decidir 1D con
-1B/1C ya funcionando, no antes.
+**Sobre el coste de 1D.** El aviso era que habría que cablear cada plantilla y
+cada plantilla nueva. Se resolvió con un componente `<Texto>` que envuelve el
+texto y lleva escrita su ruta en los datos: en la invitación publicada devuelve
+lo que envuelve y **no dibuja nada**, y solo se vuelve editable cuando la vista
+previa del panel enciende el modo. Los diez textos del cuerpo se marcan en
+`Secciones.tsx`, común a todas; en cada plantilla solo hay que marcar la
+portada, que es lo único que compone por su cuenta. Una prueba recorre las doce
+plantillas y falla si alguna se olvida.
 
 ### ✅ 1A — Portada, orden y fotos ocultas
 
@@ -92,6 +95,43 @@ Verificado con el navegador: se marcan los once bloques (portada, historia,
 lugares, código de vestimenta, programa, personas especiales, galería, regalos,
 avisos, confirmación y cierre), y señalar la historia desplaza el editor y
 resalta su tarjeta.
+
+### ✅ 1D — Escribir encima del diseño
+
+Un botón de lápiz enciende el **modo editar**: los textos que se pueden cambiar
+aparecen con un subrayado tenue y se escriben ahí mismo, sobre la invitación.
+
+- **Se guarda al salir del texto**, no en cada tecla. Si React volviera a
+  dibujar mientras se escribe, el cursor saltaría al principio en cada letra.
+- **Escape deshace** y devuelve el texto anterior.
+- **Pegar entra como texto plano**: lo copiado de WhatsApp o Word trae colores y
+  tipografías que romperían el diseño.
+- El modo pasa al **marco de celular a tamaño real**: a 0,72 el cursor cae donde
+  no es, y el marco de escritorio (0,5) directamente no vale.
+- **El sobre no se dibuja** mientras se edita — habría que abrirlo para llegar al
+  texto, y en este modo el clic no lo abre.
+- Editar y señalar **se apagan entre sí**: señalar se traga el clic y editar lo
+  necesita para poner el cursor.
+
+**Qué se edita encima y qué no.** Lo que se guarda tal cual, encima: título,
+subtitulo, frase, historia, nombre de cada lugar, actividades del programa, rol
+y nombre de las personas especiales, regalos, avisos y mensaje de cierre. Lo que
+el sistema arma solo —la hora en formato de 12, la fecha larga, la etiqueta del
+código de vestimenta, la dirección partida en dos líneas— **se sigue editando en
+su tarjeta**, porque escribir encima no tendría dónde guardarse.
+
+**Un fallo que salió al probarlo en el navegador.** Varios campos llevan
+`uppercase` en su diseño, y `innerText` devuelve el texto *como se ve*: editar
+"Ceremonia" en el nombre de un lugar guardaba `CEREMONIA`, y el dato quedaba
+estropeado también en el formulario. Se apaga la transformación el instante
+justo de leer.
+
+Verificado en el navegador: sin el modo encendido no hay ni un atributo de más
+en la invitación (0 elementos marcados); al encenderlo aparecen los 13 textos
+editables; lo escrito llega a los datos al salir del campo y no antes; Escape
+deshace; pegar HTML con formato entra limpio; un texto con salto de línea se
+guarda con `\n`; vaciarlo hace desaparecer su bloque; y con el modo encendido
+nada dentro de la invitación responde al clic.
 
 ---
 
@@ -268,6 +308,12 @@ en líneas separadas dentro de la píldora.
 
 ## Orden de trabajo
 
-**1A → 1B+1C → 2 → 3.** Cada paso hace el siguiente más fácil: con la vista
-previa en vivo, iterar las plantillas extravagantes (3C) es mucho más rápido
-que a ciegas.
+**1A → 1B+1C → 2 → 3 → 1D.** Cada paso hizo el siguiente más fácil: con la
+vista previa en vivo, iterar las plantillas extravagantes (3C) fue mucho más
+rápido que a ciegas, y 1D se apoyó en lo que 1C ya había resuelto — cubrir las
+doce plantillas tocando un solo archivo compartido.
+
+**Las tres ideas están completas.** Lo que queda abierto no es de este plan sino
+de la auditoría: rotar la clave de Supabase, corregir las vigencias que anuncia
+la web pública, las dos promesas del formulario que el sistema no cumple (video
+de portada en Luxury, dominio propio) y los slugs adivinables (§6.5).

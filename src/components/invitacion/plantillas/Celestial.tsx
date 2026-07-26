@@ -5,6 +5,7 @@ import Marco, { fechaLarga, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { CieloEstrellado, Luna, DivisorEstrella, inicialesDe } from "../base/Ornamentos";
+import Texto from "../base/Texto";
 
 /**
  * CELESTIAL
@@ -85,7 +86,7 @@ export default function Celestial({
                 className="text-[10px] uppercase tracking-[0.5em] mb-6"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -95,7 +96,7 @@ export default function Celestial({
               className="text-5xl sm:text-7xl leading-[1.08] mb-7 font-light"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -111,7 +112,7 @@ export default function Celestial({
                 className="text-xl sm:text-2xl mb-8 leading-relaxed px-2"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

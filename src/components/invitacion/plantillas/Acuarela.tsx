@@ -5,6 +5,7 @@ import Marco, { fechaCorta, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { ManchasAcuarela, DivisorPincel } from "../base/Ornamentos";
+import Texto from "../base/Texto";
 
 /**
  * ACUARELA
@@ -55,7 +56,7 @@ export default function Acuarela({
                 className="text-2xl sm:text-3xl mb-2"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -65,7 +66,7 @@ export default function Acuarela({
               className="text-4xl sm:text-5xl leading-tight mb-5"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -107,7 +108,7 @@ export default function Acuarela({
                 className="text-base sm:text-lg mt-8 leading-relaxed px-3"
                 style={{ color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

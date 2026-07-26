@@ -5,6 +5,7 @@ import Marco, { fechaLarga, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
 import { Cartucho, Voluta, DivisorBarroco, inicialesDe } from "../base/Ornamentos";
+import Texto from "../base/Texto";
 
 /**
  * BARROCO
@@ -92,7 +93,7 @@ export default function Barroco({
                 className="text-[10px] sm:text-[11px] uppercase tracking-[0.6em] mb-6"
                 style={{ color: "var(--inv-acento)" }}
               >
-                {datos.subtitulo}
+                <Texto ruta="subtitulo">{datos.subtitulo}</Texto>
               </p>
             </Revelar>
           )}
@@ -102,7 +103,7 @@ export default function Barroco({
               className="text-4xl sm:text-6xl leading-[1.12] mb-6"
               style={{ fontFamily: "var(--inv-display)", color: "var(--inv-texto)" }}
             >
-              {datos.titulo}
+              <Texto ruta="titulo">{datos.titulo}</Texto>
             </h1>
           </Revelar>
 
@@ -118,7 +119,7 @@ export default function Barroco({
                 className="text-xl sm:text-3xl mb-8 px-3 leading-relaxed"
                 style={{ fontFamily: "var(--inv-script)", color: "var(--inv-texto-suave)" }}
               >
-                {datos.frase}
+                <Texto ruta="frase">{datos.frase}</Texto>
               </p>
             </Revelar>
           )}

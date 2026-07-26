@@ -17,6 +17,12 @@ interface ContextoInvitacion {
   slug: string;
   /** true en la vista previa del equipo, antes de publicar. */
   esBorrador: boolean;
+  /**
+   * Solo lo pone la vista previa del panel con el modo editar encendido.
+   * Que exista es lo que convierte los textos en editables: en la
+   * invitación publicada nunca llega, y `Texto` no dibuja nada extra.
+   */
+  onEditarTexto?: (ruta: string, valor: string) => void;
 }
 
 const Contexto = createContext<ContextoInvitacion>({ slug: "", esBorrador: false });
@@ -24,13 +30,17 @@ const Contexto = createContext<ContextoInvitacion>({ slug: "", esBorrador: false
 export function ProveedorInvitacion({
   slug,
   esBorrador = false,
+  onEditarTexto,
   children,
 }: {
   slug: string;
   esBorrador?: boolean;
+  onEditarTexto?: (ruta: string, valor: string) => void;
   children: ReactNode;
 }) {
-  return <Contexto.Provider value={{ slug, esBorrador }}>{children}</Contexto.Provider>;
+  return (
+    <Contexto.Provider value={{ slug, esBorrador, onEditarTexto }}>{children}</Contexto.Provider>
+  );
 }
 
 export function useInvitacion(): ContextoInvitacion {
