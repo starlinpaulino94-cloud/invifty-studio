@@ -210,6 +210,8 @@ export function fotosMuestra(plantillaId: string) {
     acuarela: "#f2b795",
     cinema: "#a8a8ac",
     boho: "#d6a765",
+    jardin: "#a8bd97",
+    barroco: "#c2a558",
   };
   const tono = tonos[plantillaMeta(plantillaId).id] ?? "#c9b184";
   return [0, 1, 2, 3, 4, 5].map((i) => ({

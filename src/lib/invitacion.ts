@@ -108,12 +108,12 @@ export function sugerirPlantilla(tipoEvento: TipoEvento, respuestas: Record<stri
   const porEstilo: Record<string, string> = {
     // Bodas
     clasico_elegante: "editorial",
-    romantico_floral: "acuarela",
+    romantico_floral: "jardin",
     rustico: "boho",
     minimalista: "arco",
     tropical: "tropical",
     // Cumpleaños y 15 años
-    elegante_gala: "deco",
+    elegante_gala: "barroco",
     quince_princesa: "celestial",
     neon_fiesta: "cinema",
     vintage: "deco",
@@ -136,10 +136,10 @@ export function sugerirPlantilla(tipoEvento: TipoEvento, respuestas: Record<stri
 /** Plantillas disponibles agrupadas para el catálogo del panel. */
 export function plantillasSugeridasPara(tipoEvento: TipoEvento): string[] {
   const mapa: Record<TipoEvento, string[]> = {
-    boda: ["editorial", "arco", "botanica", "celestial", "acuarela", "tropical", "boho", "moderna", "cinema"],
-    cumpleanos: ["deco", "celestial", "cinema", "boho", "moderna", "acuarela"],
-    empresarial: ["moderna", "cinema", "editorial", "deco"],
-    otro: ["botanica", "acuarela", "arco", "boho", "tropical", "celestial"],
+    boda: ["editorial", "jardin", "arco", "botanica", "celestial", "barroco", "acuarela", "tropical", "boho", "moderna", "cinema"],
+    cumpleanos: ["deco", "barroco", "celestial", "cinema", "jardin", "boho", "moderna", "acuarela"],
+    empresarial: ["moderna", "cinema", "editorial", "deco", "barroco"],
+    otro: ["botanica", "jardin", "acuarela", "arco", "boho", "tropical", "celestial"],
   };
   return mapa[tipoEvento] ?? PLANTILLAS.map((p) => p.id);
 }

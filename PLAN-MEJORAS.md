@@ -165,7 +165,7 @@ seguridad, y limpiarlo solo rompería código legítimo.
 |---|---|---|
 | **3A** | Eje de ornamentación: sobrio / equilibrado / extravagante | ✅ Hecho |
 | **3B** | Familia nueva de ornamentos: florales, guirnaldas, marcos botánicos | ✅ Hecho |
-| **3C** | 2-3 plantillas nuevas realmente recargadas | ⏳ |
+| **3C** | 2-3 plantillas nuevas realmente recargadas | ✅ Hecho |
 | **3D** | Pregunta en el formulario para que el cliente elija cuánto adorno | ✅ Hecho |
 
 **Lo que ya existe no cambia.** El nivel por defecto es exactamente el aspecto
@@ -202,6 +202,33 @@ empresa.
 
 Verificado con capturas de los tres niveles: el extravagante enmarca sin tapar
 el texto, y el equilibrado sale **idéntico** al de siempre.
+
+### ✅ 3C — Jardín Encantado y Barroco
+
+El catálogo pasa de 10 a 12 plantillas. Las dos nuevas aportan **estructura**
+propia, no solo más adornos: eso ya lo da el eje de densidad.
+
+**Jardín Encantado** — el retrato en un óvalo, guirnaldas que lo coronan y lo
+cierran, y ramos que crecen desde las esquinas superiores. El follaje es la
+composición, no un añadido. Frente a Botánica, donde las ramas enmarcan cada
+sección, aquí todo converge sobre el retrato.
+*Bodas al aire libre · 15 años románticos · Baby showers.*
+
+**Barroco** — monograma dentro de un cartucho ovalado, volutas de acanto en las
+cuatro esquinas, doble marco y divisor de filigrana. Frente a Editorial, que
+respira, y a Art Déco, que es geometría de los años 20, aquí el ornamento es
+curvo, continuo y cubre los bordes.
+*Galas · 15 años de etiqueta · Aniversarios.*
+
+Ornamentos nuevos: `Voluta`, `Cartucho`, `DivisorBarroco` y `DivisorJardin`.
+
+También se afinaron las sugerencias automáticas: un cliente que pide estilo
+"romántico floral" recibe ahora Jardín en vez de Acuarela, y uno que pide
+"elegante / gala" recibe Barroco en vez de Art Déco.
+
+Verificado con capturas de las dos. Un detalle que destapó la revisión: en
+Jardín la fecha y la hora en una sola línea partían mal en celular, así que van
+en líneas separadas dentro de la píldora.
 
 ---
 

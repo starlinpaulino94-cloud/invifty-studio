@@ -358,16 +358,17 @@ abrir en vivo con datos de ejemplo, también sirve para enseñárselo al cliente
 
 | Pieza | Cuántas | Dónde se edita |
 |---|---|---|
-| Plantillas (estructura y ornamentos) | 10 | `src/config/plantillas.ts` + `src/components/invitacion/plantillas/` |
+| Plantillas (estructura y ornamentos) | 12 | `src/config/plantillas.ts` + `src/components/invitacion/plantillas/` |
 | Paletas de color | 24 | `src/config/diseno.ts` |
 | Parejas tipográficas | 10 | `src/config/diseno.ts` |
 
-**Las 10 plantillas:** Editorial Luxe (bodas de gala), Botánica (aire libre),
+**Las 12 plantillas:** Editorial Luxe (bodas de gala), Botánica (aire libre),
 Moderna (minimalista), Art Déco (15 años y galas), Tropical Caribe (playa),
 Arco (bodas modernas), Celestial (bodas de noche), Acuarela (baby showers y
-bautizos), Cinema (lanzamientos y bodas de destino) y Boho Retro (fiestas al
-aire libre). Cada una tiene su propia portada, sus propios ornamentos
-vectoriales y su propio ritmo — no son variaciones de color.
+bautizos), Cinema (lanzamientos y bodas de destino) Boho Retro (fiestas al
+aire libre), Jardín Encantado (bodas al aire libre y 15 años románticos) y
+Barroco (galas y 15 años de etiqueta). Cada una tiene su propia portada, sus
+propios ornamentos vectoriales y su propio ritmo — no son variaciones de color.
 
 **Detalles que elevan la experiencia:**
 
