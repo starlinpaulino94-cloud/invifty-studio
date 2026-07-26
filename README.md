@@ -117,7 +117,39 @@ al cliente sin que nadie lo note.
 | El mensaje de WhatsApp que se copia | `mensajeWhatsAppFormulario` en `src/lib/planes.ts` |
 | Estados del pipeline | `src/lib/planes.ts` (constante `ESTADOS`) + constraint en `supabase/schema.sql` |
 
-**Nota sobre vigencias:** este sistema está configurado con 3 meses para Esencial/Popular/Premium y 12 para Luxury (instrucción interna). La página pública anuncia 3/6/9/12 — cuando definan la política final, ajusta `VIGENCIA_MESES` en `src/lib/planes.ts`.
+### ⚠️ Vigencias: decisión pendiente
+
+Hay una contradicción abierta que conviene cerrar:
+
+| | Esencial | Popular | Premium | Luxury |
+|---|---|---|---|---|
+| Configurado en el sistema | 3 | **3** | **3** | 12 |
+| Anunciado en la web pública | 3 | **6** | **9** | 12 |
+
+**Manda lo que dice el sistema.** Desde que el repaso diario funciona, las
+invitaciones se apagan solas: con la configuración actual, un cliente Premium que
+compró creyendo que tenía 9 meses se queda sin invitación a los 3.
+
+Para cerrarlo:
+
+1. Ajusta `VIGENCIA_MESES` en [`src/lib/planes.ts`](./src/lib/planes.ts) — es el
+   único sitio donde se cambia.
+2. Alinea la página pública para que anuncie lo mismo.
+3. Los pedidos **ya entregados** llevan su fecha congelada con la política vieja.
+   Para aplicarles la nueva:
+
+   ```bash
+   # Ver qué cambiaría, sin tocar nada
+   node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts
+
+   # Si el listado convence, aplicarlo
+   node --experimental-strip-types --env-file=.env.local scripts/recalcular-vencimientos.mts --aplicar
+   ```
+
+   El script **solo alarga, nunca acorta**: si la política nueva diera una fecha
+   anterior a la que ya tiene un pedido, lo deja como está. A un cliente no se le
+   quita algo que ya se le prometió. A los que revive les limpia el aviso, para
+   que el repaso diario vuelva a avisar con la fecha nueva.
 
 ## 6. Funciones adicionales
 

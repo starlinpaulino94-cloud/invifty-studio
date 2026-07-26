@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { derivarDatosInvitacion, slugificar } from "./invitacion";
-import { VIGENCIA_MESES } from "./planes";
+import { calcularVencimiento } from "./vencimientos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
 
@@ -117,13 +117,11 @@ export async function publicarInvitacion(invitacionId: string) {
   };
 
   if (!["entregada", "activa", "vencida"].includes(pedido.estado)) {
-    const hoy = new Date();
-    const vencimiento = new Date(hoy);
-    vencimiento.setMonth(vencimiento.getMonth() + VIGENCIA_MESES[pedido.plan as Plan]);
     cambios.estado = "entregada";
     if (!pedido.fecha_entrega) {
-      cambios.fecha_entrega = hoy.toISOString().slice(0, 10);
-      cambios.fecha_vencimiento = vencimiento.toISOString().slice(0, 10);
+      const hoy = new Date().toISOString().slice(0, 10);
+      cambios.fecha_entrega = hoy;
+      cambios.fecha_vencimiento = calcularVencimiento(hoy, pedido.plan as Plan);
     }
   }
 

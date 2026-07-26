@@ -480,13 +480,40 @@ invitación, que **cambia** entre invitaciones y que no deja ver la IP.
 9 pruebas nuevas (27 en total). La ruta de registro devuelve siempre 200 y falla en
 silencio: contar visitas no puede estropearle la invitación a un invitado.
 
-### 6.2 La política de vigencias es contradictoria
+### 6.2 ⏳ La política de vigencias es contradictoria — PREPARADO, FALTA DECIDIR
 
 El propio README lo admite (§5): el sistema aplica **3/3/3/12 meses**
 (`planes.ts:21-26`) mientras la página pública anuncia **3/6/9/12**. Un cliente
 Premium que pagó esperando 9 meses **se queda sin invitación al tercer mes**. Es un
 reclamo garantizado en cuanto pase el tiempo suficiente. Hay que decidir la política y
 alinear ambos lados; es un cambio de una línea una vez decidido.
+
+**Qué número poner es una decisión comercial, no técnica, y sigue pendiente.** Lo
+que sí se hizo es todo lo que no depende de esa decisión, para que cambiarlo sea
+un cambio de una línea y no un problema:
+
+- **El cálculo estaba duplicado y con un error.** `acciones.ts` y
+  `acciones-invitacion.ts` repetían la suma de meses con `setMonth`, que desborda
+  al mes siguiente: una entrega el **31 de agosto con 6 meses vencía el 3 de
+  marzo**, no el 28 de febrero. Le regalaba días sueltos a unos clientes y a otros
+  no. Ahora hay una sola función (`sumarMeses`) que respeta los meses cortos y los
+  años bisiestos, con pruebas que fallan si alguien vuelve al cálculo viejo.
+- **Cambiar la política no arregla el pasado.** Los pedidos ya entregados llevan su
+  fecha congelada. `scripts/recalcular-vencimientos.mts` la recalcula, con
+  simulación por defecto y `--aplicar` para escribir. **Solo alarga, nunca acorta**:
+  a un cliente no se le quita algo que ya se le prometió, aunque la política nueva
+  sea más corta. A los pedidos que revive les limpia el aviso para que el repaso
+  diario vuelva a avisar con la fecha nueva.
+- **La vigencia se ve en el panel.** El selector de plan al crear un pedido muestra
+  "N meses en línea", para que nadie le prometa al cliente un plazo distinto del
+  que el sistema va a aplicar.
+- **`VIGENCIA_MESES` documenta la contradicción en el propio código**, con los pasos
+  a seguir al cambiarla.
+
+Recomendación: **3/6/9/12**, lo que anuncia la web. Es lo que el cliente vio al
+comprar y lo más defendible ante un reclamo; el coste es más meses de hosting, que
+para páginas estáticas con las fotos ya optimizadas es marginal. Pero es tu
+decisión: dime los números y los aplico.
 
 ### 6.3 ✅ El vencimiento llega sin aviso — RESUELTO
 

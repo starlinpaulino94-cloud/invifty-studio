@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  diasHasta, estadoVigencia, textoVigencia, repasarVencimientos, DIAS_DE_AVISO,
-  type PedidoVigencia,
+  diasHasta, estadoVigencia, textoVigencia, repasarVencimientos, calcularVencimiento,
+  sumarMeses, DIAS_DE_AVISO, type PedidoVigencia,
 } from "@/lib/vencimientos";
-import { mensajeWhatsAppRenovacion } from "@/lib/planes";
+import { mensajeWhatsAppRenovacion, VIGENCIA_MESES } from "@/lib/planes";
 
 /**
  * VENCIMIENTOS
@@ -52,6 +52,38 @@ test("el texto de vigencia se lee en español natural", () => {
   assert.equal(textoVigencia("2026-06-27", HOY), "vence en 12 días");
   assert.equal(textoVigencia("2026-06-14", HOY), "venció ayer");
   assert.equal(textoVigencia("2026-06-12", HOY), "venció hace 3 días");
+});
+
+/* ---------- Cálculo de la fecha de vencimiento ---------- */
+
+test("una entrega a fin de mes no se desborda al mes siguiente", () => {
+  // El cálculo anterior usaba setMonth: el 31 de agosto + 6 meses daba el 3
+  // de marzo, regalándole tres días a unos clientes y a otros no.
+  assert.equal(sumarMeses("2026-08-31", 6), "2027-02-28", "febrero corto");
+  assert.equal(sumarMeses("2026-01-31", 3), "2026-04-30", "abril tiene 30 días");
+  assert.equal(sumarMeses("2028-08-31", 6), "2029-02-28");
+  assert.equal(sumarMeses("2027-08-31", 6), "2028-02-29", "año bisiesto");
+  // Un día que existe en el mes destino no se toca
+  assert.equal(sumarMeses("2026-03-15", 3), "2026-06-15");
+});
+
+test("sumar meses cruza el fin de año correctamente", () => {
+  assert.equal(sumarMeses("2026-11-15", 3), "2027-02-15");
+  assert.equal(sumarMeses("2026-12-01", 12), "2027-12-01");
+  assert.equal(sumarMeses("2026-06-10", 0), "2026-06-10");
+});
+
+test("el vencimiento respeta los meses del plan y cruza bien el año", () => {
+  for (const [plan, mesesPlan] of Object.entries(VIGENCIA_MESES)) {
+    const resultado = calcularVencimiento("2026-11-15", plan as never);
+    const esperado = new Date(Date.UTC(2026, 10 + mesesPlan, 15)).toISOString().slice(0, 10);
+    assert.equal(resultado, esperado, `el plan ${plan} debería sumar ${mesesPlan} meses`);
+  }
+});
+
+test("una fecha de entrega inválida no inventa un vencimiento", () => {
+  assert.equal(calcularVencimiento("", "popular"), "");
+  assert.equal(calcularVencimiento("no es fecha", "popular"), "");
 });
 
 /* ---------- El repaso diario ---------- */

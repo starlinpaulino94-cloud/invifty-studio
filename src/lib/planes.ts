@@ -14,10 +14,27 @@ export const PLANES: Record<Plan, { nombre: string; precioDOP: number }> = {
 };
 
 /**
- * Vigencia de la invitación (en meses) desde la fecha de entrega.
- * OJO: la página pública anuncia 3/6/9/12 meses; aquí está configurado
- * 3 meses para Esencial/Popular/Premium y 12 para Luxury según la
- * instrucción interna. Alinear ambos cuando se decida la política final.
+ * VIGENCIA DE LA INVITACIÓN (meses desde la entrega)
+ * ===================================================
+ * ⚠️ DECISIÓN PENDIENTE — ESTE ES EL ÚNICO SITIO DONDE SE CAMBIA.
+ *
+ * Ahora mismo hay una contradicción abierta:
+ *   · aquí está configurado    3 / 3 / 3 / 12 meses
+ *   · la página pública anuncia 3 / 6 / 9 / 12 meses
+ *
+ * Manda lo que diga este archivo: desde que el repaso diario funciona
+ * (ver lib/vencimientos.ts), el sistema apaga las invitaciones solo. Con
+ * la configuración actual, un cliente Premium que compró creyendo que
+ * tenía 9 meses se queda sin invitación a los 3.
+ *
+ * Al cambiar estos números:
+ *   1. Alinea la página pública para que anuncie lo mismo.
+ *   2. Los pedidos YA entregados llevan su fecha congelada; para
+ *      aplicarles la política nueva ejecuta:
+ *        node --experimental-strip-types --env-file=.env.local \
+ *          scripts/recalcular-vencimientos.mts
+ *      (primero sin argumentos para simular, luego con --aplicar).
+ *      Ese script solo alarga, nunca acorta.
  */
 export const VIGENCIA_MESES: Record<Plan, number> = {
   esencial: 3,

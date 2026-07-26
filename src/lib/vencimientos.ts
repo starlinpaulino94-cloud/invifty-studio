@@ -1,4 +1,5 @@
-import type { EstadoPedido } from "./tipos";
+import type { EstadoPedido, Plan } from "./tipos";
+import { VIGENCIA_MESES } from "./planes";
 
 /**
  * VIGENCIA DE LAS INVITACIONES
@@ -12,6 +13,37 @@ import type { EstadoPedido } from "./tipos";
 
 /** Con cuántos días de antelación se avisa. Dos semanas da margen a renovar. */
 export const DIAS_DE_AVISO = 15;
+
+/**
+ * Suma meses de calendario a una fecha "YYYY-MM-DD", cuidando los meses
+ * cortos: el 31 de agosto más 6 meses es el 28 de febrero, no el 3 de marzo.
+ *
+ * El cálculo anterior usaba `setMonth`, que desborda al mes siguiente y le
+ * regalaba días sueltos a unos clientes sí y a otros no.
+ */
+export function sumarMeses(fecha: string, meses: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha ?? "");
+  if (!m) return "";
+
+  const anio = Number(m[1]);
+  const mesDestino = Number(m[2]) - 1 + meses;
+  const dia = Number(m[3]);
+
+  // Día 0 del mes siguiente = último día del mes destino.
+  const ultimoDiaDelMes = new Date(Date.UTC(anio, mesDestino + 1, 0)).getUTCDate();
+
+  return new Date(Date.UTC(anio, mesDestino, Math.min(dia, ultimoDiaDelMes)))
+    .toISOString()
+    .slice(0, 10);
+}
+
+/**
+ * Fecha en que vence una invitación entregada en la fecha dada, según los
+ * meses que incluye su plan (ver VIGENCIA_MESES en planes.ts).
+ */
+export function calcularVencimiento(fechaEntrega: string, plan: Plan): string {
+  return sumarMeses(fechaEntrega, VIGENCIA_MESES[plan] ?? 0);
+}
 
 export type EstadoVigencia = "vencida" | "por_vencer" | "vigente";
 
