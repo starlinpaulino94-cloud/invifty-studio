@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { fechaLarga } from "./Marco";
 import { useInvitacion } from "./Contexto";
+import { sumarHoras, fechaCompacta, HORAS_EVENTO, HORA_POR_DEFECTO, ZONA_HORARIA } from "@/lib/ics";
 import { FotoInvitacion } from "@/lib/tipos";
 
 /* ============================================================
@@ -203,25 +204,43 @@ export function BotonCalendario({
   hora: string;
   lugar: string;
 }) {
+  const { slug } = useInvitacion();
   if (!fecha) return null;
-  const inicio = `${fecha.replace(/-/g, "")}T${(hora || "18:00").replace(":", "")}00`;
-  const finHora = String(Number((hora || "18:00").slice(0, 2)) + 5).padStart(2, "0");
-  const fin = `${fecha.replace(/-/g, "")}T${finHora}${(hora || "18:00").slice(3, 5)}00`;
-  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
-    titulo
-  )}&dates=${inicio}/${fin}&location=${encodeURIComponent(lugar)}`;
+
+  /**
+   * Dos calendarios porque los invitados viven en dos mundos: Android abre
+   * Google Calendar, y el iPhone con calendario de iCloud —que aquí son
+   * muchísimos— solo entiende el archivo .ics. Antes ese invitado no tenía
+   * cómo guardarse la fecha.
+   */
+  const horaInicio = hora || HORA_POR_DEFECTO;
+  const fin = sumarHoras(fecha, horaInicio, HORAS_EVENTO);
+  const urlGoogle =
+    `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+    `&text=${encodeURIComponent(titulo)}` +
+    `&dates=${fechaCompacta(fecha, horaInicio)}/${fechaCompacta(fin.fecha, fin.hora)}` +
+    // Sin la zona, Google lee "17:30" en la del que mira: un invitado que
+    // viene de Madrid guardaría el evento seis horas corrido.
+    `&ctz=${ZONA_HORARIA}` +
+    `&location=${encodeURIComponent(lugar)}`;
+
+  const enlace =
+    "inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.2em] transition-opacity hover:opacity-70";
 
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.25em] transition-opacity hover:opacity-70"
-      style={{ color: "var(--inv-acento)" }}
-    >
-      <CalendarPlus className="w-4 h-4" />
-      Guardar la fecha
-    </a>
+    <div className="flex items-center justify-center gap-5 flex-wrap" style={{ color: "var(--inv-acento)" }}>
+      <a href={urlGoogle} target="_blank" rel="noopener noreferrer" className={enlace}>
+        <CalendarPlus className="w-4 h-4" />
+        Google Calendar
+      </a>
+      {/* En la página de muestra no hay invitación real detrás del archivo. */}
+      {slug && (
+        <a href={`/api/invitacion/${slug}/ics`} download="evento.ics" className={enlace}>
+          <CalendarPlus className="w-4 h-4" />
+          Apple · Outlook
+        </a>
+      )}
+    </div>
   );
 }
 

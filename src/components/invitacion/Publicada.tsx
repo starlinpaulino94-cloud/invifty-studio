@@ -6,7 +6,7 @@ import RegistroVisita from "@/components/invitacion/base/RegistroVisita";
 import CodigoPropio from "@/components/invitacion/CodigoPropio";
 import { esInvitacionDeCodigo } from "@/lib/codigo";
 import { urlFuentes } from "@/config/diseno";
-import { fechaLarga } from "@/lib/fechas";
+import { fechaLarga, fechaSinDiaSemana } from "@/lib/fechas";
 import { conVideoDePortada, listarArchivos, ordenarFotos, urlsDeFoto } from "@/lib/fotos";
 import type { DatosInvitacion } from "@/lib/tipos";
 
@@ -45,9 +45,22 @@ export function metadatosDeInvitacion(
 ): Metadata {
   if (!invitacion) return { title: "Invitación — Invifty" };
 
+  /**
+   * Privacidad de una página que es de una persona:
+   *  - noindex/nofollow/noarchive: el enlace es semisecreto (slug con
+   *    sufijo al azar) y los buscadores no deben ni guardarle copia.
+   *  - referrer no-referrer: al tocar un enlace externo (Maps, Waze, un
+   *    registro de regalos) no se le cuenta al otro sitio ni siquiera
+   *    nuestro dominio. La cabecera global deja pasar el dominio; aquí ni eso.
+   */
+  const privada = {
+    robots: { index: false, follow: false, noarchive: true },
+    referrer: "no-referrer",
+  } as const;
+
   // Los borradores no anuncian nada: aún no son del cliente para compartir.
   if (invitacion.estado !== "publicada") {
-    return { title: "Invitación — Invifty", robots: { index: false, follow: false } };
+    return { title: "Invitación — Invifty", ...privada };
   }
 
   const datos = invitacion.datos;
@@ -58,9 +71,12 @@ export function metadatosDeInvitacion(
       .join(" · ") || "Estás invitado. Abre tu invitación digital.";
 
   return {
-    title: `${titulo} — Invitación`,
+    // "Evento · Fecha — Invifty": lo que se lee en la pestaña y al compartir.
+    title: [titulo, datos.fechaEvento ? fechaSinDiaSemana(datos.fechaEvento) : ""]
+      .filter(Boolean)
+      .join(" · ") + " — Invifty",
     description: descripcion,
-    robots: { index: false, follow: false },
+    ...privada,
     openGraph: {
       type: "website",
       siteName: "Invifty",

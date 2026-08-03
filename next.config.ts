@@ -50,6 +50,19 @@ const BASICAS = [
   { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ];
 
+/**
+ * La invitación publicada: pública para quien tiene el enlace, invisible
+ * para todo lo demás. La versión servida por dominio propio no pasa por
+ * aquí (el proxy la reescribe antes de que estas reglas miren la ruta),
+ * así que src/proxy.ts pone estas mismas cabeceras al reescribir.
+ */
+const INVITACION = [
+  // El noindex del HTML no cubre lo que no es HTML; esta cabecera sí.
+  { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+  // El slug es semisecreto: a los sitios externos no les llega ni el dominio.
+  { key: "Referrer-Policy", value: "no-referrer" },
+];
+
 /** Donde vive la sesión del equipo y los datos de los clientes. */
 const PRIVADAS = [
   // Nadie mete el panel en un iframe suyo para robar clics.
@@ -70,6 +83,8 @@ const nextConfig: NextConfig = {
       { source: "/lista/:path*", headers: PRIVADAS },
       // El formulario del cliente, por lo mismo: sus datos y sus fotos.
       { source: "/f/:path*", headers: PRIVADAS },
+      { source: "/i/:path*", headers: INVITACION },
+      { source: "/d/:path*", headers: INVITACION },
     ];
   },
 };
