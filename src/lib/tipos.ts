@@ -205,6 +205,11 @@ export interface Invitacion {
    * "www". Vacío en la mayoría: la invitación vive en /i/<slug>.
    */
   dominio: string | null;
+  /**
+   * Enlace secreto del panel del anfitrión: /lista/<token_lista>. Se crea
+   * junto con la invitación (ver acciones-invitacion.ts).
+   */
+  token_lista: string | null;
   estado: EstadoInvitacion;
   publicada_en: string | null;
   creado_en: string;

@@ -272,6 +272,7 @@ export function Musica({ url, autoIniciar }: { url: string; autoIniciar?: boolea
         }}
         aria-label={sonando ? "Silenciar música" : "Reproducir música"}
         title={sonando ? "Silenciar música" : "Reproducir música"}
+        aria-pressed={sonando}
       >
         {sonando ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
         {sonando && (

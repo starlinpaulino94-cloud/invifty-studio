@@ -163,6 +163,9 @@ create table public.invitaciones (
   -- Dominio propio del cliente (extra del catálogo), sin protocolo ni www.
   -- El DNS y el alta en Vercel se hacen aparte; esto es de quién es.
   dominio       text,
+  -- Enlace secreto del panel del anfitrión: /lista/<token_lista>.
+  -- Como el token del formulario: sin cuenta, largo e imposible de adivinar.
+  token_lista   text unique,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
@@ -216,6 +219,33 @@ create unique index confirmaciones_invitado_idx
 
 create trigger confirmaciones_tocar before update on public.confirmaciones
   for each row execute function public.tocar_actualizado_en();
+
+-- ---------- INVITADOS (a quién invitó el anfitrión) ----------
+-- Opcional, y lo carga el propio anfitrión desde su panel /lista/<token>.
+-- Sin esta lista no se puede responder "¿quién NO ha confirmado?": el
+-- sistema solo conoce a quien contesta, y el que nunca abre la invitación
+-- no deja rastro. Ver lib/lista.ts.
+create table public.invitados (
+  id                 uuid primary key default gen_random_uuid(),
+  invitacion_id      uuid not null references public.invitaciones(id) on delete cascade,
+  nombre             text not null,
+  -- Lo calcula el servidor con lib/nombres.ts, el mismo código que usa el
+  -- RSVP: si cada uno normalizara a su manera, el cruce fallaría.
+  nombre_normalizado text not null,
+  creado_en          timestamptz not null default now()
+);
+
+-- El mismo nombre dos veces en la misma boda es un error de dedo, no dos
+-- personas: así pegar la lista dos veces no la duplica.
+create unique index invitados_unicos_idx
+  on public.invitados (invitacion_id, nombre_normalizado);
+create index invitados_invitacion_idx on public.invitados (invitacion_id);
+
+alter table public.invitados enable row level security;
+
+create policy "equipo acceso total invitados" on public.invitados
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
 
 alter table public.confirmaciones enable row level security;
 

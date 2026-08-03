@@ -26,7 +26,12 @@ export default async function proxy(request: NextRequest) {
     const destino = request.nextUrl.clone();
     destino.pathname = `/d/${encodeURIComponent(host)}`;
     destino.search = "";
-    return NextResponse.rewrite(destino);
+    const reescrita = NextResponse.rewrite(destino);
+    // Las mismas cabeceras que /i lleva por next.config: las reglas de ahí
+    // miran la ruta ANTES de esta reescritura y aquí nunca coinciden.
+    reescrita.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    reescrita.headers.set("Referrer-Policy", "no-referrer");
+    return reescrita;
   }
 
   let respuesta = NextResponse.next({ request });

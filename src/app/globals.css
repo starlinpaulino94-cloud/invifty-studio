@@ -29,6 +29,26 @@ body {
 }
 
 /* ============================================================
+   MOVIMIENTO REDUCIDO
+   Hay quien activa "reducir movimiento" en su teléfono por mareos o
+   migrañas. Para esa persona, todo lo que se mueve por adorno —el sobre
+   que se abre, los pulsos, las apariciones— pasa a ser instantáneo. No se
+   pierde nada: cada animación termina en su estado final, solo que ya.
+   (El video de portada tiene su propio trato en MedioPortada.tsx: ahí se
+   enseña el fotograma quieto.)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
    VISTA PREVIA EN VIVO (editor del panel)
    Las plantillas miden la portada contra la altura de la pantalla
    (100dvh). Dentro del marco de vista previa eso las haría enormes, así

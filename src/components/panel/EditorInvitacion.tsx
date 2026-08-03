@@ -18,7 +18,7 @@ import {
 } from "@/lib/acciones-invitacion";
 import {
   Save, Eye, Globe, Loader2, Plus, Trash2, CheckCircle2, EyeOff, Mail, Sparkles, Music,
-  ClipboardList, Code2, AlertTriangle, Clapperboard, Link2, ShieldCheck, ShieldAlert, Dices,
+  ClipboardList, ClipboardCheck, Code2, AlertTriangle, Clapperboard, Link2, ShieldCheck, ShieldAlert, Dices,
 } from "lucide-react";
 
 const input =
@@ -231,6 +231,35 @@ export default function EditorInvitacion({
         </p>
       )}
 
+      {/* ---------- ANTES DE PUBLICAR ----------
+          Un error de fecha o de nombre no es un bug: es un problema el día
+          del evento. La lista vive junto al botón de publicar para que
+          repasarla sea parte del gesto, no un documento que nadie abre. */}
+      {estado !== "publicada" && (
+        <details className="bg-white border border-gray-100 rounded-2xl px-5 py-4 shadow-sm group">
+          <summary className="text-sm font-semibold text-gray-900 cursor-pointer list-none flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-[#D4AF37]" />
+            Antes de publicar: el repaso
+            <span className="text-xs font-normal text-gray-400 ml-1 group-open:hidden">
+              — ábrelo, son dos minutos que evitan un mal día
+            </span>
+          </summary>
+          <ul className="mt-4 space-y-1.5 text-[13px] text-gray-600 list-disc pl-5 marker:text-[#D4AF37]">
+            <li><strong className="text-gray-800">Nombres y título</strong> sin errores: es lo primero que ven todos.</li>
+            <li><strong className="text-gray-800">Fecha y hora</strong> confirmadas con el cliente, no con la memoria.</li>
+            <li><strong className="text-gray-800">Dirección probada</strong>: toca Google Maps y Waze y comprueba que llevan al sitio.</li>
+            <li><strong className="text-gray-800">RSVP probado</strong> en la vista previa: un &quot;sí&quot; y un &quot;no&quot;, y la fecha límite puesta.</li>
+            <li><strong className="text-gray-800">Fotos</strong>: la portada es la buena y no sale ninguna que el cliente no quiera.</li>
+            <li><strong className="text-gray-800">Cuentas y enlaces de regalos</strong> letra por letra: un dígito mal manda el dinero a otro sitio.</li>
+            <li><strong className="text-gray-800">Textos leídos completos</strong>, historia y notas incluidas.</li>
+            <li><strong className="text-gray-800">Abierta en un teléfono real</strong>, no solo en la vista previa del panel.</li>
+            <li><strong className="text-gray-800">Guardar la fecha</strong>: prueba los dos botones de calendario.</li>
+            <li><strong className="text-gray-800">El cliente aprobó esta versión.</strong> La palabra final es suya, no nuestra.</li>
+            <li>Al publicar, <strong className="text-gray-800">mándale su panel de confirmaciones</strong> (el enlace está en la ficha del pedido).</li>
+          </ul>
+        </details>
+      )}
+
       {/* En pantallas anchas el formulario va a la izquierda y la vista
           previa fija a la derecha; en pantallas estrechas se apila. */}
       <div className="grid xl:grid-cols-[minmax(0,1fr)_auto] gap-6 items-start">
@@ -324,6 +353,12 @@ export default function EditorInvitacion({
           id="codigo"
           resaltada={resaltada === "codigo"}
         >
+          <p className="text-xs text-gray-500 -mt-1 mb-3">
+            ¿Lo vas a generar con IA? Usa el prompt de{" "}
+            <code className="text-[#B08D2A] font-mono">PROMPT-GENERADOR.md</code> (en el
+            repositorio): sale con los marcadores puestos, el RSVP conectado y sin los
+            arreglos de siempre.
+          </p>
           <textarea
             value={codigoHtml}
             onChange={(e) => setCodigoHtml(e.target.value)}
