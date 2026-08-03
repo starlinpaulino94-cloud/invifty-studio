@@ -65,6 +65,11 @@ const nextConfig: NextConfig = {
       { source: "/panel/:path*", headers: PRIVADAS },
       { source: "/login", headers: PRIVADAS },
       { source: "/api/:path*", headers: PRIVADAS },
+      // El panel del anfitrión: no lleva sesión, pero enseña la lista de
+      // invitados de una persona. No se cachea y no se deja enmarcar.
+      { source: "/lista/:path*", headers: PRIVADAS },
+      // El formulario del cliente, por lo mismo: sus datos y sus fotos.
+      { source: "/f/:path*", headers: PRIVADAS },
     ];
   },
 };

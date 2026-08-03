@@ -45,10 +45,13 @@ export default async function FichaPedido({
 
   const { data: invitacionData } = await supabase
     .from("invitaciones")
-    .select("id, slug, estado")
+    .select("id, slug, estado, token_lista")
     .eq("pedido_id", id)
     .maybeSingle();
-  const invitacion = invitacionData as Pick<Invitacion, "id" | "slug" | "estado"> | null;
+  const invitacion = invitacionData as Pick<
+    Invitacion,
+    "id" | "slug" | "estado" | "token_lista"
+  > | null;
 
   // Confirmaciones de asistencia que enviaron los invitados
   const { data: confirmacionesData } = invitacion
@@ -270,6 +273,30 @@ export default async function FichaPedido({
           <Visitas resumen={resumenVisitas} nombreEvento={cliente.nombre} />
           <Confirmaciones confirmaciones={confirmaciones} nombreEvento={cliente.nombre} />
         </>
+      )}
+
+      {/* El panel del anfitrión: su propia página de confirmaciones.
+          Se enseña aunque esté en borrador, para poder mandárselo con la
+          invitación de una vez y no tener que acordarse después. */}
+      {invitacion?.token_lista && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <h2 className="font-serif text-lg text-gray-900 mb-1">
+            Panel de confirmaciones del cliente
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            Mándaselo a {cliente.nombre}: ahí ve quién viene, quién no y a quién le
+            falta contestar, sin usuario ni contraseña. Es un enlace secreto.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="text-xs bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-gray-600 break-all">
+              {`${urlBase}/lista/${invitacion.token_lista}`}
+            </code>
+            <BotonCopiar
+              texto={`${urlBase}/lista/${invitacion.token_lista}`}
+              etiqueta="Copiar enlace"
+            />
+          </div>
+        </div>
       )}
 
       {/* Respuestas */}

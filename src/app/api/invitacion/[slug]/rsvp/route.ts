@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { limitar, ipDePeticion } from "@/lib/limite";
+import { normalizarNombre } from "@/lib/nombres";
 
 /**
  * CONFIRMACIÓN DE ASISTENCIA (RSVP)
@@ -31,18 +32,11 @@ const MAX_CONFIRMACIONES = 1500;
 const FRENO = { max: 20, ventanaMs: 10 * 60 * 1000 };
 
 /**
- * Nombre comparable: sin acentos, en minúsculas y con los espacios
- * colapsados. Sirve para reconocer que "José  Pérez" y "jose perez" son
- * la misma persona corrigiendo su respuesta, y no dos invitados.
+ * `normalizarNombre` vive en lib/nombres.ts porque lo comparte con el panel
+ * del anfitrion, que cruza estas confirmaciones con su lista de invitados.
+ * Si cada lado normalizara a su manera, alguien confirmaria y seguiria
+ * apareciendo como "sin responder".
  */
-function normalizarNombre(nombre: string): string {
-  return nombre
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 export async function POST(
   req: NextRequest,

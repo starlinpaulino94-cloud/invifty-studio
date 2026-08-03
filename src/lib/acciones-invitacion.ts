@@ -62,9 +62,17 @@ export async function generarInvitacion(pedidoId: string) {
     slug = slugConSufijo(datos.titulo);
   }
 
+  /**
+   * El panel del anfitrión nace con la invitación, no después: si se
+   * generara al publicar, las invitaciones que ya existen se quedarían sin
+   * él y habría que acordarse de crearlo a mano. Es el mismo trato que el
+   * formulario del cliente — un enlace secreto, sin cuenta ni contraseña.
+   */
+  const tokenLista = crypto.randomUUID().replace(/-/g, "");
+
   const { data: nueva, error } = await supabase
     .from("invitaciones")
-    .insert({ pedido_id: pedidoId, slug, datos, plantilla })
+    .insert({ pedido_id: pedidoId, slug, datos, plantilla, token_lista: tokenLista })
     .select("id")
     .single();
   if (error) throw new Error(`No se pudo generar la invitación: ${error.message}`);
