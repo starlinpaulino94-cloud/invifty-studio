@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { limitar, ipDePeticion } from "@/lib/limite";
 import { normalizarNombre } from "@/lib/nombres";
+import { fechaVencida } from "@/lib/fechas";
 
 /**
  * CONFIRMACIÓN DE ASISTENCIA (RSVP)
@@ -87,10 +88,27 @@ export async function POST(
     return NextResponse.json({ error: "Invitación no disponible" }, { status: 404 });
   }
 
-  const secciones = (invitacion.datos as { secciones?: { rsvp?: boolean } })?.secciones;
-  if (secciones?.rsvp === false) {
+  const datosInvitacion = invitacion.datos as {
+    secciones?: { rsvp?: boolean };
+    rsvp?: { fechaLimite?: string };
+  };
+
+  if (datosInvitacion?.secciones?.rsvp === false) {
     return NextResponse.json(
       { error: "Esta invitación no está recibiendo confirmaciones." },
+      { status: 409 }
+    );
+  }
+
+  // La fecha límite se cierra aquí y no solo en la pantalla: la pantalla se
+  // la salta cualquiera que llame a la API directo. El día límite cuenta
+  // entero ("antes del 15" admite el 15), en la hora de Santo Domingo.
+  if (fechaVencida(datosInvitacion?.rsvp?.fechaLimite ?? "")) {
+    return NextResponse.json(
+      {
+        error:
+          "El período de confirmación ha finalizado. Escríbeles directamente a los anfitriones.",
+      },
       { status: 409 }
     );
   }

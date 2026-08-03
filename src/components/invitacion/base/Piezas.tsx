@@ -8,6 +8,7 @@ import {
 import { fechaLarga } from "./Marco";
 import { useInvitacion } from "./Contexto";
 import { sumarHoras, fechaCompacta, HORAS_EVENTO, HORA_POR_DEFECTO, ZONA_HORARIA } from "@/lib/ics";
+import { fechaVencida } from "@/lib/fechas";
 import { FotoInvitacion } from "@/lib/tipos";
 
 /* ============================================================
@@ -495,6 +496,55 @@ export function Rsvp({
     fontFamily: "var(--inv-cuerpo)",
   };
   const campo = "w-full rounded-lg px-4 py-3.5 text-sm focus:outline-none border transition-colors";
+
+  /**
+   * Pasada la fecha límite, el formulario se retira. La puerta de verdad
+   * está en la API (la pantalla se la salta cualquiera); esto es para que
+   * el invitado tardío no rellene un formulario que va a ser rechazado, y
+   * en su lugar tenga el camino que sí funciona: escribirle al anfitrión,
+   * que es quien decide si todavía cabe.
+   *
+   * En la vista previa del equipo se enseña igual: es lo que verían los
+   * invitados, y ocultarlo haría publicar una invitación "sin RSVP" sin
+   * que nadie entienda por qué.
+   */
+  if (fechaVencida(fechaLimite)) {
+    const mensajeTardio = encodeURIComponent(
+      `Hola, soy invitado a "${titulo}". Se me pasó la fecha para confirmar, ¿aún estoy a tiempo?`
+    );
+    return (
+      <div
+        className="rounded-lg p-8 text-center"
+        style={{ backgroundColor: "var(--inv-tarjeta)", border: "1px solid var(--inv-linea)" }}
+      >
+        <p className="text-2xl mb-2" style={{ fontFamily: "var(--inv-script)", color: "var(--inv-acento)" }}>
+          El período de confirmación ha finalizado
+        </p>
+        <p className="text-xs leading-relaxed" style={{ color: "var(--inv-texto-suave)" }}>
+          La fecha límite era el {fechaLarga(fechaLimite)}. Si aún quieres
+          acompañarnos, escríbenos y vemos qué se puede hacer.
+        </p>
+        {whatsapp && (
+          <a
+            href={`https://wa.me/${whatsapp}?text=${mensajeTardio}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 w-full rounded-lg py-3.5 text-xs uppercase tracking-[0.22em] flex items-center justify-center gap-2 transition-transform active:scale-[0.98]"
+            style={{ border: "1px solid var(--inv-acento)", color: "var(--inv-acento)" }}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Escribir a los anfitriones
+          </a>
+        )}
+        {esBorrador && (
+          <p className="mt-5 text-[11px]" style={{ color: "var(--inv-texto-suave)" }}>
+            Vista previa: los invitados ven esto porque la fecha límite ya pasó.
+            Cámbiala en la tarjeta RSVP del editor si no debe estar cerrado.
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (enviado) {
     const guardada = !errorGuardado;
