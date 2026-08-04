@@ -18,9 +18,17 @@
  * dato del sistema, no una configuración suelta que nadie recuerda.
  */
 
-/** Dominios que son del propio Studio y nunca pertenecen a un cliente. */
-const SUFIJOS_PROPIOS = [".vercel.app", ".localhost"];
-const HOSTS_PROPIOS = ["localhost", "127.0.0.1", "0.0.0.0"];
+/**
+ * Dominios que son del propio Studio y nunca pertenecen a un cliente.
+ *
+ * invifty.com y sus subdominios van fijos aquí: son la marca de la casa y
+ * ningún cliente los tendrá como "dominio propio". Sin esto, entrar por
+ * studio.invifty.com con NEXT_PUBLIC_APP_URL apuntando todavía a la URL de
+ * Vercel hacía que el proxy lo tratara como dominio de un cliente — y el
+ * panel entero respondía 404.
+ */
+const SUFIJOS_PROPIOS = [".vercel.app", ".localhost", ".invifty.com"];
+const HOSTS_PROPIOS = ["localhost", "127.0.0.1", "0.0.0.0", "invifty.com"];
 
 /** Quita el puerto de un Host ("midominio.com:3000" → "midominio.com"). */
 export function hostSinPuerto(host: string): string {

@@ -64,3 +64,26 @@ export function hora12(hora: string): string {
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   return `${h12}:${minutos} ${sufijo}`;
 }
+
+/* ============================================================
+   HOY, EN LA ZONA DEL EVENTO
+   ============================================================ */
+
+/**
+ * "YYYY-MM-DD" de hoy en República Dominicana (UTC-4 fijo, sin horario de
+ * verano). No vale el hoy del servidor ni el del navegador: a las 10 de la
+ * noche en Santo Domingo ya es "mañana" en UTC, y comparar contra ese
+ * mañana cerraría el RSVP dos horas antes en su último día.
+ */
+export function hoyEnRD(ahora = new Date()): string {
+  return new Date(ahora.getTime() - 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * true cuando una fecha "YYYY-MM-DD" ya quedó atrás. El día señalado
+ * cuenta entero: "confirma antes del 15" admite confirmaciones el 15.
+ * Sin fecha no hay límite, así que nunca vence.
+ */
+export function fechaVencida(fecha: string, ahora = new Date()): boolean {
+  return !!fecha && hoyEnRD(ahora) > fecha;
+}

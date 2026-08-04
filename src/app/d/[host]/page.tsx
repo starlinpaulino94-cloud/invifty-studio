@@ -17,7 +17,11 @@ export const dynamic = "force-dynamic";
  * nuestro: el proxy (src/proxy.ts) las reescribe a /d/<dominio>.
  *
  * A esta ruta no se entra escribiéndola a mano — quien lo intente por el
- * dominio del Studio verá un 404, porque nadie tiene ese dominio.
+ * dominio del Studio verá un 404, porque el Host real no coincide.
+ *
+ * Un dominio que llega de verdad pero no tiene invitación NO da un 404
+ * mudo: enseña una página que dice qué falta (conectar el dominio en el
+ * editor, o NEXT_PUBLIC_APP_URL si el dominio es del propio Studio).
  *
  * SOLO SE SIRVEN INVITACIONES PUBLICADAS. En el dominio del cliente no hay
  * sesión del equipo, así que un borrador aquí es un 404 sin excepciones.
@@ -75,8 +79,43 @@ export default async function PaginaDominioPropio({
 }: {
   params: Promise<{ host: string }>;
 }) {
-  const invitacion = await resolver(params);
-  if (!invitacion) notFound();
+  const { host } = await params;
+  const pedido = normalizarDominio(decodeURIComponent(host));
+  const real = normalizarDominio((await headers()).get("host") ?? "");
 
-  return <Publicada invitacion={invitacion} esBorrador={false} />;
+  // /d/loquesea escrito a mano en el dominio del Studio: 404 sin más.
+  if (!pedido || pedido !== real) notFound();
+
+  const invitacion = await buscarPorDominio(pedido);
+  if (invitacion) return <Publicada invitacion={invitacion} esBorrador={false} />;
+
+  /**
+   * El dominio llegó de verdad hasta aquí (DNS y Vercel ya funcionan) pero
+   * ninguna invitación publicada lo tiene. Un 404 mudo aquí es una tarde
+   * de depuración; esta página dice qué falta y a quién le toca:
+   *  - dominio de un cliente → conectarlo en el editor o publicar;
+   *  - dominio del propio Studio → NEXT_PUBLIC_APP_URL sin actualizar,
+   *    que fue exactamente lo que pasó con studio.invifty.com.
+   */
+  return (
+    <div className="min-h-dvh bg-[#0D0D0F] flex items-center justify-center px-6">
+      <div className="max-w-md text-center">
+        <p className="text-[10px] uppercase tracking-[0.4em] text-[#D4AF37] font-semibold mb-4">
+          Invifty
+        </p>
+        <h1 className="font-serif text-2xl text-white mb-3">
+          Este dominio aún no está conectado
+        </h1>
+        <p className="text-white/50 text-sm leading-relaxed">
+          <span className="text-white/80">{pedido}</span> llega hasta aquí, pero
+          no hay ninguna invitación publicada que lo tenga asignado.
+        </p>
+        <p className="text-white/30 text-xs leading-relaxed mt-6">
+          ¿Es la invitación de un cliente? Asigna el dominio en el editor y
+          publícala. ¿Es el dominio del propio Studio? Entonces falta poner
+          NEXT_PUBLIC_APP_URL con esta dirección y volver a desplegar.
+        </p>
+      </div>
+    </div>
+  );
 }
