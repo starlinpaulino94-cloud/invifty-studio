@@ -133,6 +133,20 @@ test("el dominio de un cliente se reconoce como ajeno", () => {
   assert.equal(esHostPropio("www.bodacamila.com", BASE), false);
 });
 
+test("invifty.com es de la casa aunque la base configurada sea otra", () => {
+  // Lo que pasó en producción: studio.invifty.com registrado en Vercel,
+  // pero NEXT_PUBLIC_APP_URL apuntando todavía a la URL vieja. El proxy
+  // tomaba nuestro propio dominio por el de un cliente y el panel entero
+  // respondía 404. La marca va fija en la lista de dominios propios para
+  // que ese desajuste de configuración no vuelva a tumbar el Studio.
+  const baseVieja = "https://invifty-studio.vercel.app";
+  assert.equal(esHostPropio("studio.invifty.com", baseVieja), true);
+  assert.equal(esHostPropio("invifty.com", baseVieja), true);
+  assert.equal(esHostPropio("www.invifty.com", baseVieja), true);
+  // Y un cliente sigue siendo un cliente, con la base que sea.
+  assert.equal(esHostPropio("bodacamila.com", baseVieja), false);
+});
+
 test("sin dirección propia configurada, todo se trata como propio", () => {
   // Preferimos que un despliegue mal configurado deje el panel accesible
   // antes que servir una invitación en su lugar.
