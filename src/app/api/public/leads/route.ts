@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { validarLead } from "@/lib/leads";
 import { cabecerasCors } from "@/lib/cors-publico";
-import { limitar, ipDePeticion } from "@/lib/limite";
+import { limitarCompartido, ipDePeticion } from "@/lib/limite";
 import { registrarError } from "@/lib/registro";
 
 /**
@@ -27,12 +27,18 @@ import { registrarError } from "@/lib/registro";
  */
 
 /** Nadie legítimo envía el formulario de contacto 10 veces en 10 minutos. */
-const FRENO = { max: 10, ventanaMs: 10 * 60 * 1000 };
+const FRENO = { max: 10, ventanaS: 10 * 60 };
 
 export async function POST(req: NextRequest) {
   const cors = cabecerasCors(req.headers.get("origin"));
 
-  const freno = limitar(`leads:${ipDePeticion(req.headers)}`, FRENO);
+  // Freno compartido entre instancias (con respaldo local si la base no
+  // responde): esta ruta la puede llamar cualquiera desde la web pública.
+  const freno = await limitarCompartido(
+    crearClienteAdmin(),
+    `leads:${ipDePeticion(req.headers)}`,
+    FRENO
+  );
   if (!freno.ok) {
     return NextResponse.json(
       { error: "Demasiados envíos seguidos. Espera un momento." },

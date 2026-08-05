@@ -99,6 +99,10 @@ export async function GET(req: NextRequest) {
   //    pendiente.
   const bandeja = await procesarAvisosPendientes(supabase, 50);
 
+  // 4. Barrer los contadores caducados del freno compartido. Si la tabla
+  //    aún no existe, falla en silencio: no es asunto de este repaso.
+  await supabase.from("frenos").delete().lt("expira_en", hoy.toISOString());
+
   return NextResponse.json({
     ok: true,
     revisadas: pedidos.length,

@@ -207,8 +207,25 @@ test("las rutas públicas de escritura llaman al freno", () => {
 
   for (const ruta of conFreno) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
-    assert.match(contenido, /limitar\(/, `${ruta} no frena las peticiones`);
+    // Vale el freno local (limitar) o el compartido entre instancias
+    // (limitarCompartido, que además incluye al local por dentro).
+    assert.match(contenido, /limitar(Compartido)?\(/, `${ruta} no frena las peticiones`);
     assert.match(contenido, /429/, `${ruta} no responde 429 cuando frena`);
+  }
+});
+
+test("las rutas MÁS públicas usan el freno compartido entre instancias", () => {
+  // Estas las puede llamar cualquiera de internet sin token: el freno de
+  // memoria por instancia no basta cuando Vercel reparte el tráfico.
+  const compartido = [
+    "src/app/api/public/leads/route.ts",
+    "src/app/api/invitacion/[slug]/rsvp/route.ts",
+    "src/app/api/revision/[token]/comentario/route.ts",
+    "src/app/api/revision/[token]/decidir/route.ts",
+  ];
+  for (const ruta of compartido) {
+    const contenido = readFileSync(path.join(raiz, ruta), "utf8");
+    assert.match(contenido, /limitarCompartido\(/, `${ruta} no usa el freno compartido`);
   }
 });
 

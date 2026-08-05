@@ -12,11 +12,14 @@ export const dynamic = "force-dynamic";
 
 export default async function PaginaVencimientos() {
   const supabase = await crearClienteServidor();
+  // Ordenado por vencimiento y acotado: lo que importa aquí es lo que
+  // vence pronto, no la cola completa de lo vencido hace años.
   const { data } = await supabase
     .from("pedidos")
     .select("*, clientes(*)")
     .not("fecha_vencimiento", "is", null)
-    .order("fecha_vencimiento", { ascending: true });
+    .order("fecha_vencimiento", { ascending: true })
+    .limit(500);
 
   const pedidos = (data ?? []) as PedidoConCliente[];
   const hoy = new Date();

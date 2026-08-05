@@ -28,9 +28,12 @@ function BarraHorizontal({ etiqueta, valor, maximo, sufijo = "" }: {
 
 export default async function PaginaMetricas() {
   const supabase = await crearClienteServidor();
+  // Acotado a 5.000 filas: años de negocio para un estudio. Si algún día
+  // se queda corto, el paso honesto es calcular estos números en SQL
+  // (agregados en la base), no subir el tope.
   const [{ data: pedidosData }, { data: pagosData }] = await Promise.all([
-    supabase.from("pedidos").select("*"),
-    supabase.from("pagos").select("*"),
+    supabase.from("pedidos").select("*").order("creado_en", { ascending: false }).limit(5000),
+    supabase.from("pagos").select("*").order("fecha", { ascending: false }).limit(5000),
   ]);
 
   const pedidos = (pedidosData ?? []) as Pedido[];

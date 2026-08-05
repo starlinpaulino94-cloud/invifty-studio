@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
-import { limitar, ipDePeticion } from "@/lib/limite";
+import { limitarCompartido, ipDePeticion } from "@/lib/limite";
 import { normalizarNombre } from "@/lib/nombres";
 import { fechaVencida } from "@/lib/fechas";
 import { registrarError } from "@/lib/registro";
@@ -31,7 +31,7 @@ const MAX_CONFIRMACIONES = 1500;
  * confirmaciones seguidas; veinte en diez minutos ya no es una familia.
  * El tope de 1500 de más abajo protege la tabla; esto protege el rato.
  */
-const FRENO = { max: 20, ventanaMs: 10 * 60 * 1000 };
+const FRENO = { max: 20, ventanaS: 10 * 60 };
 
 /**
  * `normalizarNombre` vive en lib/nombres.ts porque lo comparte con el panel
@@ -46,7 +46,12 @@ export async function POST(
 ) {
   const { slug } = await params;
 
-  const freno = limitar(`rsvp:${ipDePeticion(req.headers)}`, FRENO);
+  // Compartido entre instancias: ruta pública de escritura (ver lib/limite.ts).
+  const freno = await limitarCompartido(
+    crearClienteAdmin(),
+    `rsvp:${ipDePeticion(req.headers)}`,
+    FRENO
+  );
   if (!freno.ok) {
     return NextResponse.json(
       { error: "Demasiadas confirmaciones seguidas. Espera un momento." },

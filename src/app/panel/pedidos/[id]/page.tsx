@@ -65,8 +65,15 @@ export default async function FichaPedido({
   const confirmaciones = (confirmacionesData ?? []) as Confirmacion[];
 
   // Cuánto se ha abierto la invitación
+  // Visitas es la tabla que más crece (una fila por dispositivo y hora):
+  // acotada a las últimas 5.000, que cubren cualquier evento real.
   const { data: visitasData } = invitacion
-    ? await supabase.from("visitas").select("huella, creado_en").eq("invitacion_id", invitacion.id)
+    ? await supabase
+        .from("visitas")
+        .select("huella, creado_en")
+        .eq("invitacion_id", invitacion.id)
+        .order("creado_en", { ascending: false })
+        .limit(5000)
     : { data: null };
   const resumenVisitas = resumirVisitas(visitasData ?? []);
 

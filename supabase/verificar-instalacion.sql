@@ -26,7 +26,8 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('comentarios',    9, 2, 1),
     ('hogares',        6, 4, 1),
     ('entradas',       9, 2, 1),
-    ('avisos',        15, 2, 1)
+    ('avisos',        15, 2, 1),
+    ('frenos',         3, 2, 0)
 )
 select
   e.tabla,
