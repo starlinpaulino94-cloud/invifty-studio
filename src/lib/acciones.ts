@@ -1,17 +1,12 @@
 "use server";
 
+import { normalizarTelefono } from "@/lib/telefono";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { calcularVencimiento } from "./vencimientos";
 import type { EstadoPedido, Plan } from "./tipos";
 
-/** Normaliza un teléfono a solo dígitos (formato WhatsApp: 18091234567). */
-function normalizarTelefono(t: string): string {
-  const digitos = t.replace(/\D/g, "");
-  // Números dominicanos de 10 dígitos → anteponer 1
-  return digitos.length === 10 ? `1${digitos}` : digitos;
-}
 
 /** Crea (o reutiliza) el cliente, crea el pedido y genera su formulario con token. */
 export async function crearPedido(formData: FormData) {

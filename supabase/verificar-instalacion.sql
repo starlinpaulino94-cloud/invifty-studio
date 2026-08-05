@@ -15,7 +15,9 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('invitaciones',  12, 5, 1),
     ('confirmaciones', 9, 3, 1),
     ('visitas',        5, 3, 1),
-    ('invitados',      5, 3, 1)
+    ('invitados',      5, 3, 1),
+    ('leads',         19, 4, 1),
+    ('demos',          9, 3, 1)
 )
 select
   e.tabla,
@@ -84,7 +86,7 @@ select
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename in ('clientes','pedidos','pagos','formularios',
-                        'invitaciones','confirmaciones','visitas','invitados')
+                        'invitaciones','confirmaciones','visitas','invitados','leads','demos')
       and qual = 'true'
   ) then '❌ hay políticas abiertas a cualquier registrado'
     else '✅ ninguna política abierta' end                      as politicas,

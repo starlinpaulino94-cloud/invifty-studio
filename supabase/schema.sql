@@ -247,6 +247,69 @@ create policy "equipo acceso total invitados" on public.invitados
   for all to authenticated
   using (public.es_del_equipo()) with check (public.es_del_equipo());
 
+-- ---------- LEADS (interesados que llegan desde la web pública) ----------
+-- Entran por POST /api/public/leads con estado, atribución (fuente/UTM) e
+-- idempotencia: el doble clic del visitante no crea dos leads. El equipo
+-- los trabaja en /panel/leads y al convertirlos queda el rastro.
+create table public.leads (
+  id            uuid primary key default gen_random_uuid(),
+  nombre        text not null,
+  telefono      text not null,               -- normalizado a dígitos (18091234567)
+  tipo_evento   text not null,
+  fecha_evento  date,
+  plan_id       text,
+  demo_slug     text,
+  mensaje       text,
+  idioma        text not null default 'es',
+  fuente        text not null,
+  utm           jsonb not null default '{}'::jsonb,
+  consentimiento boolean not null default false,
+  clave_idempotencia text not null,
+  estado        text not null default 'nuevo' check (estado in
+                  ('nuevo','contactado','calificado','convertido','perdido')),
+  cliente_id    uuid references public.clientes(id) on delete set null,
+  convertido_en timestamptz,
+  convertido_por uuid,
+  creado_en     timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+create unique index leads_idempotencia_idx on public.leads (clave_idempotencia);
+create index leads_estado_idx on public.leads (estado, creado_en desc);
+create index leads_telefono_idx on public.leads (telefono);
+
+create trigger leads_tocar before update on public.leads
+  for each row execute function public.tocar_actualizado_en();
+
+alter table public.leads enable row level security;
+
+create policy "equipo acceso total leads" on public.leads
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- ---------- DEMOS (invitaciones que la web enseña de muestra) ----------
+-- La web pregunta por GET /api/public/demos; los datos visibles salen de
+-- la invitación real (título, plantilla, slug), aquí solo va la marca.
+create table public.demos (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null unique references public.invitaciones(id) on delete cascade,
+  tipo_evento   text not null default 'boda',
+  plan_minimo   text not null default 'esencial',
+  orden         integer not null default 0,
+  destacada     boolean not null default false,
+  activa        boolean not null default true,
+  idioma        text not null default 'es',
+  creado_en     timestamptz not null default now()
+);
+
+create index demos_activas_idx on public.demos (activa, orden);
+
+alter table public.demos enable row level security;
+
+create policy "equipo acceso total demos" on public.demos
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
 alter table public.confirmaciones enable row level security;
 
 create policy "equipo acceso total confirmaciones" on public.confirmaciones

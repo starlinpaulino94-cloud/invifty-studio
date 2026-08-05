@@ -63,6 +63,44 @@ export interface Formulario {
   actualizado_en: string;
 }
 
+/** Interesado llegado desde la web pública (POST /api/public/leads). */
+export type EstadoLead = "nuevo" | "contactado" | "calificado" | "convertido" | "perdido";
+
+export interface Lead {
+  id: string;
+  nombre: string;
+  telefono: string;
+  tipo_evento: string;
+  fecha_evento: string | null;
+  plan_id: Plan | null;
+  demo_slug: string | null;
+  mensaje: string | null;
+  idioma: string;
+  fuente: string;
+  utm: Record<string, string>;
+  consentimiento: boolean;
+  clave_idempotencia: string;
+  estado: EstadoLead;
+  cliente_id: string | null;
+  convertido_en: string | null;
+  convertido_por: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+/** Marca de "esta invitación se enseña de demo en la web" (GET /api/public/demos). */
+export interface Demo {
+  id: string;
+  invitacion_id: string;
+  tipo_evento: string;
+  plan_minimo: Plan;
+  orden: number;
+  destacada: boolean;
+  activa: boolean;
+  idioma: string;
+  creado_en: string;
+}
+
 export interface PedidoConCliente extends Pedido {
   clientes: Cliente;
 }
