@@ -5,7 +5,7 @@
  * agujero más grande que tuvo el sistema: la clave anon viaja en el
  * navegador, así que cualquiera puede registrarse contra nuestro proyecto de
  * Supabase y quedar autenticado. Quien manda de verdad es la lista blanca
- * `equipo` de la base (ver supabase/migracion-cerrar-acceso-equipo.sql).
+ * `equipo` de la base (ver supabase/migrations/20260726135300_cerrar-acceso-equipo.sql).
  *
  * Este archivo es solo la decisión, sin nada de Supabase ni de Next, para
  * poder probarla: es una regla de seguridad con una excepción, y las

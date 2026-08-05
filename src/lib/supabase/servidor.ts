@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { supabaseUrl, supabaseClaveAnon } from "@/lib/entorno";
 import { cookies } from "next/headers";
 
 // Cliente de Supabase para Server Components y Server Actions del panel.
@@ -7,8 +8,8 @@ export async function crearClienteServidor() {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl(),
+    supabaseClaveAnon(),
     {
       cookies: {
         getAll() {

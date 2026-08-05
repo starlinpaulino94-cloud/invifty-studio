@@ -12,9 +12,10 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('pedidos',       15, 4, 1),
     ('pagos',          6, 2, 1),
     ('formularios',    8, 3, 1),
-    ('invitaciones',  11, 4, 1),
+    ('invitaciones',  12, 5, 1),
     ('confirmaciones', 9, 3, 1),
-    ('visitas',        5, 3, 1)
+    ('visitas',        5, 3, 1),
+    ('invitados',      5, 3, 1)
 )
 select
   e.tabla,
@@ -70,7 +71,7 @@ order by e.tabla;
 
 select
   case when to_regclass('public.equipo') is null
-    then '❌ falta la tabla equipo — corre migracion-cerrar-acceso-equipo.sql'
+    then '❌ falta la tabla equipo — corre migrations/20260726135300_cerrar-acceso-equipo.sql'
     else '✅ existe la lista del equipo' end                    as lista,
 
   case when to_regclass('public.equipo') is null then '—'
@@ -83,7 +84,7 @@ select
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename in ('clientes','pedidos','pagos','formularios',
-                        'invitaciones','confirmaciones','visitas')
+                        'invitaciones','confirmaciones','visitas','invitados')
       and qual = 'true'
   ) then '❌ hay políticas abiertas a cualquier registrado'
     else '✅ ninguna política abierta' end                      as politicas,

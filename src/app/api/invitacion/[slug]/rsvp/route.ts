@@ -3,6 +3,7 @@ import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { limitar, ipDePeticion } from "@/lib/limite";
 import { normalizarNombre } from "@/lib/nombres";
 import { fechaVencida } from "@/lib/fechas";
+import { registrarError } from "@/lib/registro";
 
 /**
  * CONFIRMACIÓN DE ASISTENCIA (RSVP)
@@ -129,6 +130,7 @@ export async function POST(
       .update({ nombre, asiste, cantidad, nota })
       .eq("id", previa.id);
     if (error) {
+      registrarError("rsvp", error, { slug, codigo: error.code, paso: "actualizar" });
       return NextResponse.json({ error: "No se pudo guardar tu confirmación." }, { status: 500 });
     }
     return NextResponse.json({ ok: true, actualizada: true });
@@ -159,6 +161,7 @@ export async function POST(
     // Dos envíos simultáneos del mismo invitado chocan con el índice único:
     // no es un fallo real, su confirmación ya quedó registrada.
     if (error.code === "23505") return NextResponse.json({ ok: true, actualizada: true });
+    registrarError("rsvp", error, { slug, codigo: error.code, paso: "insertar" });
     return NextResponse.json({ error: "No se pudo guardar tu confirmación." }, { status: 500 });
   }
 

@@ -92,7 +92,7 @@ create trigger formularios_tocar before update on public.formularios
 -- decir "cualquiera con una sesión en este proyecto de Supabase". La clave
 -- anon viaja en el navegador, así que cualquiera puede registrarse y quedar
 -- autenticado. Por eso las políticas piden además estar en la lista blanca
--- `equipo` — ver migracion-cerrar-acceso-equipo.sql.
+-- `equipo` — ver migrations/20260726135300_cerrar-acceso-equipo.sql.
 create table if not exists public.equipo (
   usuario_id  uuid primary key references auth.users(id) on delete cascade,
   email       text,

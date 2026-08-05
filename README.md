@@ -22,12 +22,10 @@ Dos caras:
 
 1. En el menú lateral: **SQL Editor** → **New query**.
 2. Abre el archivo [`supabase/schema.sql`](./supabase/schema.sql) de este repo, copia TODO su contenido, pégalo y presiona **Run**.
-   - **¿Ya habías ejecutado el schema antes de la Fase 2?** Entonces ejecuta solo [`supabase/migracion-fase2-invitaciones.sql`](./supabase/migracion-fase2-invitaciones.sql), que agrega la tabla `invitaciones`.
-   - **¿Ya lo habías ejecutado antes de las confirmaciones (RSVP)?** Ejecuta también [`supabase/migracion-rsvp-confirmaciones.sql`](./supabase/migracion-rsvp-confirmaciones.sql), que agrega la tabla `confirmaciones`. Sin ella, las confirmaciones de los invitados no se guardan.
-   - **¿Y antes del contador de visitas?** Ejecuta [`supabase/migracion-visitas.sql`](./supabase/migracion-visitas.sql), que agrega la tabla `visitas`. Sin ella el panel muestra el contador en cero, pero nada se rompe.
-   - **¿Y antes de los avisos de vencimiento?** Ejecuta [`supabase/migracion-aviso-vencimiento.sql`](./supabase/migracion-aviso-vencimiento.sql), que agrega la columna `aviso_vencimiento_en` a `pedidos`.
-   - **¿Y antes de las invitaciones con código propio?** Ejecuta [`supabase/migracion-codigo-propio.sql`](./supabase/migracion-codigo-propio.sql), que agrega la columna `codigo_html` a `invitaciones`.
-   - **¿Y antes del dominio propio?** Ejecuta [`supabase/migracion-dominio-propio.sql`](./supabase/migracion-dominio-propio.sql), que agrega la columna `dominio` a `invitaciones`. Sin ella, el editor no puede guardar el dominio del cliente.
+   - **¿Instalación que ya existía?** Ejecuta las migraciones de [`supabase/migrations/`](./supabase/migrations)
+     que te falten, **en orden de nombre** (empiezan por su fecha). Cada una dice arriba
+     qué agrega y todas son repetibles: correr una que ya corriste no daña nada.
+     El detalle de cada una y cómo comprobar el resultado está en [`docs/migraciones.md`](./docs/migraciones.md).
    - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Las siete filas deben decir `OK`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
@@ -600,7 +598,7 @@ acceso a un solo dato.
 
 **Para ponerlo al día** (una vez, en Supabase → SQL Editor):
 
-1. Corre `supabase/migracion-cerrar-acceso-equipo.sql`. Se siembra sola con los
+1. Corre `supabase/migrations/20260726135300_cerrar-acceso-equipo.sql`. Se siembra sola con los
    usuarios que ya existen, así que quien hoy entra al panel sigue entrando
    igual. Las tres filas de comprobación del final tienen que decir OK.
 2. **Apaga el registro público**: Supabase → *Authentication* → *Sign In / Up* →

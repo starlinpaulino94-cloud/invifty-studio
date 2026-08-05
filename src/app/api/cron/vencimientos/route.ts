@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { secretoCron } from "@/lib/entorno";
 import { repasarVencimientos, diasHasta, type PedidoVigencia } from "@/lib/vencimientos";
 import { notificarVencimientosProximos } from "@/lib/notificaciones";
 import type { Plan } from "@/lib/tipos";
@@ -32,7 +33,7 @@ type PedidoRepaso = PedidoVigencia & {
 };
 
 function autorizado(req: NextRequest): boolean {
-  const secreto = process.env.CRON_SECRET;
+  const secreto = secretoCron();
   // Sin secreto configurado la ruta queda cerrada, no abierta.
   if (!secreto) return false;
   return req.headers.get("authorization") === `Bearer ${secreto}`;

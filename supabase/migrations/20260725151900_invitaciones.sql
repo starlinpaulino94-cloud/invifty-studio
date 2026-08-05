@@ -26,7 +26,7 @@ alter table public.invitaciones enable row level security;
 
 -- NOTA: esta política se endureció después. "authenticated" no quiere decir
 -- "del equipo": la clave anon es pública y cualquiera puede registrarse.
--- Ver migracion-cerrar-acceso-equipo.sql.
+-- Ver 20260726135300_cerrar-acceso-equipo.sql.
 create policy "equipo acceso total invitaciones" on public.invitaciones
   for all to authenticated
   using (public.es_del_equipo()) with check (public.es_del_equipo());

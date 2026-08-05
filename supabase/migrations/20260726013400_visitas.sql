@@ -36,7 +36,7 @@ alter table public.visitas enable row level security;
 -- El equipo lee las visitas desde el panel.
 -- NOTA: esta política se endureció después. "authenticated" no quiere decir
 -- "del equipo": la clave anon es pública y cualquiera puede registrarse.
--- Ver migracion-cerrar-acceso-equipo.sql.
+-- Ver 20260726135300_cerrar-acceso-equipo.sql.
 create policy "equipo acceso total visitas" on public.visitas
   for all to authenticated
   using (public.es_del_equipo()) with check (public.es_del_equipo());
