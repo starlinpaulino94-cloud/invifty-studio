@@ -7,6 +7,7 @@ import Publicada, {
 } from "@/components/invitacion/Publicada";
 import { paleta } from "@/config/diseno";
 import { normalizarDominio } from "@/lib/dominios";
+import { hogarDeEnlace } from "@/lib/hogares";
 
 export const dynamic = "force-dynamic";
 
@@ -76,8 +77,10 @@ export async function generateMetadata({
 
 export default async function PaginaDominioPropio({
   params,
+  searchParams,
 }: {
   params: Promise<{ host: string }>;
+  searchParams: Promise<{ h?: string }>;
 }) {
   const { host } = await params;
   const pedido = normalizarDominio(decodeURIComponent(host));
@@ -87,7 +90,16 @@ export default async function PaginaDominioPropio({
   if (!pedido || pedido !== real) notFound();
 
   const invitacion = await buscarPorDominio(pedido);
-  if (invitacion) return <Publicada invitacion={invitacion} esBorrador={false} />;
+  if (invitacion) {
+    // El enlace personal (?h=) funciona igual en el dominio propio.
+    const { h } = await searchParams;
+    const hogar = await hogarDeEnlace(
+      crearClienteAdmin(),
+      (invitacion as InvitacionPublicable & { id: string }).id,
+      h
+    );
+    return <Publicada invitacion={invitacion} esBorrador={false} hogar={hogar} />;
+  }
 
   /**
    * El dominio llegó de verdad hasta aquí (DNS y Vercel ya funcionan) pero

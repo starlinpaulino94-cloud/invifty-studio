@@ -71,7 +71,7 @@ create index if not exists invitados_invitacion_idx
 -- Igual que las demás tablas: el equipo entra por la lista blanca, y el
 -- anfitrión NUNCA toca Supabase directamente. Su panel pasa por rutas del
 -- servidor que validan el token y usan la clave de servicio.
--- Ver migracion-cerrar-acceso-equipo.sql.
+-- Ver 20260726135300_cerrar-acceso-equipo.sql.
 
 alter table public.invitados enable row level security;
 

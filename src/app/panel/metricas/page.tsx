@@ -1,5 +1,6 @@
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { PLANES, EXTRAS, TIPOS_EVENTO, formatoDOP } from "@/lib/planes";
+import { pagoActivo } from "@/lib/pagos";
 import { Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import { BarChart3, TrendingUp, Package, PartyPopper } from "lucide-react";
 
@@ -33,7 +34,8 @@ export default async function PaginaMetricas() {
   ]);
 
   const pedidos = (pedidosData ?? []) as Pedido[];
-  const pagos = (pagosData ?? []) as Pago[];
+  // Los pagos anulados están tachados, no borrados: aquí no cuentan.
+  const pagos = ((pagosData ?? []) as Pago[]).filter(pagoActivo);
 
   const ahora = new Date();
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);

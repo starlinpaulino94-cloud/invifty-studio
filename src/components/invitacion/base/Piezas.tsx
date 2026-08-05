@@ -425,14 +425,17 @@ export function Rsvp({
   fechaLimite: string;
   acompanantes: boolean;
 }) {
-  const { slug, esBorrador } = useInvitacion();
-  const [nombre, setNombre] = useState("");
+  const { slug, esBorrador, hogar } = useInvitacion();
+  // El enlace personal trae el nombre del hogar puesto (editable: quien
+  // confirma puede ser "Juan, de la familia Pérez") y su cupo como tope.
+  const [nombre, setNombre] = useState(hogar?.nombre ?? "");
   const [asiste, setAsiste] = useState<"si" | "no">("si");
   const [cantidad, setCantidad] = useState(1);
   const [nota, setNota] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState("");
+  const maxPersonas = hogar?.cupo ?? 20;
 
   const mensajeWhatsApp = [
     "💌 *CONFIRMACIÓN DE ASISTENCIA*",
@@ -475,7 +478,13 @@ export function Rsvp({
       const res = await fetch(`/api/invitacion/${slug}/rsvp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, asiste: asiste === "si", cantidad, nota }),
+        body: JSON.stringify({
+          nombre,
+          asiste: asiste === "si",
+          cantidad,
+          nota,
+          hogar: hogar?.token,
+        }),
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
@@ -606,6 +615,20 @@ export function Rsvp({
       className="rounded-lg p-6 sm:p-8 space-y-4"
       style={{ backgroundColor: "var(--inv-tarjeta)", border: "1px solid var(--inv-linea)" }}
     >
+      {hogar && (
+        <p
+          className="text-xs text-center rounded-lg py-2 px-3"
+          style={{
+            color: "var(--inv-acento)",
+            border: "1px solid var(--inv-linea)",
+            backgroundColor: "color-mix(in srgb, var(--inv-acento) 8%, transparent)",
+          }}
+        >
+          Invitación para <strong>{hogar.nombre}</strong> · hasta {hogar.cupo}{" "}
+          {hogar.cupo === 1 ? "persona" : "personas"}
+        </p>
+      )}
+
       {fechaLimite && (
         <p className="text-xs text-center mb-2" style={{ color: "var(--inv-texto-suave)" }}>
           Confirma tu asistencia antes del{" "}
@@ -650,7 +673,7 @@ export function Rsvp({
             ¿Cuántas personas asistirán en total (incluyéndote)?
           </label>
           <input
-            type="number" min={1} max={20}
+            type="number" min={1} max={maxPersonas}
             value={cantidad}
             onChange={(e) => setCantidad(Number(e.target.value))}
             className={campo}

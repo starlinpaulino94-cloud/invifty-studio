@@ -1,5 +1,5 @@
-import { PLANES, TIPOS_EVENTO, formatoFecha } from "./planes";
-import type { Plan, TipoEvento } from "./tipos";
+import { PLANES, formatoFecha } from "./planes";
+import type { Plan } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
 
 /**
@@ -24,7 +24,7 @@ import { urlBase as resolverUrlBase } from "./url";
  * la ficha del cliente, así que un nombre como «Joyería Pérez & Hijos»
  * rompería el formato del email sin esto.
  */
-function escaparHtml(texto: string): string {
+export function escaparHtml(texto: string): string {
   return texto
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -32,17 +32,8 @@ function escaparHtml(texto: string): string {
     .replace(/"/g, "&quot;");
 }
 
-interface DatosNotificacion {
-  nombreCliente: string;
-  telefonoCliente: string;
-  tipoEvento: TipoEvento;
-  plan: Plan;
-  fechaEvento: string | null;
-  pedidoId: string;
-}
-
 /** Configuración de envío, o null si el equipo no la ha activado. */
-function configuracionEnvio(): { apiKey: string; destinatarios: string[]; remitente: string } | null {
+export function configuracionEnvio(): { apiKey: string; destinatarios: string[]; remitente: string } | null {
   const apiKey = process.env.RESEND_API_KEY;
   const destinatarios = (process.env.NOTIFICACIONES_EMAIL ?? "")
     .split(",")
@@ -59,7 +50,7 @@ function configuracionEnvio(): { apiKey: string; destinatarios: string[]; remite
 }
 
 /** Envuelve el contenido en la cabecera de marca. */
-function plantillaCorreo(contenido: string): string {
+export function plantillaCorreo(contenido: string): string {
   return `
   <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
     <div style="background: #0D0D0F; padding: 24px; text-align: center;">
@@ -70,10 +61,18 @@ function plantillaCorreo(contenido: string): string {
   </div>`.trim();
 }
 
-/** Envía el correo. Devuelve true solo si salió de verdad. */
-async function enviar(asunto: string, html: string): Promise<boolean> {
+/**
+ * Envía un correo a destinatarios concretos. Devuelve el error como texto
+ * (o null si salió): la bandeja de salida (lib/avisos.ts) guarda ese texto
+ * en la fila para poder responder "¿por qué no llegó?".
+ */
+export async function enviarCorreo(
+  destinatarios: string[],
+  asunto: string,
+  html: string
+): Promise<string | null> {
   const config = configuracionEnvio();
-  if (!config) return false;
+  if (!config) return "Envío sin configurar (RESEND_API_KEY / NOTIFICACIONES_EMAIL)";
 
   try {
     const res = await fetch("https://api.resend.com/emails", {
@@ -84,53 +83,35 @@ async function enviar(asunto: string, html: string): Promise<boolean> {
       },
       body: JSON.stringify({
         from: config.remitente,
-        to: config.destinatarios,
+        to: destinatarios,
         subject: asunto,
         html,
       }),
     });
     if (!res.ok) {
-      console.error("Notificación Resend falló:", res.status, await res.text());
-      return false;
+      const detalle = `Resend ${res.status}: ${(await res.text()).slice(0, 300)}`;
+      console.error("Notificación falló:", detalle);
+      return detalle;
     }
-    return true;
+    return null;
   } catch (e) {
     // Nunca rompemos el flujo por un fallo de notificación
     console.error("Notificación Resend error:", e);
-    return false;
+    return e instanceof Error ? e.message : "Error de red";
   }
 }
 
-export async function notificarFormularioCompletado(datos: DatosNotificacion): Promise<void> {
-  if (!configuracionEnvio()) return;
-
-  const urlBase = resolverUrlBase();
-  const urlFicha = `${urlBase}/panel/pedidos/${datos.pedidoId}`;
-
-  const evento = TIPOS_EVENTO[datos.tipoEvento];
-  const plan = PLANES[datos.plan].nombre;
-
-  const html = plantillaCorreo(`
-      <h1 style="font-size: 18px; color: #111; margin: 0 0 6px;">✅ Formulario completado</h1>
-      <p style="font-size: 14px; color: #555; margin: 0 0 20px;">
-        Un cliente terminó de llenar su formulario. El pedido está listo para pasar a diseño.
-      </p>
-      <table style="width: 100%; font-size: 14px; color: #111; border-collapse: collapse;">
-        <tr><td style="padding: 6px 0; color: #999; width: 110px;">Cliente</td><td style="padding: 6px 0;"><strong>${escaparHtml(datos.nombreCliente)}</strong></td></tr>
-        <tr><td style="padding: 6px 0; color: #999;">WhatsApp</td><td style="padding: 6px 0;">${escaparHtml(datos.telefonoCliente)}</td></tr>
-        <tr><td style="padding: 6px 0; color: #999;">Evento</td><td style="padding: 6px 0;">${evento} · Plan ${plan}</td></tr>
-        <tr><td style="padding: 6px 0; color: #999;">Fecha evento</td><td style="padding: 6px 0;">${datos.fechaEvento ? formatoFecha(datos.fechaEvento) : "Sin definir"}</td></tr>
-      </table>
-      <a href="${urlFicha}"
-         style="display: inline-block; margin-top: 24px; background: #D4AF37; color: #000; text-decoration: none; font-weight: bold; font-size: 13px; padding: 12px 24px; border-radius: 10px;">
-        Ver pedido en el panel →
-      </a>`);
-
-  await enviar(
-    `📋 Formulario completado — ${datos.nombreCliente} (${evento}, Plan ${plan})`,
-    html
-  );
+/** Envía a todo el equipo configurado. Devuelve true solo si salió. */
+async function enviar(asunto: string, html: string): Promise<boolean> {
+  const config = configuracionEnvio();
+  if (!config) return false;
+  return (await enviarCorreo(config.destinatarios, asunto, html)) === null;
 }
+
+/*
+ * El aviso de "formulario completado" ya no se envía desde aquí: viaja por
+ * la bandeja de salida (lib/avisos.ts), que reintenta si Resend falla.
+ */
 
 /* ============================================================
    AVISO DE VENCIMIENTOS (repaso diario)

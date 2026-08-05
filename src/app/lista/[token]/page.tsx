@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { cruzarLista, type InvitadoDeLista, type ConfirmacionCruzada } from "@/lib/lista";
 import PanelInvitados from "@/components/lista/PanelInvitados";
+import type { HogarDeLista } from "@/components/lista/Hogares";
+import type { EntradaDeLista } from "@/components/lista/Recepcion";
 import type { DatosInvitacion } from "@/lib/tipos";
 
 /**
@@ -44,7 +46,16 @@ export default async function PaginaLista({
   // enlace no vale": no hay por qué confirmarle nada a quien esté probando.
   if (!invitacion) notFound();
 
-  const [{ data: invitadosData }, { data: confirmacionesData }] = await Promise.all([
+  // Hogares, entradas y el cruce por hogar van en consultas APARTE de las
+  // de siempre: si la migración de la Etapa E aún no se corrió, fallan
+  // ellas solas (data null) y el panel clásico sigue completo.
+  const [
+    { data: invitadosData },
+    { data: confirmacionesData },
+    { data: hogaresData },
+    { data: entradasData },
+    { data: confirmacionesConHogar },
+  ] = await Promise.all([
     supabase
       .from("invitados")
       .select("id, nombre, nombre_normalizado")
@@ -55,7 +66,35 @@ export default async function PaginaLista({
       .select("nombre, nombre_normalizado, asiste, cantidad, nota, creado_en")
       .eq("invitacion_id", invitacion.id)
       .order("creado_en", { ascending: false }),
+    supabase
+      .from("hogares")
+      .select("id, nombre, cupo, token")
+      .eq("invitacion_id", invitacion.id)
+      .order("creado_en"),
+    supabase
+      .from("entradas")
+      .select("id, hogar_id, nombre, personas, operador, anulada_en, creado_en")
+      .eq("invitacion_id", invitacion.id)
+      .order("creado_en", { ascending: false })
+      .limit(200),
+    supabase
+      .from("confirmaciones")
+      .select("hogar_id, asiste, cantidad")
+      .eq("invitacion_id", invitacion.id)
+      .not("hogar_id", "is", null),
   ]);
+
+  // Cuántas personas confirmó cada hogar (para el cupo y la puerta).
+  const confirmadosPorHogar: Record<string, number> = {};
+  for (const c of (confirmacionesConHogar ?? []) as {
+    hogar_id: string;
+    asiste: boolean;
+    cantidad: number;
+  }[]) {
+    if (c.asiste) {
+      confirmadosPorHogar[c.hogar_id] = (confirmadosPorHogar[c.hogar_id] ?? 0) + c.cantidad;
+    }
+  }
 
   const cruce = cruzarLista(
     (invitadosData ?? []) as InvitadoDeLista[],
@@ -72,6 +111,10 @@ export default async function PaginaLista({
       publicada={invitacion.estado === "publicada"}
       invitados={(invitadosData ?? []) as InvitadoDeLista[]}
       cruce={cruce}
+      slug={invitacion.slug}
+      hogares={(hogaresData ?? []) as HogarDeLista[]}
+      entradas={(entradasData ?? []) as EntradaDeLista[]}
+      confirmadosPorHogar={confirmadosPorHogar}
     />
   );
 }

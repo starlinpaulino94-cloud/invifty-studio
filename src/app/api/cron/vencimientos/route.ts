@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { secretoCron } from "@/lib/entorno";
 import { repasarVencimientos, diasHasta, type PedidoVigencia } from "@/lib/vencimientos";
 import { notificarVencimientosProximos } from "@/lib/notificaciones";
+import { procesarAvisosPendientes } from "@/lib/avisos";
 import type { Plan } from "@/lib/tipos";
 
 /**
@@ -32,7 +34,7 @@ type PedidoRepaso = PedidoVigencia & {
 };
 
 function autorizado(req: NextRequest): boolean {
-  const secreto = process.env.CRON_SECRET;
+  const secreto = secretoCron();
   // Sin secreto configurado la ruta queda cerrada, no abierta.
   if (!secreto) return false;
   return req.headers.get("authorization") === `Bearer ${secreto}`;
@@ -91,11 +93,19 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // 3. Barrer la bandeja de salida: los avisos cuyo intento inmediato
+  //    falló (Resend caído, deploy a mitad) se reintentan aquí, hasta
+  //    agotar sus intentos. Reprocesar no duplica: lo enviado ya no está
+  //    pendiente.
+  const bandeja = await procesarAvisosPendientes(supabase, 50);
+
   return NextResponse.json({
     ok: true,
     revisadas: pedidos.length,
     marcadasVencidas: aMarcarVencidas.length,
     porVencer: aAvisar.length,
     avisadas,
+    avisosEnviados: bandeja.enviados,
+    avisosFallidos: bandeja.fallidos,
   });
 }

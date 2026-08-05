@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { limitar } from "@/lib/limite";
 import { construirFormulario } from "@/config/formularios";
-import { LIMITE_FOTOS } from "@/lib/planes";
+import { LIMITE_FOTOS, PLANES, TIPOS_EVENTO } from "@/lib/planes";
 import { Plan, TipoEvento } from "@/lib/tipos";
-import { notificarFormularioCompletado } from "@/lib/notificaciones";
+import { encolarAvisoEquipo } from "@/lib/avisos";
 import { listarArchivos, rutaOriginal } from "@/lib/fotos";
+import { urlBase } from "@/lib/url";
 
 /**
  * API pública del formulario del cliente, autenticada por el token único
@@ -138,15 +139,20 @@ export async function POST(
       .eq("id", pedido.id);
   }
 
-  // Aviso por email al equipo (se activa con RESEND_API_KEY; nunca rompe el flujo)
-  await notificarFormularioCompletado({
-    nombreCliente: pedido.clientes?.nombre ?? "Cliente",
-    telefonoCliente: pedido.clientes?.telefono ?? "",
-    tipoEvento: pedido.tipo_evento as TipoEvento,
-    plan: pedido.plan as Plan,
-    fechaEvento: pedido.fecha_evento,
-    pedidoId: pedido.id,
-  });
+  // Aviso al equipo por la bandeja de salida (lib/avisos.ts): queda
+  // encolado con reintentos aunque Resend falle ahora mismo, y la
+  // respuesta al cliente no espera al correo.
+  await encolarAvisoEquipo(
+    supabase,
+    "formulario_completado",
+    {
+      nombre: pedido.clientes?.nombre ?? "Cliente",
+      detalle: `${TIPOS_EVENTO[pedido.tipo_evento as TipoEvento]} · Plan ${PLANES[pedido.plan as Plan].nombre}`,
+      rutaPanel: `/panel/pedidos/${pedido.id}`,
+      urlBase: urlBase(),
+    },
+    { tipo: "pedido", id: pedido.id }
+  );
 
   return NextResponse.json({ ok: true });
 }

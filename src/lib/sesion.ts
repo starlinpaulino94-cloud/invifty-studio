@@ -9,7 +9,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * anon viaja en el navegador, así que cualquiera puede registrarse contra
  * nuestro proyecto de Supabase y quedar autenticado. Por eso no basta con
  * mirar si hay usuario: hay que mirar si está en la lista blanca `equipo`
- * (ver supabase/migracion-cerrar-acceso-equipo.sql).
+ * (ver supabase/migrations/20260726135300_cerrar-acceso-equipo.sql).
  *
  * Quien de verdad protege los datos es la RLS de la base: aunque esta
  * comprobación fallara, un extraño no leería una sola fila. Esto está para

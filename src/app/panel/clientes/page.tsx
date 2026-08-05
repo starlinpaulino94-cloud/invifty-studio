@@ -7,13 +7,30 @@ import { Users, ChevronDown, Phone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function PaginaClientes() {
+const POR_PAGINA = 50;
+
+export default async function PaginaClientes({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string }>;
+}) {
+  const { pagina } = await searchParams;
+  const paginaActual = Math.max(1, Number(pagina) || 1);
+  const desde = (paginaActual - 1) * POR_PAGINA;
+
   const supabase = await crearClienteServidor();
-  const [{ data: clientesData }, { data: pedidosData }] = await Promise.all([
-    supabase.from("clientes").select("*").order("creado_en", { ascending: false }),
+  // Paginado: con cientos de clientes, traerlos todos a memoria en cada
+  // visita es la clase de coste que crece en silencio hasta que duele.
+  const [{ data: clientesData, count }, { data: pedidosData }] = await Promise.all([
+    supabase
+      .from("clientes")
+      .select("*", { count: "exact" })
+      .order("creado_en", { ascending: false })
+      .range(desde, desde + POR_PAGINA - 1),
     supabase.from("pedidos").select("*").order("creado_en", { ascending: false }),
   ]);
 
+  const totalPaginas = Math.max(1, Math.ceil((count ?? 0) / POR_PAGINA));
   const clientes = (clientesData ?? []) as Cliente[];
   const pedidos = (pedidosData ?? []) as Pedido[];
   const pedidosDe = (clienteId: string) => pedidos.filter((p) => p.cliente_id === clienteId);
@@ -25,7 +42,7 @@ export default async function PaginaClientes() {
           <Users className="w-6 h-6 text-[#D4AF37]" /> Clientes
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          {clientes.length} cliente{clientes.length === 1 ? "" : "s"} registrados
+          {count ?? clientes.length} cliente{(count ?? clientes.length) === 1 ? "" : "s"} registrados
         </p>
       </div>
 
@@ -91,6 +108,22 @@ export default async function PaginaClientes() {
           );
         })}
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-center gap-3 text-xs text-gray-500">
+          {paginaActual > 1 && (
+            <Link href={`/panel/clientes?pagina=${paginaActual - 1}`} className="hover:text-gray-900 font-medium">
+              ← Anteriores
+            </Link>
+          )}
+          <span>Página {paginaActual} de {totalPaginas}</span>
+          {paginaActual < totalPaginas && (
+            <Link href={`/panel/clientes?pagina=${paginaActual + 1}`} className="hover:text-gray-900 font-medium">
+              Siguientes →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

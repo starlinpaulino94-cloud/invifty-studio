@@ -5,18 +5,19 @@ import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { registrarPago, guardarFicha } from "@/lib/acciones";
 import { generarInvitacion } from "@/lib/acciones-invitacion";
 import {
-  PLANES, EXTRAS, TIPOS_EVENTO, formatoDOP, formatoFecha, mensajeWhatsAppFormulario,
+  PLANES, EXTRAS, TIPOS_EVENTO, formatoDOP, formatoFecha, nombreEstado, mensajeWhatsAppFormulario,
 } from "@/lib/planes";
 import { construirFormulario } from "@/config/formularios";
 import { formatearValor, textoDeBloque } from "@/lib/respuestas";
-import { Cliente, Confirmacion, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
+import { Cliente, Confirmacion, EstadoPedido, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import Confirmaciones from "@/components/panel/Confirmaciones";
 import Visitas from "@/components/panel/Visitas";
 import { resumirVisitas } from "@/lib/visitas";
 import { urlBase as resolverUrlBase } from "@/lib/url";
+import { balancePagos, pagoActivo } from "@/lib/pagos";
 import { BUCKET, HORAS_FIRMA, listarArchivos, rutaOriginal, urlsDeFoto } from "@/lib/fotos";
 import {
-  SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonEliminarPago,
+  SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonAnularPago,
 } from "@/components/panel/Interactivos";
 import {
   ArrowLeft, Phone, Mail, Link2, StickyNote, Wallet, Image as ImageIcon, Download, Sparkles, FileText, Wand2, PenLine,
@@ -69,6 +70,17 @@ export default async function FichaPedido({
     : { data: null };
   const resumenVisitas = resumirVisitas(visitasData ?? []);
 
+  // El camino recorrido por el pedido. Si la migración de operaciones aún
+  // no corrió, la tabla no existe y esto queda vacío sin romper nada.
+  const { data: historialData } = await supabase
+    .from("historial_estados")
+    .select("estado_anterior, estado_nuevo, motivo, usuario_email, creado_en")
+    .eq("entidad", "pedido")
+    .eq("entidad_id", id)
+    .order("creado_en", { ascending: false })
+    .limit(15);
+  const historial = historialData ?? [];
+
   const pedido = data as Pedido & {
     clientes: Cliente;
     formularios: Formulario[];
@@ -79,7 +91,8 @@ export default async function FichaPedido({
   const pagos = (pedido.pagos ?? []).sort(
     (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
   );
-  const abonado = pagos.reduce((s, p) => s + Number(p.monto), 0);
+  // La suma ignora los anulados: un pago tachado no es dinero.
+  const abonado = balancePagos(pagos);
   const saldo = Number(pedido.precio) - abonado;
 
   const urlBase = resolverUrlBase();
@@ -189,6 +202,24 @@ export default async function FichaPedido({
         )}
 
         <SelectorEstado pedidoId={pedido.id} estado={pedido.estado} />
+
+        {historial.length > 0 && (
+          <details className="mt-4">
+            <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+              Historial de estados ({historial.length})
+            </summary>
+            <ul className="mt-2 space-y-1 text-xs text-gray-500 border-l-2 border-gray-100 pl-3">
+              {historial.map((h, i) => (
+                <li key={i}>
+                  {formatoFecha(h.creado_en)} · {nombreEstado((h.estado_anterior ?? "—") as EstadoPedido)} →{" "}
+                  <strong className="text-gray-700">{nombreEstado(h.estado_nuevo as EstadoPedido)}</strong>
+                  {h.motivo ? ` · ${h.motivo}` : ""}
+                  {h.usuario_email ? ` · ${h.usuario_email}` : ""}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
 
         {pedido.fecha_vencimiento && (
           <p className="text-xs text-gray-500 mt-4">
@@ -395,13 +426,26 @@ export default async function FichaPedido({
           <ul className="divide-y divide-gray-100 mb-5">
             {pagos.map((pago) => (
               <li key={pago.id} className="py-2.5 flex items-center justify-between gap-3 text-sm">
-                <div>
-                  <span className="font-semibold text-gray-900">{formatoDOP(pago.monto)}</span>
+                {/* Un pago anulado se enseña tachado con su motivo: el
+                    dinero mal anotado no desaparece, se ve corregido. */}
+                <div className={pagoActivo(pago) ? "" : "opacity-60"}>
+                  <span
+                    className={`font-semibold ${
+                      pagoActivo(pago) ? "text-gray-900" : "text-gray-400 line-through"
+                    }`}
+                  >
+                    {formatoDOP(pago.monto)}
+                  </span>
                   <span className="text-gray-400 text-xs ml-2">
                     {formatoFecha(pago.fecha)}{pago.metodo ? ` · ${pago.metodo}` : ""}{pago.nota ? ` · ${pago.nota}` : ""}
                   </span>
+                  {!pagoActivo(pago) && (
+                    <span className="block text-[11px] text-red-400 mt-0.5">
+                      Anulado{pago.motivo_anulacion ? `: ${pago.motivo_anulacion}` : ""}
+                    </span>
+                  )}
                 </div>
-                <BotonEliminarPago pagoId={pago.id} pedidoId={pedido.id} />
+                {pagoActivo(pago) && <BotonAnularPago pagoId={pago.id} pedidoId={pedido.id} />}
               </li>
             ))}
           </ul>

@@ -11,7 +11,8 @@ export type EstadoPedido =
   | "revision_cliente"
   | "entregada"
   | "activa"
-  | "vencida";
+  | "vencida"
+  | "cancelado";
 
 export type EstadoFormulario = "pendiente" | "en_progreso" | "completado";
 
@@ -49,6 +50,11 @@ export interface Pago {
   monto: number;
   metodo: string | null;
   nota: string | null;
+  tipo: "pago" | "reembolso" | "ajuste";
+  /** Un pago anulado se tacha, no se borra: el balance lo ignora (lib/pagos.ts). */
+  anulado_en: string | null;
+  anulado_por: string | null;
+  motivo_anulacion: string | null;
   fecha: string;
 }
 
@@ -61,6 +67,44 @@ export interface Formulario {
   fecha_completado: string | null;
   creado_en: string;
   actualizado_en: string;
+}
+
+/** Interesado llegado desde la web pública (POST /api/public/leads). */
+export type EstadoLead = "nuevo" | "contactado" | "calificado" | "convertido" | "perdido";
+
+export interface Lead {
+  id: string;
+  nombre: string;
+  telefono: string;
+  tipo_evento: string;
+  fecha_evento: string | null;
+  plan_id: Plan | null;
+  demo_slug: string | null;
+  mensaje: string | null;
+  idioma: string;
+  fuente: string;
+  utm: Record<string, string>;
+  consentimiento: boolean;
+  clave_idempotencia: string;
+  estado: EstadoLead;
+  cliente_id: string | null;
+  convertido_en: string | null;
+  convertido_por: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+/** Marca de "esta invitación se enseña de demo en la web" (GET /api/public/demos). */
+export interface Demo {
+  id: string;
+  invitacion_id: string;
+  tipo_evento: string;
+  plan_minimo: Plan;
+  orden: number;
+  destacada: boolean;
+  activa: boolean;
+  idioma: string;
+  creado_en: string;
 }
 
 export interface PedidoConCliente extends Pedido {
@@ -210,6 +254,12 @@ export interface Invitacion {
    * junto con la invitación (ver acciones-invitacion.ts).
    */
   token_lista: string | null;
+  /**
+   * El candado de la aprobación: cuando el cliente aprueba una versión,
+   * aquí queda la fecha y el editor deja de guardar. Desbloquear es un
+   * acto explícito que firma en auditoría (acciones-revision.ts).
+   */
+  bloqueada_en: string | null;
   estado: EstadoInvitacion;
   publicada_en: string | null;
   creado_en: string;

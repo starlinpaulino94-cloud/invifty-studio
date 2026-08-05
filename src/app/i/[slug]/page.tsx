@@ -6,6 +6,7 @@ import Publicada, {
   metadatosDeInvitacion, type InvitacionPublicable,
 } from "@/components/invitacion/Publicada";
 import { paleta } from "@/config/diseno";
+import { hogarDeEnlace } from "@/lib/hogares";
 import { urlBase } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
@@ -56,10 +57,13 @@ export async function generateMetadata({
 
 export default async function PaginaInvitacion({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ h?: string }>;
 }) {
   const { slug } = await params;
+  const { h } = await searchParams;
   const invitacion = await buscarInvitacion(slug);
   if (!invitacion) notFound();
 
@@ -74,5 +78,12 @@ export default async function PaginaInvitacion({
     if (!user) notFound();
   }
 
-  return <Publicada invitacion={invitacion} esBorrador={esBorrador} />;
+  // ?h=<token>: el enlace personal de un hogar (ver lib/hogares.ts).
+  const hogar = await hogarDeEnlace(
+    crearClienteAdmin(),
+    (invitacion as InvitacionPublicable & { id: string }).id,
+    h
+  );
+
+  return <Publicada invitacion={invitacion} esBorrador={esBorrador} hogar={hogar} />;
 }

@@ -3,6 +3,7 @@ import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { limitar } from "@/lib/limite";
 import { normalizarNombre } from "@/lib/nombres";
 import { leerNombresPegados } from "@/lib/lista";
+import { registrarError } from "@/lib/registro";
 
 /**
  * LA LISTA DE INVITADOS DEL ANFITRIÓN
@@ -90,6 +91,7 @@ export async function POST(
   );
 
   if (error) {
+    registrarError("lista-invitados", error, { codigo: error.code, paso: "guardar" });
     return NextResponse.json({ error: "No se pudo guardar la lista." }, { status: 500 });
   }
 
@@ -132,6 +134,7 @@ export async function DELETE(
     .eq("invitacion_id", invitacion.id);
 
   if (error) {
+    registrarError("lista-invitados", error, { codigo: error.code, paso: "quitar" });
     return NextResponse.json({ error: "No se pudo quitar el nombre." }, { status: 500 });
   }
 

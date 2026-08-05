@@ -25,7 +25,7 @@ create table public.pedidos (
   fecha_evento  date,
   estado        text not null default 'nuevo' check (estado in (
                   'nuevo','formulario_enviado','formulario_completado',
-                  'en_diseno','revision_cliente','entregada','activa','vencida')),
+                  'en_diseno','revision_cliente','entregada','activa','vencida','cancelado')),
   precio        numeric(10,2) not null default 0,   -- precio acordado (DOP)
   url_entregada text,                                -- URL de la invitación publicada
   fecha_entrega date,                                -- cuándo se entregó (base del vencimiento)
@@ -51,6 +51,12 @@ create table public.pagos (
   monto      numeric(10,2) not null,
   metodo     text,                     -- transferencia / efectivo / zelle / paypal / tarjeta
   nota       text,
+  tipo       text not null default 'pago' check (tipo in ('pago','reembolso','ajuste')),
+  -- Un pago confirmado no se borra: se anula con motivo y firma, y el
+  -- balance lo ignora (lib/pagos.ts). Borrar dinero sin rastro, jamás.
+  anulado_en timestamptz,
+  anulado_por uuid,
+  motivo_anulacion text,
   fecha      timestamptz not null default now()
 );
 
@@ -92,10 +98,14 @@ create trigger formularios_tocar before update on public.formularios
 -- decir "cualquiera con una sesión en este proyecto de Supabase". La clave
 -- anon viaja en el navegador, así que cualquiera puede registrarse y quedar
 -- autenticado. Por eso las políticas piden además estar en la lista blanca
--- `equipo` — ver migracion-cerrar-acceso-equipo.sql.
+-- `equipo` — ver migrations/20260726135300_cerrar-acceso-equipo.sql.
 create table if not exists public.equipo (
   usuario_id  uuid primary key references auth.users(id) on delete cascade,
   email       text,
+  -- Qué le toca a cada quien; la matriz vive en src/lib/roles.ts y se
+  -- valida en servidor. El primer miembro debe ser 'propietario'.
+  rol         text not null default 'admin'
+              check (rol in ('propietario','admin','ventas','operaciones','disenador','lectura')),
   creado_en   timestamptz not null default now()
 );
 
@@ -166,6 +176,9 @@ create table public.invitaciones (
   -- Enlace secreto del panel del anfitrión: /lista/<token_lista>.
   -- Como el token del formulario: sin cuenta, largo e imposible de adivinar.
   token_lista   text unique,
+  -- Cuando el cliente aprueba una versión, la invitación se bloquea contra
+  -- ediciones accidentales; desbloquear es explícito y queda en auditoría.
+  bloqueada_en  timestamptz,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
@@ -247,6 +260,163 @@ create policy "equipo acceso total invitados" on public.invitados
   for all to authenticated
   using (public.es_del_equipo()) with check (public.es_del_equipo());
 
+-- ---------- LEADS (interesados que llegan desde la web pública) ----------
+-- Entran por POST /api/public/leads con estado, atribución (fuente/UTM) e
+-- idempotencia: el doble clic del visitante no crea dos leads. El equipo
+-- los trabaja en /panel/leads y al convertirlos queda el rastro.
+create table public.leads (
+  id            uuid primary key default gen_random_uuid(),
+  nombre        text not null,
+  telefono      text not null,               -- normalizado a dígitos (18091234567)
+  tipo_evento   text not null,
+  fecha_evento  date,
+  plan_id       text,
+  demo_slug     text,
+  mensaje       text,
+  idioma        text not null default 'es',
+  fuente        text not null,
+  utm           jsonb not null default '{}'::jsonb,
+  consentimiento boolean not null default false,
+  clave_idempotencia text not null,
+  estado        text not null default 'nuevo' check (estado in
+                  ('nuevo','contactado','calificado','convertido','perdido')),
+  cliente_id    uuid references public.clientes(id) on delete set null,
+  convertido_en timestamptz,
+  convertido_por uuid,
+  creado_en     timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+create unique index leads_idempotencia_idx on public.leads (clave_idempotencia);
+create index leads_estado_idx on public.leads (estado, creado_en desc);
+create index leads_telefono_idx on public.leads (telefono);
+
+create trigger leads_tocar before update on public.leads
+  for each row execute function public.tocar_actualizado_en();
+
+alter table public.leads enable row level security;
+
+create policy "equipo acceso total leads" on public.leads
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- ---------- DEMOS (invitaciones que la web enseña de muestra) ----------
+-- La web pregunta por GET /api/public/demos; los datos visibles salen de
+-- la invitación real (título, plantilla, slug), aquí solo va la marca.
+create table public.demos (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null unique references public.invitaciones(id) on delete cascade,
+  tipo_evento   text not null default 'boda',
+  plan_minimo   text not null default 'esencial',
+  orden         integer not null default 0,
+  destacada     boolean not null default false,
+  activa        boolean not null default true,
+  idioma        text not null default 'es',
+  creado_en     timestamptz not null default now()
+);
+
+create index demos_activas_idx on public.demos (activa, orden);
+
+alter table public.demos enable row level security;
+
+create policy "equipo acceso total demos" on public.demos
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- ---------- HISTORIAL DE ESTADOS Y AUDITORÍA (inmutables) ----------
+-- Se puede leer y añadir, nunca corregir: un historial corregible no es
+-- historial. El trigger lo hace explícito incluso saltándose políticas.
+create table public.historial_estados (
+  id             uuid primary key default gen_random_uuid(),
+  entidad        text not null,            -- 'pedido' / 'invitacion' / 'lead'
+  entidad_id     uuid not null,
+  estado_anterior text,
+  estado_nuevo   text not null,
+  motivo         text,
+  usuario_id     uuid,
+  usuario_email  text,
+  creado_en      timestamptz not null default now()
+);
+
+create index historial_entidad_idx
+  on public.historial_estados (entidad, entidad_id, creado_en desc);
+
+create table public.auditoria (
+  id            uuid primary key default gen_random_uuid(),
+  accion        text not null,             -- 'pago:registrar' / 'invitacion:publicar' …
+  entidad       text not null,
+  entidad_id    uuid,
+  usuario_id    uuid,
+  usuario_email text,
+  -- Contexto NO sensible: montos, slugs, estados. Nunca datos de invitados.
+  detalles      jsonb not null default '{}'::jsonb,
+  creado_en     timestamptz not null default now()
+);
+
+create index auditoria_fecha_idx on public.auditoria (creado_en desc);
+create index auditoria_entidad_idx on public.auditoria (entidad, entidad_id);
+
+create or replace function public.historial_inmutable()
+returns trigger language plpgsql as $$
+begin
+  raise exception 'El historial no se corrige: es un registro, no un borrador.';
+end $$;
+
+create trigger historial_no_se_toca
+  before update or delete on public.historial_estados
+  for each row execute function public.historial_inmutable();
+create trigger auditoria_no_se_toca
+  before update or delete on public.auditoria
+  for each row execute function public.historial_inmutable();
+
+alter table public.historial_estados enable row level security;
+alter table public.auditoria enable row level security;
+
+create policy "equipo lee historial" on public.historial_estados
+  for select to authenticated using (public.es_del_equipo());
+create policy "equipo escribe historial" on public.historial_estados
+  for insert to authenticated with check (public.es_del_equipo());
+create policy "equipo lee auditoria" on public.auditoria
+  for select to authenticated using (public.es_del_equipo());
+create policy "equipo escribe auditoria" on public.auditoria
+  for insert to authenticated with check (public.es_del_equipo());
+
+-- ---------- GENERACIONES DE IA ----------
+-- Registro trazable de cada tanda de conceptos propuesta por un proveedor
+-- (mock o Claude): quién pidió, qué salió, si validó y cuánto costó.
+-- Sin cadenas de razonamiento ni claves. Ver src/lib/ia/.
+create table public.generaciones (
+  id             uuid primary key default gen_random_uuid(),
+  invitacion_id  uuid references public.invitaciones(id) on delete set null,
+  tipo           text not null default 'conceptos',
+  proveedor      text not null,               -- mock / anthropic
+  modelo         text not null,
+  prompt_version text not null,
+  hash_brief     text not null,
+  intento        integer not null default 1,
+  resultado      jsonb,
+  valido         boolean not null default false,
+  error          text,
+  tokens_entrada integer not null default 0,
+  tokens_salida  integer not null default 0,
+  costo_usd      numeric(10,6) not null default 0,
+  latencia_ms    integer not null default 0,
+  usuario_id     uuid,
+  usuario_email  text,
+  creado_en      timestamptz not null default now()
+);
+
+create index generaciones_invitacion_idx
+  on public.generaciones (invitacion_id, creado_en desc);
+create index generaciones_fecha_idx on public.generaciones (creado_en desc);
+
+alter table public.generaciones enable row level security;
+
+create policy "equipo lee generaciones" on public.generaciones
+  for select to authenticated using (public.es_del_equipo());
+create policy "equipo escribe generaciones" on public.generaciones
+  for insert to authenticated with check (public.es_del_equipo());
+
 alter table public.confirmaciones enable row level security;
 
 create policy "equipo acceso total confirmaciones" on public.confirmaciones
@@ -283,3 +453,195 @@ create policy "equipo acceso total visitas" on public.visitas
   using (public.es_del_equipo()) with check (public.es_del_equipo());
 -- Los invitados NO tocan la tabla: la visita se registra desde
 -- /api/invitacion/<slug>/visita, en el servidor.
+
+-- ============================================================
+-- CLIENTE E INVITADOS (Etapa E): versiones, revisiones, comentarios,
+-- hogares, entradas y la bandeja de salida de avisos.
+-- ============================================================
+
+-- ---------- VERSIONES (fotos inmutables de la invitación) ----------
+
+create table public.versiones (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  numero        integer not null,
+  plantilla     text not null,
+  datos         jsonb not null,
+  codigo_html   text,
+  motivo        text,
+  usuario_id    uuid,
+  usuario_email text,
+  creado_en     timestamptz not null default now()
+);
+
+create unique index versiones_numero_idx
+  on public.versiones (invitacion_id, numero);
+
+-- Una versión que se puede corregir no prueba nada: mismo trato que el
+-- historial (la función ya existe desde la migración de operaciones).
+create trigger versiones_no_se_tocan
+  before update or delete on public.versiones
+  for each row execute function public.historial_inmutable();
+
+alter table public.versiones enable row level security;
+
+create policy "equipo lee versiones" on public.versiones
+  for select to authenticated using (public.es_del_equipo());
+create policy "equipo escribe versiones" on public.versiones
+  for insert to authenticated with check (public.es_del_equipo());
+
+-- ---------- REVISIONES (el enlace del cliente) ----------
+
+create table public.revisiones (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  version_id    uuid not null references public.versiones(id) on delete cascade,
+  token         text not null unique,
+  estado        text not null default 'abierta'
+                check (estado in ('abierta','cambios_solicitados','aprobada')),
+  expira_en     timestamptz not null,
+  revocada_en   timestamptz,
+  aprobada_en   timestamptz,
+  -- El nombre que el cliente escribe al aprobar: la evidencia de quién
+  -- dijo que sí, junto con la fecha y la versión exacta.
+  aprobada_por  text,
+  usuario_id    uuid,
+  usuario_email text,
+  creado_en     timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+create index revisiones_invitacion_idx
+  on public.revisiones (invitacion_id, creado_en desc);
+
+create trigger revisiones_tocar before update on public.revisiones
+  for each row execute function public.tocar_actualizado_en();
+
+alter table public.revisiones enable row level security;
+
+create policy "equipo acceso total revisiones" on public.revisiones
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+-- El cliente NO toca la tabla: entra por /revision/<token>, que valida
+-- el token en el servidor con la clave secreta.
+
+-- ---------- COMENTARIOS (lo que el cliente pide cambiar) ----------
+
+create table public.comentarios (
+  id            uuid primary key default gen_random_uuid(),
+  revision_id   uuid not null references public.revisiones(id) on delete cascade,
+  seccion       text not null default 'general',
+  texto         text not null,
+  autor         text not null default 'cliente',
+  estado        text not null default 'abierto'
+                check (estado in ('abierto','en_proceso','resuelto','descartado')),
+  resuelto_por  text,
+  creado_en     timestamptz not null default now(),
+  actualizado_en timestamptz not null default now()
+);
+
+create index comentarios_revision_idx
+  on public.comentarios (revision_id, creado_en);
+
+create trigger comentarios_tocar before update on public.comentarios
+  for each row execute function public.tocar_actualizado_en();
+
+alter table public.comentarios enable row level security;
+
+create policy "equipo acceso total comentarios" on public.comentarios
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- ---------- HOGARES (cupo agrupado por familia) ----------
+
+create table public.hogares (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,              -- "Familia Pérez"
+  cupo          integer not null default 2 check (cupo >= 1 and cupo <= 20),
+  -- Token opaco: va en el enlace personal (/i/<slug>?h=<token>) y en el
+  -- QR de la puerta. NUNCA lleva nombre, teléfono ni dirección.
+  token         text not null unique,
+  creado_en     timestamptz not null default now()
+);
+
+-- "Familia Pérez" dos veces en la misma boda es un error de dedo.
+create unique index hogares_nombre_idx
+  on public.hogares (invitacion_id, lower(nombre));
+create index hogares_invitacion_idx
+  on public.hogares (invitacion_id);
+
+alter table public.hogares enable row level security;
+
+create policy "equipo acceso total hogares" on public.hogares
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+-- El anfitrión los gestiona desde /lista/<token>, vía rutas de servidor.
+
+-- Un invitado puede pertenecer a un hogar; borrado el hogar, el invitado
+-- queda suelto (no desaparece de la lista).
+alter table public.invitados
+  add column hogar_id uuid references public.hogares(id) on delete set null;
+
+-- La confirmación recuerda por qué puerta llegó (enlace personal del
+-- hogar) para poder aplicar el cupo y cruzar la recepción.
+alter table public.confirmaciones
+  add column hogar_id uuid references public.hogares(id) on delete set null;
+
+-- ---------- ENTRADAS (la puerta el día del evento) ----------
+
+create table public.entradas (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  hogar_id      uuid references public.hogares(id) on delete set null,
+  -- A quién se registró, con sus palabras: "Familia Pérez" o "Juan (sin
+  -- hogar)". Queda escrito aunque el hogar se borre después.
+  nombre        text not null,
+  personas      integer not null check (personas >= 1 and personas <= 20),
+  operador      text,
+  nota          text,
+  -- Una entrada mal anotada se ANULA, no se borra: la puerta es historial.
+  anulada_en    timestamptz,
+  creado_en     timestamptz not null default now()
+);
+
+create index entradas_invitacion_idx
+  on public.entradas (invitacion_id, creado_en desc);
+
+alter table public.entradas enable row level security;
+
+create policy "equipo acceso total entradas" on public.entradas
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- ---------- AVISOS (bandeja de salida de notificaciones) ----------
+
+create table public.avisos (
+  id             uuid primary key default gen_random_uuid(),
+  tipo           text not null,     -- formulario_completado / revision_aprobada / …
+  canal          text not null default 'email',
+  destinatario   text not null,     -- correo del equipo (interno)
+  referencia_tipo text,             -- pedido / invitacion / revision
+  referencia_id  uuid,
+  asunto         text not null,
+  cuerpo_html    text not null,
+  estado         text not null default 'pendiente'
+                 check (estado in ('pendiente','enviado','fallido')),
+  intentos       integer not null default 0,
+  error          text,
+  proveedor      text not null default 'resend',
+  programado_en  timestamptz not null default now(),
+  enviado_en     timestamptz,
+  creado_en      timestamptz not null default now()
+);
+
+-- El repaso solo mira lo pendiente: índice parcial, no tabla entera.
+create index avisos_pendientes_idx
+  on public.avisos (programado_en) where estado = 'pendiente';
+
+alter table public.avisos enable row level security;
+
+create policy "equipo lee avisos" on public.avisos
+  for select to authenticated using (public.es_del_equipo());
+-- Se escribe solo desde el servidor (clave secreta): encolar y procesar
+-- no dependen de la sesión de nadie.

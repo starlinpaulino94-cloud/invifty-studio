@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
+import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { derivarDatosInvitacion } from "./invitacion";
 import { slugificar, slugConSufijo } from "./slug";
 import { normalizarDominio, dominioValido } from "./dominios";
@@ -93,6 +94,7 @@ export async function guardarInvitacion(
   dominio?: string | null
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "editar_invitaciones");
 
   // El dominio se guarda normalizado (sin https://, sin www, en
   // minúsculas) para que la petición que llegue por él lo encuentre.
@@ -102,6 +104,26 @@ export async function guardarInvitacion(
   }
 
   const slugLimpio = slugificar(slug);
+
+  // El slug y el dominio son la DIRECCIÓN pública: cambiarlos rompe
+  // enlaces ya repartidos, así que su cambio queda firmado. Se mira ANTES
+  // de escribir — después ya no habría contra qué comparar.
+  const { data: previa } = await supabase
+    .from("invitaciones")
+    .select("slug, dominio, bloqueada_en")
+    .eq("id", invitacionId)
+    .single();
+
+  // El candado de la aprobación: lo que el cliente aprobó no se toca por
+  // descuido. Desbloquear existe, es explícito y queda firmado.
+  if (previa?.bloqueada_en) {
+    return {
+      ok: false,
+      error:
+        "El cliente aprobó esta invitación y está bloqueada. Para editarla, desbloquéala desde la tarjeta de revisión (quedará en auditoría).",
+    };
+  }
+
   const { error } = await supabase
     .from("invitaciones")
     .update({
@@ -122,6 +144,12 @@ export async function guardarInvitacion(
     return { ok: false, error: mensaje };
   }
 
+  if (previa && (previa.slug !== slugLimpio || (previa.dominio ?? "") !== (dominioLimpio || ""))) {
+    await registrarAccion(supabase, quien, "invitacion:direccion", "invitacion", invitacionId, {
+      slug: slugLimpio, dominio: dominioLimpio || null,
+    });
+  }
+
   revalidatePath(`/panel/invitaciones/${invitacionId}`);
   return { ok: true };
 }
@@ -132,6 +160,7 @@ export async function guardarInvitacion(
  */
 export async function publicarInvitacion(invitacionId: string) {
   const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "publicar");
 
   const { data: invitacion } = await supabase
     .from("invitaciones")
@@ -166,6 +195,18 @@ export async function publicarInvitacion(invitacionId: string) {
 
   await supabase.from("pedidos").update(cambios).eq("id", pedido.id);
 
+  await registrarCambioEstado(
+    supabase, quien, "invitacion", invitacionId, invitacion.estado, "publicada"
+  );
+  await registrarAccion(supabase, quien, "invitacion:publicar", "invitacion", invitacionId, {
+    slug: invitacion.slug, dominio: invitacion.dominio ?? null,
+  });
+  if (cambios.estado === "entregada") {
+    await registrarCambioEstado(
+      supabase, quien, "pedido", pedido.id, pedido.estado, "entregada", "invitación publicada"
+    );
+  }
+
   revalidatePath(`/panel/invitaciones/${invitacionId}`);
   revalidatePath(`/panel/pedidos/${pedido.id}`);
   revalidatePath("/panel");
@@ -174,9 +215,12 @@ export async function publicarInvitacion(invitacionId: string) {
 /** Regresa la invitación a borrador (deja de ser visible al público). */
 export async function despublicarInvitacion(invitacionId: string) {
   const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "publicar");
   await supabase
     .from("invitaciones")
     .update({ estado: "borrador" })
     .eq("id", invitacionId);
+  await registrarCambioEstado(supabase, quien, "invitacion", invitacionId, "publicada", "borrador");
+  await registrarAccion(supabase, quien, "invitacion:despublicar", "invitacion", invitacionId);
   revalidatePath(`/panel/invitaciones/${invitacionId}`);
 }

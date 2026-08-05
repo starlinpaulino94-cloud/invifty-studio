@@ -10,11 +10,23 @@ with esperado(tabla, columnas, indices, politicas) as (
   values
     ('clientes',       6, 2, 1),
     ('pedidos',       15, 4, 1),
-    ('pagos',          6, 2, 1),
+    ('pagos',         10, 2, 1),
     ('formularios',    8, 3, 1),
-    ('invitaciones',  11, 4, 1),
-    ('confirmaciones', 9, 3, 1),
-    ('visitas',        5, 3, 1)
+    ('invitaciones',  13, 5, 1),
+    ('confirmaciones',10, 3, 1),
+    ('visitas',        5, 3, 1),
+    ('invitados',      6, 3, 1),
+    ('leads',         19, 4, 1),
+    ('demos',          9, 3, 1),
+    ('historial_estados', 9, 2, 2),
+    ('auditoria',      8, 3, 2),
+    ('generaciones',  17, 3, 2),
+    ('versiones',     10, 2, 2),
+    ('revisiones',    13, 3, 1),
+    ('comentarios',    9, 2, 1),
+    ('hogares',        6, 4, 1),
+    ('entradas',       9, 2, 1),
+    ('avisos',        15, 2, 1)
 )
 select
   e.tabla,
@@ -70,7 +82,7 @@ order by e.tabla;
 
 select
   case when to_regclass('public.equipo') is null
-    then '❌ falta la tabla equipo — corre migracion-cerrar-acceso-equipo.sql'
+    then '❌ falta la tabla equipo — corre migrations/20260726135300_cerrar-acceso-equipo.sql'
     else '✅ existe la lista del equipo' end                    as lista,
 
   case when to_regclass('public.equipo') is null then '—'
@@ -83,7 +95,7 @@ select
     select 1 from pg_policies
     where schemaname = 'public'
       and tablename in ('clientes','pedidos','pagos','formularios',
-                        'invitaciones','confirmaciones','visitas')
+                        'invitaciones','confirmaciones','visitas','invitados','leads','demos')
       and qual = 'true'
   ) then '❌ hay políticas abiertas a cualquier registrado'
     else '✅ ninguna política abierta' end                      as politicas,

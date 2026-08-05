@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { fechaLarga } from "@/lib/fechas";
 import type { Cruce, InvitadoDeLista } from "@/lib/lista";
+import Hogares, { type HogarDeLista } from "./Hogares";
+import Recepcion, { type EntradaDeLista } from "./Recepcion";
 
 /**
  * EL PANEL DEL ANFITRIÓN
@@ -30,6 +32,10 @@ export default function PanelInvitados({
   publicada,
   invitados,
   cruce,
+  slug,
+  hogares,
+  entradas,
+  confirmadosPorHogar,
 }: {
   token: string;
   titulo: string;
@@ -37,6 +43,10 @@ export default function PanelInvitados({
   publicada: boolean;
   invitados: InvitadoDeLista[];
   cruce: Cruce;
+  slug: string;
+  hogares: HogarDeLista[];
+  entradas: EntradaDeLista[];
+  confirmadosPorHogar: Record<string, number>;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -262,6 +272,24 @@ export default function PanelInvitados({
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        {/* ---------- Hogares y la puerta ---------- */}
+        <div className="mt-6">
+          <Hogares
+            token={token}
+            slug={slug}
+            hogares={hogares}
+            confirmadosPorHogar={confirmadosPorHogar}
+          />
+          {hogares.length + entradas.length > 0 && (
+            <Recepcion
+              token={token}
+              hogares={hogares}
+              entradas={entradas}
+              confirmadosPorHogar={confirmadosPorHogar}
+            />
           )}
         </div>
 
