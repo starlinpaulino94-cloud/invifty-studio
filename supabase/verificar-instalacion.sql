@@ -19,7 +19,8 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('leads',         19, 4, 1),
     ('demos',          9, 3, 1),
     ('historial_estados', 9, 2, 2),
-    ('auditoria',      8, 3, 2)
+    ('auditoria',      8, 3, 2),
+    ('generaciones',  17, 3, 2)
 )
 select
   e.tabla,

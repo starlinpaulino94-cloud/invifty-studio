@@ -78,3 +78,33 @@ export function secretoCron(): string | null {
   soloServidor("CRON_SECRET");
   return process.env.CRON_SECRET?.trim() || null;
 }
+
+/* ---------- IA creativa (Etapa D) ---------- */
+
+export type ModoIA = "mock" | "anthropic" | "off";
+
+/**
+ * Qué proveedor de conceptos está activo. Por defecto "mock": el pipeline
+ * completo funciona sin clave ni coste. "anthropic" exige IA_API_KEY — sin
+ * ella se cae a mock CON NOTA EN EL LOG, porque un despliegue que cree
+ * estar usando IA real y esté usando el mock debe poder descubrirse.
+ */
+export function modoIA(): ModoIA {
+  soloServidor("IA_PROVEEDOR");
+  const valor = process.env.IA_PROVEEDOR?.trim().toLowerCase();
+  if (valor === "off") return "off";
+  if (valor === "anthropic") {
+    if (!process.env.IA_API_KEY?.trim()) {
+      console.error("[ia] IA_PROVEEDOR=anthropic pero falta IA_API_KEY: se usa el modo mock.");
+      return "mock";
+    }
+    return "anthropic";
+  }
+  return "mock";
+}
+
+/** La clave del proveedor de IA. Secreta: solo servidor. */
+export function claveIA(): string | null {
+  soloServidor("IA_API_KEY");
+  return process.env.IA_API_KEY?.trim() || null;
+}

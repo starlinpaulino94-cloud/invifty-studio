@@ -5,6 +5,7 @@ import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/tipos";
 import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
+import ConceptosIA from "./ConceptosIA";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import { escribirEnRuta } from "@/lib/rutas";
@@ -345,6 +346,26 @@ export default function EditorInvitacion({
           </span>
         </button>
       </Tarjeta>
+
+      {/* ---------- CONCEPTOS CON IA ----------
+          Propone tres direcciones dentro del sistema de diseño (nunca HTML
+          libre). Aplicar cambia el estado local: la vista previa enseña el
+          antes y el después, y nada se guarda hasta «Guardar cambios». */}
+      {!esCodigo && (
+        <Tarjeta
+          titulo="Conceptos con IA"
+          subtitulo="Tres direcciones distintas para elegir con criterio. La palabra final es del equipo."
+        >
+          <ConceptosIA
+            invitacionId={invitacionId}
+            datos={datos}
+            onAplicar={(nuevosDatos, nuevaPlantilla) => {
+              setDatos(nuevosDatos);
+              if (nuevaPlantilla) setPlantilla(nuevaPlantilla);
+            }}
+          />
+        </Tarjeta>
+      )}
 
       {esCodigo && (
         <Tarjeta

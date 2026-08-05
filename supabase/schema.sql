@@ -378,6 +378,42 @@ create policy "equipo lee auditoria" on public.auditoria
 create policy "equipo escribe auditoria" on public.auditoria
   for insert to authenticated with check (public.es_del_equipo());
 
+-- ---------- GENERACIONES DE IA ----------
+-- Registro trazable de cada tanda de conceptos propuesta por un proveedor
+-- (mock o Claude): quién pidió, qué salió, si validó y cuánto costó.
+-- Sin cadenas de razonamiento ni claves. Ver src/lib/ia/.
+create table public.generaciones (
+  id             uuid primary key default gen_random_uuid(),
+  invitacion_id  uuid references public.invitaciones(id) on delete set null,
+  tipo           text not null default 'conceptos',
+  proveedor      text not null,               -- mock / anthropic
+  modelo         text not null,
+  prompt_version text not null,
+  hash_brief     text not null,
+  intento        integer not null default 1,
+  resultado      jsonb,
+  valido         boolean not null default false,
+  error          text,
+  tokens_entrada integer not null default 0,
+  tokens_salida  integer not null default 0,
+  costo_usd      numeric(10,6) not null default 0,
+  latencia_ms    integer not null default 0,
+  usuario_id     uuid,
+  usuario_email  text,
+  creado_en      timestamptz not null default now()
+);
+
+create index generaciones_invitacion_idx
+  on public.generaciones (invitacion_id, creado_en desc);
+create index generaciones_fecha_idx on public.generaciones (creado_en desc);
+
+alter table public.generaciones enable row level security;
+
+create policy "equipo lee generaciones" on public.generaciones
+  for select to authenticated using (public.es_del_equipo());
+create policy "equipo escribe generaciones" on public.generaciones
+  for insert to authenticated with check (public.es_del_equipo());
+
 alter table public.confirmaciones enable row level security;
 
 create policy "equipo acceso total confirmaciones" on public.confirmaciones

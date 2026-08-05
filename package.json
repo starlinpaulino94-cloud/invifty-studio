@@ -13,6 +13,7 @@
     "test": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./scripts/resolver-imports.mjs --test 'pruebas/**/*.prueba.ts'"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.8",
     "lucide-react": "^1.26.0",
