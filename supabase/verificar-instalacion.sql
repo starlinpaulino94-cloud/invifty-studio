@@ -12,15 +12,21 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('pedidos',       15, 4, 1),
     ('pagos',         10, 2, 1),
     ('formularios',    8, 3, 1),
-    ('invitaciones',  12, 5, 1),
-    ('confirmaciones', 9, 3, 1),
+    ('invitaciones',  13, 5, 1),
+    ('confirmaciones',10, 3, 1),
     ('visitas',        5, 3, 1),
-    ('invitados',      5, 3, 1),
+    ('invitados',      6, 3, 1),
     ('leads',         19, 4, 1),
     ('demos',          9, 3, 1),
     ('historial_estados', 9, 2, 2),
     ('auditoria',      8, 3, 2),
-    ('generaciones',  17, 3, 2)
+    ('generaciones',  17, 3, 2),
+    ('versiones',     10, 2, 2),
+    ('revisiones',    13, 3, 1),
+    ('comentarios',    9, 2, 1),
+    ('hogares',        6, 4, 1),
+    ('entradas',       9, 2, 1),
+    ('avisos',        15, 2, 1)
 )
 select
   e.tabla,

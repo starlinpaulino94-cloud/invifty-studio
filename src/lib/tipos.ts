@@ -254,6 +254,12 @@ export interface Invitacion {
    * junto con la invitación (ver acciones-invitacion.ts).
    */
   token_lista: string | null;
+  /**
+   * El candado de la aprobación: cuando el cliente aprueba una versión,
+   * aquí queda la fecha y el editor deja de guardar. Desbloquear es un
+   * acto explícito que firma en auditoría (acciones-revision.ts).
+   */
+  bloqueada_en: string | null;
   estado: EstadoInvitacion;
   publicada_en: string | null;
   creado_en: string;

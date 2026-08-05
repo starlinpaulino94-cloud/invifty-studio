@@ -114,6 +114,33 @@ export async function POST(
     );
   }
 
+  // ---------- El hogar del enlace personal, si vino con uno ----------
+  // El cupo se aplica AQUÍ y no solo en la pantalla: la pantalla se la
+  // salta cualquiera que llame a la API directo. Un token que no es de
+  // esta invitación se ignora (el primo con el enlace reenviado confirma
+  // normal, sin hogar), pero un token VÁLIDO respeta su cupo.
+  let hogarId: string | null = null;
+  const tokenHogar = String(body.hogar ?? "");
+  if (/^[0-9a-f]{16,64}$/.test(tokenHogar)) {
+    const { data: hogar } = await supabase
+      .from("hogares")
+      .select("id, cupo, nombre")
+      .eq("invitacion_id", invitacion.id)
+      .eq("token", tokenHogar)
+      .maybeSingle();
+    if (hogar) {
+      hogarId = hogar.id;
+      if (asiste && cantidad > hogar.cupo) {
+        return NextResponse.json(
+          {
+            error: `Tu invitación tiene cupo para ${hogar.cupo} ${hogar.cupo === 1 ? "persona" : "personas"}. Si necesitan más, escríbanles a los anfitriones.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+  }
+
   const nombreNormalizado = normalizarNombre(nombre);
 
   // ---------- Guardar (o corregir una respuesta anterior) ----------
@@ -124,10 +151,14 @@ export async function POST(
     .eq("nombre_normalizado", nombreNormalizado)
     .maybeSingle();
 
+  // `hogar_id` solo viaja cuando hay hogar: así una base sin la migración
+  // de la Etapa E sigue aceptando confirmaciones normales sin quejarse.
+  const extraHogar = hogarId ? { hogar_id: hogarId } : {};
+
   if (previa) {
     const { error } = await supabase
       .from("confirmaciones")
-      .update({ nombre, asiste, cantidad, nota })
+      .update({ nombre, asiste, cantidad, nota, ...extraHogar })
       .eq("id", previa.id);
     if (error) {
       registrarError("rsvp", error, { slug, codigo: error.code, paso: "actualizar" });
@@ -155,6 +186,7 @@ export async function POST(
     asiste,
     cantidad,
     nota,
+    ...extraHogar,
   });
 
   if (error) {

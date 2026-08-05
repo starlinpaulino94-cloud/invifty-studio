@@ -110,9 +110,19 @@ export async function guardarInvitacion(
   // de escribir — después ya no habría contra qué comparar.
   const { data: previa } = await supabase
     .from("invitaciones")
-    .select("slug, dominio")
+    .select("slug, dominio, bloqueada_en")
     .eq("id", invitacionId)
     .single();
+
+  // El candado de la aprobación: lo que el cliente aprobó no se toca por
+  // descuido. Desbloquear existe, es explícito y queda firmado.
+  if (previa?.bloqueada_en) {
+    return {
+      ok: false,
+      error:
+        "El cliente aprobó esta invitación y está bloqueada. Para editarla, desbloquéala desde la tarjeta de revisión (quedará en auditoría).",
+    };
+  }
 
   const { error } = await supabase
     .from("invitaciones")

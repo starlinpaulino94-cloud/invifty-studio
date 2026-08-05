@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import Renderizador from "@/components/invitacion/Renderizador";
-import { ProveedorInvitacion } from "@/components/invitacion/base/Contexto";
+import { ProveedorInvitacion, type HogarInvitado } from "@/components/invitacion/base/Contexto";
 import RegistroVisita from "@/components/invitacion/base/RegistroVisita";
 import CodigoPropio from "@/components/invitacion/CodigoPropio";
 import { esInvitacionDeCodigo } from "@/lib/codigo";
@@ -92,9 +92,12 @@ export function metadatosDeInvitacion(
 export default async function Publicada({
   invitacion,
   esBorrador,
+  hogar,
 }: {
   invitacion: InvitacionPublicable;
   esBorrador: boolean;
+  /** El hogar del enlace personal (?h=<token>), si el invitado llegó con uno. */
+  hogar?: HogarInvitado;
 }) {
   const datos = invitacion.datos;
 
@@ -131,7 +134,7 @@ export default async function Publicada({
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="stylesheet" href={urlFuentes(datos.tipografia)} />
 
-      <ProveedorInvitacion slug={invitacion.slug} esBorrador={esBorrador}>
+      <ProveedorInvitacion slug={invitacion.slug} esBorrador={esBorrador} hogar={hogar}>
         <RegistroVisita />
         {esInvitacionDeCodigo(invitacion.plantilla) ? (
           <CodigoPropio html={invitacion.codigo_html} datos={datos} fotos={medios} />
