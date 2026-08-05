@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { crearClienteServidor } from "./supabase/servidor";
+import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { ESTADOS_LEAD, type EstadoLead } from "./leads";
 import type { Lead, Plan } from "./tipos";
 
@@ -16,8 +17,11 @@ import type { Lead, Plan } from "./tipos";
 export async function cambiarEstadoLead(leadId: string, estado: EstadoLead) {
   if (!ESTADOS_LEAD.includes(estado)) throw new Error("Estado inválido");
   const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "convertir_leads");
+  const { data: previo } = await supabase.from("leads").select("estado").eq("id", leadId).single();
   const { error } = await supabase.from("leads").update({ estado }).eq("id", leadId);
   if (error) throw new Error("No se pudo cambiar el estado");
+  await registrarCambioEstado(supabase, quien, "lead", leadId, previo?.estado ?? null, estado);
   revalidatePath("/panel/leads");
 }
 
@@ -34,11 +38,7 @@ export async function cambiarEstadoLead(leadId: string, estado: EstadoLead) {
  */
 export async function convertirLead(leadId: string) {
   const supabase = await crearClienteServidor();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Sin sesión");
+  const quien = await exigirPermiso(supabase, "convertir_leads");
 
   const { data: lead } = await supabase.from("leads").select("*").eq("id", leadId).single();
   if (!lead) throw new Error("Lead no encontrado");
@@ -74,10 +74,15 @@ export async function convertirLead(leadId: string) {
       estado: "convertido",
       cliente_id: clienteId,
       convertido_en: new Date().toISOString(),
-      convertido_por: user.id,
+      convertido_por: quien.id,
     })
     .eq("id", leadId);
   if (error) throw new Error("No se pudo marcar la conversión");
+
+  await registrarCambioEstado(supabase, quien, "lead", leadId, encontrado.estado, "convertido");
+  await registrarAccion(supabase, quien, "lead:convertir", "lead", leadId, {
+    cliente_id: clienteId ?? null,
+  });
 
   revalidatePath("/panel/leads");
   revalidatePath("/panel/clientes");
@@ -90,6 +95,7 @@ export async function marcarDemo(
   opciones: { tipo_evento: string; plan_minimo: Plan; destacada: boolean }
 ) {
   const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "marcar_demos");
   const { error } = await supabase.from("demos").upsert(
     {
       invitacion_id: invitacionId,
@@ -101,12 +107,17 @@ export async function marcarDemo(
     { onConflict: "invitacion_id" }
   );
   if (error) throw new Error("No se pudo marcar la demo");
+  await registrarAccion(supabase, quien, "demo:marcar", "invitacion", invitacionId, {
+    destacada: opciones.destacada, plan_minimo: opciones.plan_minimo,
+  });
   revalidatePath("/panel/demos");
 }
 
 export async function quitarDemo(invitacionId: string) {
   const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "marcar_demos");
   const { error } = await supabase.from("demos").delete().eq("invitacion_id", invitacionId);
   if (error) throw new Error("No se pudo quitar la demo");
+  await registrarAccion(supabase, quien, "demo:quitar", "invitacion", invitacionId);
   revalidatePath("/panel/demos");
 }

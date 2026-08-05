@@ -10,14 +10,16 @@ with esperado(tabla, columnas, indices, politicas) as (
   values
     ('clientes',       6, 2, 1),
     ('pedidos',       15, 4, 1),
-    ('pagos',          6, 2, 1),
+    ('pagos',         10, 2, 1),
     ('formularios',    8, 3, 1),
     ('invitaciones',  12, 5, 1),
     ('confirmaciones', 9, 3, 1),
     ('visitas',        5, 3, 1),
     ('invitados',      5, 3, 1),
     ('leads',         19, 4, 1),
-    ('demos',          9, 3, 1)
+    ('demos',          9, 3, 1),
+    ('historial_estados', 9, 2, 2),
+    ('auditoria',      8, 3, 2)
 )
 select
   e.tabla,

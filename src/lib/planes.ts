@@ -170,6 +170,7 @@ export const ESTADOS: { id: EstadoPedido; nombre: string; color: string }[] = [
   { id: "entregada", nombre: "Entregada", color: "bg-emerald-100 text-emerald-700" },
   { id: "activa", nombre: "Activa", color: "bg-green-100 text-green-700" },
   { id: "vencida", nombre: "Vencida", color: "bg-red-100 text-red-600" },
+  { id: "cancelado", nombre: "Cancelado", color: "bg-gray-200 text-gray-500" },
 ];
 
 export function nombreEstado(id: EstadoPedido): string {

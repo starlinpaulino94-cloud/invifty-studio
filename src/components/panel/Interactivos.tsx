@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cambiarEstado, marcarFormularioEnviado, eliminarPago } from "@/lib/acciones";
+import { cambiarEstado, marcarFormularioEnviado, anularPago } from "@/lib/acciones";
 import { ESTADOS, colorEstado, nombreEstado } from "@/lib/planes";
+import { transicionesDesde } from "@/lib/estados";
 import { EstadoPedido } from "@/lib/tipos";
 import { Check, Copy, Download, Loader2, MessageCircle, Trash2 } from "lucide-react";
 
@@ -17,9 +18,16 @@ export function SelectorEstado({
 }) {
   const [pendiente, startTransition] = useTransition();
 
+  /**
+   * Solo se ofrecen el estado actual y sus transiciones válidas
+   * (lib/estados.ts). El servidor valida lo mismo: esto es cortesía
+   * visual, no la barrera.
+   */
+  const posibles = new Set<EstadoPedido>([estado, ...transicionesDesde(estado)]);
+
   return (
     <div className="flex flex-wrap gap-1.5">
-      {ESTADOS.map((e) => {
+      {ESTADOS.filter((e) => posibles.has(e.id)).map((e) => {
         const activo = e.id === estado;
         return (
           <button
@@ -180,18 +188,22 @@ export function BotonExportarConfirmaciones({
 
 /* ---------- Eliminar pago ---------- */
 
-export function BotonEliminarPago({ pagoId, pedidoId }: { pagoId: string; pedidoId: string }) {
+export function BotonAnularPago({ pagoId, pedidoId }: { pagoId: string; pedidoId: string }) {
   const [pendiente, startTransition] = useTransition();
   return (
     <button
       disabled={pendiente}
       onClick={() => {
-        if (confirm("¿Eliminar este abono?")) {
-          startTransition(() => eliminarPago(pagoId, pedidoId));
+        // Anular, no borrar: el motivo queda firmado en el registro.
+        const motivo = prompt("¿Por qué se anula este abono? (queda en el registro)");
+        if (motivo && motivo.trim().length >= 3) {
+          startTransition(() => anularPago(pagoId, pedidoId, motivo));
+        } else if (motivo !== null) {
+          alert("Escribe el motivo: al anular dinero, el porqué no es opcional.");
         }
       }}
       className="text-gray-300 hover:text-red-500 transition-colors p-1"
-      aria-label="Eliminar abono"
+      aria-label="Anular abono"
     >
       {pendiente ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
     </button>

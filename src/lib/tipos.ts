@@ -11,7 +11,8 @@ export type EstadoPedido =
   | "revision_cliente"
   | "entregada"
   | "activa"
-  | "vencida";
+  | "vencida"
+  | "cancelado";
 
 export type EstadoFormulario = "pendiente" | "en_progreso" | "completado";
 
@@ -49,6 +50,11 @@ export interface Pago {
   monto: number;
   metodo: string | null;
   nota: string | null;
+  tipo: "pago" | "reembolso" | "ajuste";
+  /** Un pago anulado se tacha, no se borra: el balance lo ignora (lib/pagos.ts). */
+  anulado_en: string | null;
+  anulado_por: string | null;
+  motivo_anulacion: string | null;
   fecha: string;
 }
 
