@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { limitar, olvidarTodo, ipDePeticion } from "@/lib/limite";
+import {
+  limitar, olvidarTodo, ipDePeticion, veredictoDeFreno, limitarCompartido,
+} from "@/lib/limite";
 
 /**
  * EL FRENO DE LAS RUTAS PÚBLICAS
@@ -115,4 +117,59 @@ test("sin cabeceras de IP no se deja pasar a todos por libre", () => {
   // todos los desconocidos comparten un mismo cupo.
   assert.equal(ipDePeticion(new Headers()), "desconocida");
   assert.equal(ipDePeticion(new Headers({ "x-forwarded-for": "" })), "desconocida");
+});
+
+/* ---------- El freno compartido (entre instancias) ---------- */
+
+test("la fila del freno compartido se traduce a veredicto", () => {
+  assert.deepEqual(veredictoDeFreno({ permitido: true, espera_s: 0 }), { ok: true, esperaS: 0 });
+  assert.deepEqual(veredictoDeFreno({ permitido: false, espera_s: 45 }), { ok: false, esperaS: 45 });
+});
+
+test("una fila rara del freno compartido ABRE, no cierra", () => {
+  // La política de fallo es abrir: un hipo de la base no puede dejar a
+  // todos los invitados sin confirmar. El freno local sigue de guardia.
+  assert.equal(veredictoDeFreno(null).ok, true);
+  assert.equal(veredictoDeFreno(undefined).ok, true);
+  assert.equal(veredictoDeFreno({}).ok, true);
+  assert.equal(veredictoDeFreno("basura").ok, true);
+});
+
+test("un espera_s roto no devuelve NaN al Retry-After", () => {
+  const v = veredictoDeFreno({ permitido: false, espera_s: Number.NaN });
+  assert.equal(v.ok, false);
+  assert.equal(v.esperaS, 60, "con espera rota se pide un minuto, no NaN");
+});
+
+test("limitarCompartido consulta la base y respeta su negativa", async () => {
+  olvidarTodo();
+  const llamadas: unknown[] = [];
+  const admin = {
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      llamadas.push([fn, args]);
+      return { data: [{ permitido: false, espera_s: 30 }], error: null };
+    },
+  };
+  const v = await limitarCompartido(admin, "leads:1.2.3.4", { max: 10, ventanaS: 600 });
+  assert.equal(v.ok, false);
+  assert.equal(v.esperaS, 30);
+  assert.deepEqual(llamadas[0], ["frenar", { p_clave: "leads:1.2.3.4", p_max: 10, p_ventana_s: 600 }]);
+});
+
+test("si la base falla, el freno compartido abre y el local sigue mandando", async () => {
+  olvidarTodo();
+  const admin = {
+    rpc: async () => ({ data: null, error: { message: "function frenar does not exist" } }),
+  };
+  // La base rota no bloquea al invitado legítimo…
+  const v = await limitarCompartido(admin, "rsvp:9.9.9.9", { max: 3, ventanaS: 600 });
+  assert.equal(v.ok, true);
+
+  // …pero el bucle casero se sigue frenando con el contador local.
+  let pasaron = 0;
+  for (let i = 0; i < 50; i++) {
+    const r = await limitarCompartido(admin, "rsvp:9.9.9.9", { max: 3, ventanaS: 600 });
+    if (r.ok) pasaron++;
+  }
+  assert.equal(pasaron, 2, "el local ya contaba 1: solo caben 2 más de las 50");
 });

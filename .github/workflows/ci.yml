@@ -2,12 +2,56 @@ name: CI
 
 # Red de seguridad en cada cambio: si algo de esto falla, no debería
 # llegar a producción. Es rápido a propósito, para que nadie lo esquive.
+#
+# Lo que este pipeline NO hace, a propósito: no modifica archivos, no
+# ejecuta migraciones, no despliega y no toca producción. Desplegar es de
+# Vercel (tras revisar el preview) y las migraciones se corren a mano en
+# el SQL Editor tras leerlas (docs/migraciones.md).
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
+  # Que ninguna clave viva en el repositorio. Busca las formas de las
+  # credenciales reales de este proyecto (JWT de Supabase, claves nuevas
+  # sb_*, claves de Anthropic/Resend, URLs de Postgres con contraseña) en
+  # los archivos RASTREADOS. La prueba de node ya vigila que .env.example
+  # esté vacío; esto vigila todo lo demás.
+  secretos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Buscar credenciales en el código
+        run: |
+          set +e
+          HALLAZGOS=$(git grep -nIE \
+            'eyJ[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{20,}|sb_(secret|publishable)_[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9-]{20,}|re_[A-Za-z0-9]{24,}|postgres(ql)?://[^:]+:[^@/]{8,}@' \
+            -- ':!package-lock.json')
+          if [ -n "$HALLAZGOS" ]; then
+            echo "❌ Hay algo con forma de credencial en el repositorio:"
+            echo "$HALLAZGOS"
+            exit 1
+          fi
+          echo "✅ Sin credenciales en el código."
+
+  # Vulnerabilidades conocidas en dependencias de producción. INFORMA,
+  # no bloquea: hoy Next 16 arrastra avisos en postcss/sharp que solo se
+  # resuelven con el parche de Next, y un CI rojo permanente se acaba
+  # ignorando entero. El registro del job es el informe.
+  dependencias:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=high
+
   verificar:
     runs-on: ubuntu-latest
     steps:

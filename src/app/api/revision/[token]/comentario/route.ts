@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
-import { limitar, ipDePeticion } from "@/lib/limite";
+import { limitarCompartido, ipDePeticion } from "@/lib/limite";
 import { puedeDecidir, seccionValida, type RevisionVigencia } from "@/lib/revision";
 import { encolarAvisoEquipo } from "@/lib/avisos";
 import { registrarError } from "@/lib/registro";
@@ -18,7 +18,7 @@ import type { DatosInvitacion } from "@/lib/tipos";
 
 const MAX_TEXTO = 1000;
 const MAX_COMENTARIOS = 100;
-const FRENO = { max: 30, ventanaMs: 10 * 60 * 1000 };
+const FRENO = { max: 30, ventanaS: 10 * 60 };
 
 export async function POST(
   req: NextRequest,
@@ -26,7 +26,11 @@ export async function POST(
 ) {
   const { token } = await params;
 
-  const freno = limitar(`revision:${ipDePeticion(req.headers)}`, FRENO);
+  const freno = await limitarCompartido(
+    crearClienteAdmin(),
+    `revision:${ipDePeticion(req.headers)}`,
+    FRENO
+  );
   if (!freno.ok) {
     return NextResponse.json(
       { error: "Demasiados envíos seguidos. Espera un momento." },

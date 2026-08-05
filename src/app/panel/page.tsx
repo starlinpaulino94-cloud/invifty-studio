@@ -6,14 +6,24 @@ import { AlertTriangle, ClipboardCheck, PlusCircle, CalendarDays } from "lucide-
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Hasta dónde carga el tablero. Los pedidos ACTIVOS de un estudio caben
+ * de sobra; lo que crece sin tope son los terminados (vencida, cancelado)
+ * de años anteriores, y esos no necesitan estar todos en el kanban.
+ */
+const TOPE_TABLERO = 400;
+
 export default async function Tablero() {
   const supabase = await crearClienteServidor();
-  const { data } = await supabase
+  const { data, count } = await supabase
     .from("pedidos")
-    .select("*, clientes(*)")
-    .order("creado_en", { ascending: false });
+    .select("*, clientes(*)", { count: "exact" })
+    .order("creado_en", { ascending: false })
+    .limit(TOPE_TABLERO);
 
   const pedidos = (data ?? []) as PedidoConCliente[];
+  const totalPedidos = count ?? pedidos.length;
+  const hayMas = totalPedidos > pedidos.length;
 
   // Alertas
   const hoy = new Date();
@@ -37,7 +47,8 @@ export default async function Tablero() {
         <div>
           <h1 className="font-serif text-3xl text-gray-900">Tablero</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {pedidos.length} pedido{pedidos.length === 1 ? "" : "s"} en total
+            {totalPedidos} pedido{totalPedidos === 1 ? "" : "s"} en total
+            {hayMas && ` · el tablero enseña los ${pedidos.length} más recientes`}
           </p>
         </div>
         <Link

@@ -26,7 +26,7 @@ Dos caras:
      que te falten, **en orden de nombre** (empiezan por su fecha). Cada una dice arriba
      qué agrega y todas son repetibles: correr una que ya corriste no daña nada.
      El detalle de cada una y cómo comprobar el resultado está en [`docs/migraciones.md`](./docs/migraciones.md).
-   - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Las siete filas deben decir `OK`.
+   - **¿Dudas de si quedó todo bien?** Pega [`supabase/verificar-instalacion.sql`](./supabase/verificar-instalacion.sql) en el SQL Editor: comprueba tablas, columnas, índices, RLS y políticas, y no modifica nada. Todas las filas deben decir `OK`.
 3. Verifica en **Table Editor** que existen las tablas `clientes`, `pedidos`, `pagos`, `formularios`, `invitaciones`, `confirmaciones` y `visitas`, y en **Storage** que existe el bucket `fotos-pedidos`.
 
 ### 1.3 Crear el primer usuario del panel
@@ -689,3 +689,22 @@ que es lo que de verdad arregla el problema. Reescribir el historial
 (`git filter-repo`, BFG) es opcional: rompe todos los clones existentes y hay
 copias en caché que no siempre desaparecen. Si el repositorio es privado y la
 clave ya está rotada, no hace falta.
+
+---
+
+## Mapa de la documentación
+
+Cada pieza grande del sistema tiene su documento en [`docs/`](./docs):
+
+| Documento | Qué cuenta |
+|---|---|
+| [`docs/migraciones.md`](./docs/migraciones.md) | Cada migración, qué agrega y cómo verificarla |
+| [`docs/roles-y-permisos.md`](./docs/roles-y-permisos.md) | La matriz de roles del equipo y dónde se aplica |
+| [`docs/integracion-invifty-web.md`](./docs/integracion-invifty-web.md) | Los endpoints públicos que consume la web (catálogo, demos, leads) |
+| [`docs/pipeline-ia.md`](./docs/pipeline-ia.md) | El pipeline creativo con IA: aduana, proveedores y costos |
+| [`docs/cliente-e-invitados.md`](./docs/cliente-e-invitados.md) | Revisión y aprobación del cliente, hogares, RSVP con cupo y recepción |
+| [`docs/observabilidad.md`](./docs/observabilidad.md) | Qué se registra, dónde mirar cuando algo falla |
+| [`docs/privacidad-y-retencion.md`](./docs/privacidad-y-retencion.md) | Cuánto vive cada dato y los derechos del cliente (propuesta) |
+| [`docs/backups-y-recuperacion.md`](./docs/backups-y-recuperacion.md) | La estrategia de copias y cómo restaurar |
+| [`docs/rotacion-credenciales.md`](./docs/rotacion-credenciales.md) | Rotar la clave de Supabase paso a paso |
+| [`docs/informe-final.md`](./docs/informe-final.md) | El informe completo de la mejora integral (etapas A–F) |
