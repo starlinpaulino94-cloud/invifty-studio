@@ -30,6 +30,12 @@ te fíes de la memoria ni de este documento.
 | `20260726123000_dominio-propio` | Columna `dominio` + índice único (dominio del cliente) |
 | `20260726135300_cerrar-acceso-equipo` | Lista blanca `equipo`, `es_del_equipo()`, políticas cerradas |
 | `20260803001800_panel-invitados` | `token_lista` en invitaciones + tabla `invitados` (panel del anfitrión) |
+| `20260805120000_leads-y-demos` | Tablas `leads` (idempotencia, atribución) y `demos` (escaparate de la web) |
+| `20260805150000_operaciones` | Columna `rol` en equipo; `historial_estados` y `auditoria` inmutables; anulación en `pagos` |
+| `20260805180000_generaciones-ia` | Tabla `generaciones` (registro trazable del pipeline de IA) |
+| `20260805210000_cliente-e-invitados` | `versiones`, `revisiones`, `comentarios`, `hogares`, `entradas`, `avisos`; candado `bloqueada_en`; `hogar_id` |
+| `20260805230000_escala` | Tabla `frenos` + función atómica `frenar()` (rate limit compartido); índice del tablero |
+| `20260806010000_pagos-completos` | `pagos`: referencia, fecha efectiva, firma, idempotencia y comprobante |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).

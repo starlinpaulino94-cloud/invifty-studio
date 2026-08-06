@@ -57,10 +57,22 @@ create table public.pagos (
   anulado_en timestamptz,
   anulado_por uuid,
   motivo_anulacion text,
+  -- La transacción completa: referencia bancaria, cuándo ENTRÓ el dinero
+  -- (vs. cuándo se anotó), quién la registró, idempotencia contra el
+  -- doble clic y el comprobante en el bucket privado (comprobantes/).
+  referencia text,
+  fecha_efectiva date,
+  usuario_id uuid,
+  usuario_email text,
+  clave_idempotencia text,
+  comprobante_ruta text,
   fecha      timestamptz not null default now()
 );
 
 create index pagos_pedido_idx on public.pagos (pedido_id);
+create unique index pagos_idempotencia_idx
+  on public.pagos (clave_idempotencia)
+  where clave_idempotencia is not null;
 
 -- ---------- FORMULARIOS ----------
 create table public.formularios (

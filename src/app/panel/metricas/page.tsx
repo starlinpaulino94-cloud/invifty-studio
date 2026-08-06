@@ -1,8 +1,8 @@
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { PLANES, EXTRAS, TIPOS_EVENTO, formatoDOP } from "@/lib/planes";
-import { pagoActivo } from "@/lib/pagos";
+import { pagoActivo, cobradoNeto, antiguedadSaldos } from "@/lib/pagos";
 import { Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
-import { BarChart3, TrendingUp, Package, PartyPopper } from "lucide-react";
+import { BarChart3, TrendingUp, Package, PartyPopper, Hourglass, Undo2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +44,31 @@ export default async function PaginaMetricas() {
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
 
   const pedidosMes = pedidos.filter((p) => new Date(p.creado_en) >= inicioMes);
-  const ingresosMes = pagos
-    .filter((p) => new Date(p.fecha) >= inicioMes)
-    .reduce((s, p) => s + Number(p.monto), 0);
+  // NETO: la suma ingenua contaba un reembolso como ingreso — el mes se
+  // inflaba justo cuando peor vino (hubo que devolver dinero).
+  const { cobrado: ingresosMes, reembolsado: reembolsosMes } = cobradoNeto(pagos, inicioMes);
   const ventasMes = pedidosMes.reduce((s, p) => s + Number(p.precio), 0);
+
+  // Antigüedad de saldos: cuánto dinero pendiente hay y desde hace cuánto.
+  const pagosPorPedido = new Map<string, Pago[]>();
+  for (const pago of pagos) {
+    const lista = pagosPorPedido.get(pago.pedido_id) ?? [];
+    lista.push(pago);
+    pagosPorPedido.set(pago.pedido_id, lista);
+  }
+  const tramosSaldo = antiguedadSaldos(pedidos, pagosPorPedido, ahora);
+  const totalPendiente = tramosSaldo.reduce((s, t) => s + t.monto, 0);
+  const maxTramo = Math.max(...tramosSaldo.map((t) => t.monto), 1);
+
+  // Por método de pago (histórico, solo entradas de dinero)
+  const porMetodo = new Map<string, number>();
+  for (const pago of pagos) {
+    if (pago.tipo === "reembolso") continue;
+    const metodo = pago.metodo || "sin método";
+    porMetodo.set(metodo, (porMetodo.get(metodo) ?? 0) + Number(pago.monto));
+  }
+  const metodos = [...porMetodo.entries()].sort((a, b) => b[1] - a[1]);
+  const maxMetodo = Math.max(...metodos.map(([, monto]) => monto), 1);
 
   // Distribuciones (histórico completo)
   const porPlan = (Object.keys(PLANES) as Plan[]).map((plan) => ({
@@ -88,7 +109,12 @@ export default async function PaginaMetricas() {
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
           <TrendingUp className="w-5 h-5 text-[#D4AF37] mb-3" />
           <p className="text-3xl font-serif text-gray-900">{formatoDOP(ingresosMes)}</p>
-          <p className="text-xs text-gray-400 mt-1">Cobrado este mes (abonos)</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Cobrado este mes (neto)
+            {reembolsosMes > 0 && (
+              <span className="text-red-500"> · {formatoDOP(reembolsosMes)} reembolsados</span>
+            )}
+          </p>
         </div>
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
           <Package className="w-5 h-5 text-[#D4AF37] mb-3" />
@@ -121,6 +147,53 @@ export default async function PaginaMetricas() {
               maximo={maxEvento}
             />
           ))}
+        </div>
+      </div>
+
+      {/* El dinero: quién debe desde cuándo, y por dónde entra */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="font-serif text-lg text-gray-900 flex items-center gap-2">
+            <Hourglass className="w-4 h-4 text-[#D4AF37]" /> Antigüedad de saldos
+          </h2>
+          {totalPendiente <= 0.01 ? (
+            <p className="text-sm text-gray-400">No hay saldos pendientes. Caja al día.</p>
+          ) : (
+            <>
+              <p className="text-xs text-gray-500">
+                {formatoDOP(totalPendiente)} por cobrar. Lo de más de 60 días necesita una
+                llamada, no un recordatorio.
+              </p>
+              {tramosSaldo.map((t) => (
+                <BarraHorizontal
+                  key={t.etiqueta}
+                  etiqueta={`${t.etiqueta}${t.pedidos > 0 ? ` (${t.pedidos})` : ""}`}
+                  valor={Math.round(t.monto)}
+                  maximo={maxTramo}
+                  sufijo=" RD$"
+                />
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="font-serif text-lg text-gray-900 flex items-center gap-2">
+            <Undo2 className="w-4 h-4 text-[#D4AF37]" /> Por método de pago
+          </h2>
+          {metodos.length === 0 ? (
+            <p className="text-sm text-gray-400">Todavía no se han registrado pagos.</p>
+          ) : (
+            metodos.map(([metodo, monto]) => (
+              <BarraHorizontal
+                key={metodo}
+                etiqueta={metodo}
+                valor={Math.round(monto)}
+                maximo={maxMetodo}
+                sufijo=" RD$"
+              />
+            ))
+          )}
         </div>
       </div>
 
