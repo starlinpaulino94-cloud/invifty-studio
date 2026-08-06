@@ -6,9 +6,12 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { calcularVencimiento } from "./vencimientos";
 import { transicionValida } from "./estados";
-import { montoValido } from "./pagos";
+import { fechaEfectivaValida, motivoRechazoTransaccion } from "./pagos";
 import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
-import type { EstadoPedido, Plan } from "./tipos";
+import { crearClienteAdmin } from "./supabase/admin";
+import { BUCKET } from "./fotos";
+import { registrarError } from "./registro";
+import type { EstadoPedido, Pago, Plan } from "./tipos";
 
 
 /** Crea (o reutiliza) el cliente, crea el pedido y genera su formulario con token. */
@@ -145,25 +148,110 @@ export async function marcarFormularioEnviado(pedidoId: string) {
   }
 }
 
-/** Registra un abono al pedido. */
+/** Tipos de comprobante que aceptamos: lo que un banco o Zelle exporta. */
+const COMPROBANTE_TIPOS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "application/pdf": "pdf",
+};
+const COMPROBANTE_MAX_MB = 8;
+
+/**
+ * Registra una transacción del pedido: pago, reembolso o ajuste.
+ *
+ * Las reglas que protegen la caja (lib/pagos.ts): el monto entra
+ * positivo y el TIPO dice si suma o resta; un reembolso jamás supera lo
+ * neto en caja; la fecha efectiva no vive en el futuro; y el doble clic
+ * no crea dos pagos (clave de idempotencia única). Todo firmado: quién
+ * registró queda en la fila, y el comprobante —si viene— en el bucket
+ * privado de siempre.
+ */
 export async function registrarPago(pedidoId: string, formData: FormData) {
   const supabase = await crearClienteServidor();
   const quien = await exigirPermiso(supabase, "registrar_pagos");
   const monto = Number(formData.get("monto") ?? 0);
+  const tipo = String(formData.get("tipo") ?? "pago").trim() || "pago";
   const metodo = String(formData.get("metodo") ?? "").trim() || null;
   const nota = String(formData.get("nota") ?? "").trim() || null;
+  const referencia = String(formData.get("referencia") ?? "").trim().slice(0, 80) || null;
+  const fechaEfectiva = String(formData.get("fecha_efectiva") ?? "").trim();
+  const claveIdempotencia = String(formData.get("clave_idempotencia") ?? "").trim() || null;
 
-  if (!montoValido(monto)) throw new Error("El monto debe ser un número mayor que cero");
+  // Reembolsar exige el permiso de anular: devolver dinero pesa igual.
+  if (tipo === "reembolso") await exigirPermiso(supabase, "anular_pagos");
 
-  const { data: pago, error } = await supabase
+  const { data: previosData } = await supabase
     .from("pagos")
-    .insert({ pedido_id: pedidoId, monto, metodo, nota })
+    .select("monto, tipo, anulado_en")
+    .eq("pedido_id", pedidoId);
+  const previos = (previosData ?? []) as Pick<Pago, "monto" | "tipo" | "anulado_en">[];
+
+  const rechazo = motivoRechazoTransaccion(tipo, monto, previos);
+  if (rechazo) throw new Error(rechazo);
+  if (!fechaEfectivaValida(fechaEfectiva, new Date())) {
+    throw new Error("La fecha efectiva no puede estar en el futuro.");
+  }
+
+  // El comprobante se sube ANTES de insertar para guardar su ruta en la
+  // misma fila. Va al bucket privado bajo comprobantes/<pedido>/.
+  let comprobanteRuta: string | null = null;
+  const comprobante = formData.get("comprobante");
+  if (comprobante instanceof File && comprobante.size > 0) {
+    const extension = COMPROBANTE_TIPOS[comprobante.type];
+    if (!extension) throw new Error("El comprobante debe ser JPG, PNG, WEBP o PDF.");
+    if (comprobante.size > COMPROBANTE_MAX_MB * 1024 * 1024) {
+      throw new Error(`El comprobante no puede pasar de ${COMPROBANTE_MAX_MB} MB.`);
+    }
+    const admin = crearClienteAdmin();
+    comprobanteRuta = `comprobantes/${pedidoId}/${crypto.randomUUID()}.${extension}`;
+    const { error: errorSubida } = await admin.storage
+      .from(BUCKET)
+      .upload(comprobanteRuta, comprobante, { contentType: comprobante.type });
+    if (errorSubida) throw new Error(`No se pudo subir el comprobante: ${errorSubida.message}`);
+  }
+
+  const filaCompleta = {
+    pedido_id: pedidoId,
+    monto,
+    tipo,
+    metodo,
+    nota,
+    referencia,
+    fecha_efectiva: fechaEfectiva || null,
+    usuario_id: quien.id,
+    usuario_email: quien.email,
+    clave_idempotencia: claveIdempotencia,
+    comprobante_ruta: comprobanteRuta,
+  };
+
+  let { data: pago, error } = await supabase
+    .from("pagos")
+    .insert(filaCompleta)
     .select("id")
     .single();
-  if (error) throw new Error(error.message);
 
-  await registrarAccion(supabase, quien, "pago:registrar", "pago", pago.id, {
-    pedido_id: pedidoId, monto, metodo,
+  // El doble clic choca con el índice de idempotencia: la transacción ya
+  // quedó registrada la primera vez, así que no es un error.
+  if (error?.code === "23505" && claveIdempotencia) {
+    revalidatePath(`/panel/pedidos/${pedidoId}`);
+    return;
+  }
+
+  // Base sin la migración de pagos-completos: se registra a la antigua
+  // (sin perder el pago) y se anota en el log qué falta.
+  if (error && /column|comprobante_ruta|referencia|schema/i.test(error.message)) {
+    registrarError("pagos", error, { nota: "falta la migración 20260806010000_pagos-completos" });
+    ({ data: pago, error } = await supabase
+      .from("pagos")
+      .insert({ pedido_id: pedidoId, monto, tipo, metodo, nota })
+      .select("id")
+      .single());
+  }
+  if (error || !pago) throw new Error(error?.message ?? "No se pudo registrar");
+
+  await registrarAccion(supabase, quien, `pago:${tipo === "pago" ? "registrar" : tipo}`, "pago", pago.id, {
+    pedido_id: pedidoId, monto, metodo, tipo, referencia,
   });
 
   revalidatePath(`/panel/pedidos/${pedidoId}`);

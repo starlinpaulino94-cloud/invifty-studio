@@ -55,6 +55,15 @@ export interface Pago {
   anulado_en: string | null;
   anulado_por: string | null;
   motivo_anulacion: string | null;
+  /** Número de transferencia/Zelle, para cruzar con el banco. */
+  referencia: string | null;
+  /** Cuándo ENTRÓ el dinero (no cuándo se anotó). */
+  fecha_efectiva: string | null;
+  usuario_id: string | null;
+  usuario_email: string | null;
+  clave_idempotencia: string | null;
+  /** Ruta del voucher en el bucket privado (comprobantes/<pedido>/...). */
+  comprobante_ruta: string | null;
   fecha: string;
 }
 

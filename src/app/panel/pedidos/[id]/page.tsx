@@ -14,7 +14,7 @@ import Confirmaciones from "@/components/panel/Confirmaciones";
 import Visitas from "@/components/panel/Visitas";
 import { resumirVisitas } from "@/lib/visitas";
 import { urlBase as resolverUrlBase } from "@/lib/url";
-import { balancePagos, pagoActivo } from "@/lib/pagos";
+import { desglosePagos, estadoPago, pagoActivo, NOMBRE_ESTADO_PAGO } from "@/lib/pagos";
 import { BUCKET, HORAS_FIRMA, listarArchivos, rutaOriginal, urlsDeFoto } from "@/lib/fotos";
 import {
   SelectorEstado, BotonCopiar, BotonMensajeWhatsApp, BotonAnularPago,
@@ -98,9 +98,25 @@ export default async function FichaPedido({
   const pagos = (pedido.pagos ?? []).sort(
     (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
   );
-  // La suma ignora los anulados: un pago tachado no es dinero.
-  const abonado = balancePagos(pagos);
+  // La suma ignora los anulados: un pago tachado no es dinero. El
+  // desglose separa además lo devuelto, y el estado del cobro se DERIVA
+  // de las transacciones (lib/pagos.ts) — nunca es una columna a mano.
+  const dinero = desglosePagos(pagos);
+  const abonado = dinero.neto;
   const saldo = Number(pedido.precio) - abonado;
+  const situacionPago = estadoPago(Number(pedido.precio), pagos);
+
+  // El comprobante se enseña con URL firmada del bucket privado, fresca
+  // en cada visita, igual que las fotos.
+  const admin = crearClienteAdmin();
+  const comprobantes = new Map<string, string>();
+  for (const pago of pagos) {
+    if (!pago.comprobante_ruta) continue;
+    const { data: firmada } = await admin.storage
+      .from(BUCKET)
+      .createSignedUrl(pago.comprobante_ruta, HORAS_FIRMA * 60 * 60);
+    if (firmada?.signedUrl) comprobantes.set(pago.id, firmada.signedUrl);
+  }
 
   const urlBase = resolverUrlBase();
   const urlFormulario = formulario ? `${urlBase}/f/${formulario.token}` : "";
@@ -115,7 +131,6 @@ export default async function FichaPedido({
   // Archivos subidos. La descarga apunta siempre al ORIGINAL (es lo que
   // necesita el equipo de diseño); la vista previa usa la miniatura, para
   // no cargar 200 MB de fotos al abrir la ficha.
-  const admin = crearClienteAdmin();
   const archivos = await listarArchivos(admin, pedido.id, 200);
   const fotos = await Promise.all(
     archivos.map(async (a) => {
@@ -412,6 +427,20 @@ export default async function FichaPedido({
       <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
         <h2 className="font-serif text-lg text-gray-900 mb-4 flex items-center gap-2">
           <Wallet className="w-4 h-4 text-[#D4AF37]" /> Pagos
+          {/* El estado se deriva de las transacciones; nadie lo edita. */}
+          <span
+            className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+              situacionPago === "pagado"
+                ? "bg-emerald-100 text-emerald-700"
+                : situacionPago === "parcial"
+                  ? "bg-amber-100 text-amber-700"
+                  : situacionPago === "pendiente"
+                    ? "bg-gray-100 text-gray-500"
+                    : "bg-red-100 text-red-600"
+            }`}
+          >
+            {NOMBRE_ESTADO_PAGO[situacionPago]}
+          </span>
         </h2>
 
         <div className="grid grid-cols-3 gap-3 text-center mb-5">
@@ -429,6 +458,12 @@ export default async function FichaPedido({
           </div>
         </div>
 
+        {dinero.reembolsado > 0 && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
+            Se han reembolsado {formatoDOP(dinero.reembolsado)} (ya descontados del abonado).
+          </p>
+        )}
+
         {pagos.length > 0 && (
           <ul className="divide-y divide-gray-100 mb-5">
             {pagos.map((pago) => (
@@ -438,14 +473,42 @@ export default async function FichaPedido({
                 <div className={pagoActivo(pago) ? "" : "opacity-60"}>
                   <span
                     className={`font-semibold ${
-                      pagoActivo(pago) ? "text-gray-900" : "text-gray-400 line-through"
+                      !pagoActivo(pago)
+                        ? "text-gray-400 line-through"
+                        : pago.tipo === "reembolso"
+                          ? "text-red-600"
+                          : "text-gray-900"
                     }`}
                   >
-                    {formatoDOP(pago.monto)}
+                    {pago.tipo === "reembolso" ? "−" : ""}{formatoDOP(pago.monto)}
                   </span>
+                  {pago.tipo !== "pago" && (
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 ml-1.5">
+                      {pago.tipo}
+                    </span>
+                  )}
                   <span className="text-gray-400 text-xs ml-2">
-                    {formatoFecha(pago.fecha)}{pago.metodo ? ` · ${pago.metodo}` : ""}{pago.nota ? ` · ${pago.nota}` : ""}
+                    {formatoFecha(pago.fecha_efectiva ?? pago.fecha)}
+                    {pago.metodo ? ` · ${pago.metodo}` : ""}
+                    {pago.referencia ? ` · ref. ${pago.referencia}` : ""}
+                    {pago.nota ? ` · ${pago.nota}` : ""}
                   </span>
+                  {(pago.usuario_email || comprobantes.has(pago.id)) && (
+                    <span className="block text-[11px] text-gray-400 mt-0.5">
+                      {pago.usuario_email ? `anotó ${pago.usuario_email}` : ""}
+                      {pago.usuario_email && comprobantes.has(pago.id) ? " · " : ""}
+                      {comprobantes.has(pago.id) && (
+                        <a
+                          href={comprobantes.get(pago.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#B08D2A] underline"
+                        >
+                          Ver comprobante
+                        </a>
+                      )}
+                    </span>
+                  )}
                   {!pagoActivo(pago) && (
                     <span className="block text-[11px] text-red-400 mt-0.5">
                       Anulado{pago.motivo_anulacion ? `: ${pago.motivo_anulacion}` : ""}
@@ -458,26 +521,57 @@ export default async function FichaPedido({
           </ul>
         )}
 
-        <form action={registrarPago.bind(null, pedido.id)} className="flex flex-wrap gap-2">
-          <input
-            name="monto" type="number" min="1" step="50" required placeholder="Monto RD$"
-            className={`${inputBase} w-32`}
-          />
-          <select name="metodo" className={`${inputBase} w-40`}>
-            <option value="">Método…</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="zelle">Zelle</option>
-            <option value="paypal">PayPal</option>
-            <option value="tarjeta">Tarjeta</option>
-          </select>
-          <input name="nota" placeholder="Nota (opcional)" className={`${inputBase} flex-1 min-w-32`} />
-          <button
-            type="submit"
-            className="bg-[#0D0D0F] text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors"
-          >
-            Registrar abono
-          </button>
+        <form action={registrarPago.bind(null, pedido.id)} className="space-y-2">
+          {/* Idempotencia: doble clic = una sola transacción. La clave se
+              sortea por render; la base la exige única. */}
+          <input type="hidden" name="clave_idempotencia" value={crypto.randomUUID()} />
+          <div className="flex flex-wrap gap-2">
+            <select name="tipo" className={`${inputBase} w-36`} title="Un reembolso RESTA de la caja">
+              <option value="pago">Abono</option>
+              <option value="reembolso">Reembolso</option>
+              <option value="ajuste">Ajuste</option>
+            </select>
+            <input
+              name="monto" type="number" min="1" step="50" required placeholder="Monto RD$"
+              className={`${inputBase} w-32`}
+            />
+            <select name="metodo" className={`${inputBase} w-40`}>
+              <option value="">Método…</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="zelle">Zelle</option>
+              <option value="paypal">PayPal</option>
+              <option value="tarjeta">Tarjeta</option>
+            </select>
+            <input
+              name="referencia" placeholder="Referencia (nº transferencia)"
+              className={`${inputBase} flex-1 min-w-40`}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex items-center gap-2 text-xs text-gray-500">
+              Fecha efectiva
+              <input
+                name="fecha_efectiva" type="date"
+                title="Cuándo ENTRÓ el dinero (vacío = hoy)"
+                className={`${inputBase} w-40`}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-xs text-gray-500 flex-1 min-w-48">
+              Comprobante
+              <input
+                name="comprobante" type="file" accept=".jpg,.jpeg,.png,.webp,.pdf"
+                className="text-xs text-gray-500 file:mr-2 file:rounded-lg file:border file:border-gray-200 file:bg-white file:px-3 file:py-1.5 file:text-xs file:text-gray-700"
+              />
+            </label>
+            <input name="nota" placeholder="Nota (opcional; si fue USD, di el monto original)" className={`${inputBase} flex-1 min-w-40`} />
+            <button
+              type="submit"
+              className="bg-[#0D0D0F] text-white text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors"
+            >
+              Registrar
+            </button>
+          </div>
         </form>
       </div>
 
