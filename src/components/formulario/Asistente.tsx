@@ -22,6 +22,10 @@ export default function Asistente({ token }: { token: string }) {
   const [datos, setDatos] = useState<DatosFormulario | null>(null);
   const [cargando, setCargando] = useState(true);
   const [noEncontrado, setNoEncontrado] = useState(false);
+  // Un 404 es "este enlace no existe"; cualquier otro fallo es NUESTRO
+  // (servidor caído, clave mal rotada) y se dice distinto: al cliente no
+  // se le culpa el enlace por un problema del sistema.
+  const [errorServidor, setErrorServidor] = useState(false);
 
   const [respuestas, setRespuestas] = useState<Record<string, unknown>>({});
   const [fotos, setFotos] = useState<{ nombre: string; ruta: string; url?: string }[]>([]);
@@ -35,7 +39,11 @@ export default function Asistente({ token }: { token: string }) {
   useEffect(() => {
     fetch(`/api/formulario/${token}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error();
+        if (r.status === 404) {
+          setNoEncontrado(true);
+          throw new Error("404");
+        }
+        if (!r.ok) throw new Error(String(r.status));
         const d: DatosFormulario = await r.json();
         setDatos(d);
         setRespuestas(d.respuestas ?? {});
@@ -51,7 +59,9 @@ export default function Asistente({ token }: { token: string }) {
         );
         setFotos(conUrl);
       })
-      .catch(() => setNoEncontrado(true))
+      .catch((e) => {
+        if (!(e instanceof Error && e.message === "404")) setErrorServidor(true);
+      })
       .finally(() => setCargando(false));
   }, [token]);
 
@@ -169,6 +179,26 @@ export default function Asistente({ token }: { token: string }) {
     return (
       <Pantalla>
         <Loader2 className="w-8 h-8 text-[#D4AF37] animate-spin mx-auto" />
+      </Pantalla>
+    );
+  }
+
+  if (errorServidor) {
+    return (
+      <Pantalla>
+        <div className="text-center max-w-sm mx-auto">
+          <h1 className="font-serif text-3xl text-white mb-3">Un momento…</h1>
+          <p className="text-white/50 text-sm mb-6">
+            Tu enlace está bien, pero nuestro sistema tuvo un problema al abrirlo.
+            Inténtalo de nuevo en un momento; si sigue igual, escríbenos.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="text-[#D4AF37] text-xs uppercase tracking-[0.2em] font-semibold underline underline-offset-4"
+          >
+            Reintentar
+          </button>
+        </div>
       </Pantalla>
     );
   }
