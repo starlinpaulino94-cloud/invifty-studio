@@ -178,64 +178,41 @@ function proximaFecha(diasDesplazamiento = 0): string {
 }
 
 /**
- * Fotos de muestra acordes al EVENTO de cada plantilla: los novios y la
- * preboda donde la muestra es una boda, la quinceañera en los quince
- * (Art Déco), la gala en las corporativas (Moderna, Cinema) y el baby
- * shower en Acuarela. Son FOTOGRAFÍAS reales curadas por el propietario
- * (public/muestra/, optimizadas a 900×1200 WebP; procedencia y licencias
- * en docs/creditos-fotos-muestra.md). El evento de cada plantilla tiene
- * que coincidir con lo que cuentan sus `datosMuestra` de arriba — la
- * portada y el texto son una sola escena, y la PRIMERA foto es la
- * portada.
+ * Fotos de muestra acordes al EVENTO de cada plantilla, REPARTIDAS: las
+ * ocho plantillas de boda no enseñan las mismas siete fotos — cada una
+ * tiene su propio set corto (la PRIMERA es la portada), con la
+ * combinación elegida según el carácter del diseño (la sesión aérea en
+ * Editorial, el ramo en Botánica, los novios en la playa en Tropical…).
+ * Así el catálogo se ve variado en vez de clónico, y una muestra no
+ * abruma con toda la galería del evento.
+ *
+ * Son FOTOGRAFÍAS reales curadas por el propietario (public/muestra/,
+ * 900×1200 WebP; procedencia y licencias en
+ * docs/creditos-fotos-muestra.md). El evento de cada plantilla tiene que
+ * coincidir con lo que cuentan sus `datosMuestra` de arriba.
  */
-type EventoMuestra = "boda" | "quince" | "empresa" | "baby";
-
-const FOTOS_POR_EVENTO: Record<EventoMuestra, string[]> = {
-  boda: [
-    "boda-1-novios",
-    "boda-2-preboda",
-    "boda-3-anillos",
-    "boda-4-brindis",
-    "boda-5-ramo",
-    "boda-6-sesion",
-    "boda-7-ceremonia",
-  ],
-  quince: [
-    "quince-1-quinceanera",
-    "quince-2-vestido",
-    "quince-3-corona",
-    "quince-4-espejo",
-    "quince-5-jardin",
-    "quince-6-celebracion",
-  ],
-  empresa: [
-    "empresa-1-gala",
-    "empresa-2-conferencia",
-    "empresa-3-networking",
-    "empresa-4-vistas",
-    "empresa-5-mesa",
-    "empresa-6-escenario",
-  ],
-  baby: [
-    "baby-1-ositos",
-    "baby-2-mama",
-    "baby-3-recien-nacido",
-    "baby-4-mesa-dulce",
-    "baby-5-globos",
-    "baby-6-fiesta",
-  ],
+const FOTOS_POR_PLANTILLA: Record<string, string[]> = {
+  // Boda: siete fotos repartidas entre ocho plantillas, combos distintos.
+  editorial: ["boda-6-sesion", "boda-3-anillos", "boda-4-brindis"],
+  botanica: ["boda-5-ramo", "boda-2-preboda", "boda-7-ceremonia"],
+  tropical: ["boda-1-novios", "boda-4-brindis", "boda-5-ramo"],
+  arco: ["boda-7-ceremonia", "boda-1-novios", "boda-3-anillos"],
+  celestial: ["boda-2-preboda", "boda-6-sesion", "boda-4-brindis"],
+  boho: ["boda-1-novios", "boda-5-ramo", "boda-2-preboda"],
+  jardin: ["boda-7-ceremonia", "boda-5-ramo", "boda-6-sesion"],
+  barroco: ["boda-6-sesion", "boda-1-novios", "boda-3-anillos"],
+  // Quince y baby: una sola plantilla cada uno, cuatro fotos moderadas.
+  deco: ["quince-1-quinceanera", "quince-2-vestido", "quince-4-espejo", "quince-3-corona"],
+  acuarela: ["baby-1-ositos", "baby-2-mama", "baby-3-recien-nacido", "baby-5-globos"],
+  // Empresarial: las seis fotos partidas entre las dos plantillas.
+  moderna: ["empresa-1-gala", "empresa-2-conferencia", "empresa-3-networking"],
+  cinema: ["empresa-6-escenario", "empresa-4-vistas", "empresa-5-mesa"],
 };
 
 export function fotosMuestra(plantillaId: string) {
-  const eventos: Record<string, EventoMuestra> = {
-    deco: "quince",
-    moderna: "empresa",
-    cinema: "empresa",
-    acuarela: "baby",
-  };
-
-  const evento = eventos[plantillaMeta(plantillaId).id] ?? "boda";
-  return FOTOS_POR_EVENTO[evento].map((nombre) => ({
+  const nombres =
+    FOTOS_POR_PLANTILLA[plantillaMeta(plantillaId).id] ?? FOTOS_POR_PLANTILLA.editorial;
+  return nombres.map((nombre) => ({
     nombre: `${nombre}.webp`,
     url: `/muestra/${nombre}.webp`,
   }));

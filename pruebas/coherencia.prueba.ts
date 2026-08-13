@@ -2,7 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { PALETAS, TIPOGRAFIAS } from "@/config/diseno";
+import { existsSync } from "node:fs";
+import path from "node:path";
+
 import { PLANTILLAS, plantillaMeta } from "@/config/plantillas";
+import { fotosMuestra } from "@/config/muestra";
 import { FORMULARIOS, construirFormulario } from "@/config/formularios";
 import { sugerirPlantilla } from "@/lib/invitacion";
 import type { TipoEvento, Plan } from "@/lib/tipos";
@@ -128,5 +132,37 @@ test("los identificadores de pregunta no se repiten dentro de un formulario", ()
           `Las respuestas se pisarían entre sí.`
       );
     }
+  }
+});
+
+/* ---------- Las fotos de muestra ---------- */
+
+test("cada plantilla tiene su set de fotos de muestra, y los archivos existen", () => {
+  const dirMuestra = path.join(import.meta.dirname, "..", "public", "muestra");
+  for (const plantilla of PLANTILLAS) {
+    const fotos = fotosMuestra(plantilla.id);
+    assert.ok(fotos.length >= 3, `"${plantilla.id}" se queda con ${fotos.length} fotos`);
+    assert.ok(fotos.length <= 4, `"${plantilla.id}" abruma con ${fotos.length} fotos`);
+    for (const foto of fotos) {
+      assert.ok(
+        existsSync(path.join(dirMuestra, foto.nombre)),
+        `la foto "${foto.nombre}" de "${plantilla.id}" no existe en public/muestra`
+      );
+    }
+  }
+});
+
+test("las plantillas del mismo evento no son clónicas: sets y portadas variados", () => {
+  const boda = ["editorial", "botanica", "tropical", "arco", "celestial", "boho", "jardin", "barroco"];
+  const combos = new Set(boda.map((id) => fotosMuestra(id).map((f) => f.nombre).join("|")));
+  assert.equal(combos.size, boda.length, "dos plantillas de boda enseñan exactamente lo mismo");
+
+  const portadas = new Set(boda.map((id) => fotosMuestra(id)[0].nombre));
+  assert.ok(portadas.size >= 5, `solo ${portadas.size} portadas distintas entre 8 plantillas de boda`);
+
+  // Las dos corporativas no comparten ni una foto: mitades limpias.
+  const moderna = new Set(fotosMuestra("moderna").map((f) => f.nombre));
+  for (const foto of fotosMuestra("cinema")) {
+    assert.ok(!moderna.has(foto.nombre), `"${foto.nombre}" está en las dos corporativas`);
   }
 });
