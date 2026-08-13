@@ -1,5 +1,6 @@
 import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion } from "@/lib/tipos";
+import { escenasMuestra, type EscenaEvento } from "./escenas-muestra";
 import { plantillaMeta } from "./plantillas";
 
 /**
@@ -198,7 +199,15 @@ function proximaFecha(diasDesplazamiento = 0): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Fotos de muestra coherentes con la paleta de cada plantilla. */
+/**
+ * Fotos de muestra acordes al EVENTO de cada plantilla y tintadas con su
+ * paleta: los novios y la preboda donde la muestra es una boda, la
+ * corona y el vestido en los quince (Art Déco), el skyline en las
+ * corporativas (Moderna, Cinema) y el cochecito en el baby shower
+ * (Acuarela). El arte vive en config/escenas-muestra.ts; el evento de
+ * cada plantilla tiene que coincidir con lo que cuentan sus
+ * `datosMuestra` de arriba — la portada y el texto son una sola escena.
+ */
 export function fotosMuestra(plantillaId: string) {
   const tonos: Record<string, string> = {
     editorial: "#c9b184",
@@ -214,9 +223,13 @@ export function fotosMuestra(plantillaId: string) {
     jardin: "#a8bd97",
     barroco: "#c2a558",
   };
-  const tono = tonos[plantillaMeta(plantillaId).id] ?? "#c9b184";
-  return [0, 1, 2, 3, 4, 5].map((i) => ({
-    nombre: `muestra-${i}.svg`,
-    url: fotoMuestra(tono),
-  }));
+  const eventos: Record<string, EscenaEvento> = {
+    deco: "quince",
+    moderna: "empresarial",
+    cinema: "empresarial",
+    acuarela: "baby",
+  };
+
+  const id = plantillaMeta(plantillaId).id;
+  return escenasMuestra(eventos[id] ?? "boda", tonos[id] ?? "#c9b184");
 }
