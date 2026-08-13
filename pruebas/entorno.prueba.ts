@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { supabaseUrl, supabaseClaveSecreta, secretoCron } from "@/lib/entorno";
+import { avisoDeDominio } from "@/lib/url";
 
 /**
  * LAS VARIABLES DE ENTORNO
@@ -90,4 +91,30 @@ test("pedir la clave secreta desde un navegador revienta a gritos", () => {
 test("sin CRON_SECRET la respuesta es null, que quien llama convierte en puerta cerrada", () => {
   conEntorno({ CRON_SECRET: undefined }, () => assert.equal(secretoCron(), null));
   conEntorno({ CRON_SECRET: "abc" }, () => assert.equal(secretoCron(), "abc"));
+});
+
+/* ---------- El aviso de dominio ---------- */
+
+test("el aviso de dominio salta cuando los enlaces salen por otro host", () => {
+  const previa = process.env.NEXT_PUBLIC_APP_URL;
+  try {
+    // El error de dedo que pasó de verdad: .co sin la eme.
+    process.env.NEXT_PUBLIC_APP_URL = "https://studio.invifty.co";
+    const aviso = avisoDeDominio("studio.invifty.com");
+    assert.ok(aviso, "debía avisar");
+    assert.equal(aviso!.configurado, "studio.invifty.co");
+    assert.equal(aviso!.real, "studio.invifty.com");
+
+    // Cuando todo cuadra, silencio.
+    process.env.NEXT_PUBLIC_APP_URL = "https://studio.invifty.com";
+    assert.equal(avisoDeDominio("studio.invifty.com"), null);
+
+    // Sin host que comparar o con una base impronunciable, tampoco grita.
+    assert.equal(avisoDeDominio(null), null);
+    process.env.NEXT_PUBLIC_APP_URL = "esto no es una url";
+    assert.equal(avisoDeDominio("studio.invifty.com"), null);
+  } finally {
+    if (previa === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+    else process.env.NEXT_PUBLIC_APP_URL = previa;
+  }
 });

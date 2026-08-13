@@ -27,3 +27,22 @@ export function urlBase(): string {
 function sinBarraFinal(url: string): string {
   return url.replace(/\/+$/, "");
 }
+
+/**
+ * ¿Los enlaces se están generando con un dominio DISTINTO al que se está
+ * usando? Pasó de verdad: NEXT_PUBLIC_APP_URL decía "invifty.co" (sin la
+ * eme) y los formularios salieron por WhatsApp con un enlace roto, sin
+ * que nada fallara a la vista. El panel usa esto para avisar en grande.
+ * Devuelve null cuando todo cuadra o cuando no hay con qué comparar.
+ */
+export function avisoDeDominio(
+  hostReal: string | null | undefined
+): { configurado: string; real: string } | null {
+  if (!hostReal) return null;
+  try {
+    const configurado = new URL(urlBase()).host;
+    return configurado === hostReal ? null : { configurado, real: hostReal };
+  } catch {
+    return null; // una urlBase impronunciable no puede tumbar el panel
+  }
+}
