@@ -1,33 +1,11 @@
 import { EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import type { DatosInvitacion } from "@/lib/tipos";
-import { escenasMuestra, type EscenaEvento } from "./escenas-muestra";
 import { plantillaMeta } from "./plantillas";
 
 /**
  * Datos de ejemplo para el catálogo de plantillas del panel.
  * Permiten ver cómo luce cada diseño antes de elegirlo.
  */
-
-/** Fotografía ficticia (degradado suave) para que la portada no salga vacía. */
-export function fotoMuestra(tono: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200">
-    <defs>
-      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="${tono}" stop-opacity="0.95"/>
-        <stop offset="55%" stop-color="#8d8577" stop-opacity="0.75"/>
-        <stop offset="100%" stop-color="#2b2823" stop-opacity="0.9"/>
-      </linearGradient>
-      <filter id="b"><feGaussianBlur stdDeviation="26"/></filter>
-    </defs>
-    <rect width="900" height="1200" fill="url(#g)"/>
-    <g filter="url(#b)" opacity=".55">
-      <circle cx="300" cy="380" r="190" fill="#ffffff" opacity=".35"/>
-      <circle cx="640" cy="760" r="240" fill="#000000" opacity=".3"/>
-      <circle cx="180" cy="980" r="150" fill="#ffffff" opacity=".2"/>
-    </g>
-  </svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-}
 
 export function datosMuestra(plantillaId: string): DatosInvitacion {
   const meta = plantillaMeta(plantillaId);
@@ -200,36 +178,65 @@ function proximaFecha(diasDesplazamiento = 0): string {
 }
 
 /**
- * Fotos de muestra acordes al EVENTO de cada plantilla y tintadas con su
- * paleta: los novios y la preboda donde la muestra es una boda, la
- * corona y el vestido en los quince (Art Déco), el skyline en las
- * corporativas (Moderna, Cinema) y el cochecito en el baby shower
- * (Acuarela). El arte vive en config/escenas-muestra.ts; el evento de
- * cada plantilla tiene que coincidir con lo que cuentan sus
- * `datosMuestra` de arriba — la portada y el texto son una sola escena.
+ * Fotos de muestra acordes al EVENTO de cada plantilla: los novios y la
+ * preboda donde la muestra es una boda, la quinceañera en los quince
+ * (Art Déco), la gala en las corporativas (Moderna, Cinema) y el baby
+ * shower en Acuarela. Son FOTOGRAFÍAS reales curadas por el propietario
+ * (public/muestra/, optimizadas a 900×1200 WebP; procedencia y licencias
+ * en docs/creditos-fotos-muestra.md). El evento de cada plantilla tiene
+ * que coincidir con lo que cuentan sus `datosMuestra` de arriba — la
+ * portada y el texto son una sola escena, y la PRIMERA foto es la
+ * portada.
  */
+type EventoMuestra = "boda" | "quince" | "empresa" | "baby";
+
+const FOTOS_POR_EVENTO: Record<EventoMuestra, string[]> = {
+  boda: [
+    "boda-1-novios",
+    "boda-2-preboda",
+    "boda-3-anillos",
+    "boda-4-brindis",
+    "boda-5-ramo",
+    "boda-6-sesion",
+    "boda-7-ceremonia",
+  ],
+  quince: [
+    "quince-1-quinceanera",
+    "quince-2-vestido",
+    "quince-3-corona",
+    "quince-4-espejo",
+    "quince-5-jardin",
+    "quince-6-celebracion",
+  ],
+  empresa: [
+    "empresa-1-gala",
+    "empresa-2-conferencia",
+    "empresa-3-networking",
+    "empresa-4-vistas",
+    "empresa-5-mesa",
+    "empresa-6-escenario",
+  ],
+  baby: [
+    "baby-1-ositos",
+    "baby-2-mama",
+    "baby-3-recien-nacido",
+    "baby-4-mesa-dulce",
+    "baby-5-globos",
+    "baby-6-fiesta",
+  ],
+};
+
 export function fotosMuestra(plantillaId: string) {
-  const tonos: Record<string, string> = {
-    editorial: "#c9b184",
-    botanica: "#9fae8e",
-    moderna: "#b9b9b9",
-    deco: "#b99a5e",
-    tropical: "#f0a97f",
-    arco: "#c6a7ae",
-    celestial: "#8fa4c8",
-    acuarela: "#f2b795",
-    cinema: "#a8a8ac",
-    boho: "#d6a765",
-    jardin: "#a8bd97",
-    barroco: "#c2a558",
-  };
-  const eventos: Record<string, EscenaEvento> = {
+  const eventos: Record<string, EventoMuestra> = {
     deco: "quince",
-    moderna: "empresarial",
-    cinema: "empresarial",
+    moderna: "empresa",
+    cinema: "empresa",
     acuarela: "baby",
   };
 
-  const id = plantillaMeta(plantillaId).id;
-  return escenasMuestra(eventos[id] ?? "boda", tonos[id] ?? "#c9b184");
+  const evento = eventos[plantillaMeta(plantillaId).id] ?? "boda";
+  return FOTOS_POR_EVENTO[evento].map((nombre) => ({
+    nombre: `${nombre}.webp`,
+    url: `/muestra/${nombre}.webp`,
+  }));
 }
