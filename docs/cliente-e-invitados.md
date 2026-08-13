@@ -11,7 +11,9 @@ Equipo: "Enviar a revisión" (tarjeta en el editor)
 → Se congela una VERSIÓN inmutable (tabla versiones, trigger anti-edición)
 → Enlace /revision/<token> (opaco, caduca a 30 días, revocable)
 → El cliente ve EXACTAMENTE esa versión, dibujada por el render de siempre
-→ Comenta por sección · pide cambios · o APRUEBA firmando con su nombre
+→ Comenta por sección (con imagen de referencia opcional: "quiero algo
+  así" — JPG/PNG/WEBP ≤8 MB, tope de 10 por revisión, bucket privado con
+  URL firmada) · pide cambios · o APRUEBA firmando con su nombre
 → Aprobar deja evidencia (quién, cuándo, qué versión) y BLOQUEA la invitación
 → Editar lo aprobado exige desbloquear a propósito (motivo + auditoría)
 → Publicar sigue siendo un acto del equipo: aprobar no publica nada
@@ -119,9 +121,6 @@ de servidor autenticadas por token. Variables de entorno nuevas: ninguna.
   o se busca por nombre. Leer el QR con la cámara del teléfono necesita
   una librería de descodificación en el navegador; entra cuando haga
   falta de verdad en un evento.
-- **Adjuntar referencias en la revisión** (imágenes del cliente): el
-  texto por sección cubre el 95% de los casos; subir archivos del
-  cliente reutilizaría el flujo de fotos del formulario.
 - **Notificaciones al CLIENTE** (no solo al equipo): mandarle "tu
   invitación está lista para revisar" por email exige su consentimiento
   y su correo verificado; hoy ese mensaje va por WhatsApp a mano, que es

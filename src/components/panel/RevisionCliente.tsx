@@ -29,6 +29,8 @@ export interface ComentarioPanel {
   texto: string;
   estado: string;
   creado_en: string;
+  /** URL firmada de la imagen de referencia, si el cliente adjuntó una. */
+  imagenUrl?: string;
 }
 
 export interface RevisionPanel {
@@ -252,6 +254,23 @@ export default function RevisionCliente({
                       </span>
                       {c.estado === "descartado" && (
                         <span className="text-gray-400"> (descartado)</span>
+                      )}
+                      {/* La referencia del cliente: miniatura que abre la
+                          imagen completa (URL firmada del bucket privado) */}
+                      {c.imagenUrl && (
+                        <a
+                          href={c.imagenUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mt-1.5"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal: next/image no puede optimizarla */}
+                          <img
+                            src={c.imagenUrl}
+                            alt="Imagen de referencia del cliente"
+                            className="h-16 rounded-lg border border-gray-200 object-cover hover:opacity-80 transition-opacity"
+                          />
+                        </a>
                       )}
                     </span>
                     {c.estado !== "resuelto" && c.estado !== "descartado" && (

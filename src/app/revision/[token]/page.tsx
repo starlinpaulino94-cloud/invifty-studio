@@ -70,13 +70,31 @@ export default async function PaginaRevision({
   const invitacion = revision.invitaciones;
   if (!version || !invitacion) notFound();
 
-  // Lo que el propio cliente ya comentó, para que no lo repita.
-  const { data: comentarios } = await supabase
+  // Lo que el propio cliente ya comentó, para que no lo repita. El `*`
+  // es a propósito: trae imagen_ruta si la migración corrió, y funciona
+  // igual si aún no.
+  const { data: comentariosData } = await supabase
     .from("comentarios")
-    .select("seccion, texto, estado, creado_en")
+    .select("*")
     .eq("revision_id", revision.id)
     .eq("autor", "cliente")
     .order("creado_en");
+
+  const comentarios: ComentarioCliente[] = (
+    (comentariosData ?? []) as {
+      seccion: string;
+      texto: string;
+      estado: string;
+      creado_en: string;
+      imagen_ruta?: string | null;
+    }[]
+  ).map((c) => ({
+    seccion: c.seccion,
+    texto: c.texto,
+    estado: c.estado,
+    creado_en: c.creado_en,
+    tieneImagen: Boolean(c.imagen_ruta),
+  }));
 
   const instantanea: InvitacionPublicable = {
     slug: invitacion.slug,
@@ -100,7 +118,7 @@ export default async function PaginaRevision({
         expiraEn={revision.expira_en}
         aprobadaPor={revision.aprobada_por}
         aprobadaEn={revision.aprobada_en}
-        comentariosPrevios={(comentarios ?? []) as ComentarioCliente[]}
+        comentariosPrevios={comentarios}
       />
     </>
   );

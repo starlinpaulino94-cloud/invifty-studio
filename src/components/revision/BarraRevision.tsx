@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2, MessageSquare, PenLine, Loader2, X, ChevronDown, ChevronUp,
+  CheckCircle2, MessageSquare, PenLine, Loader2, X, ChevronDown, ChevronUp, ImagePlus, Paperclip,
 } from "lucide-react";
 import {
   NOMBRE_SECCION, SECCIONES_COMENTABLES, type EstadoRevision,
@@ -29,6 +29,8 @@ export interface ComentarioCliente {
   texto: string;
   estado: string;
   creado_en: string;
+  /** true si el comentario llevó una imagen de referencia adjunta. */
+  tieneImagen?: boolean;
 }
 
 type Modo = "cerrado" | "comentar" | "cambios" | "aprobar";
@@ -54,6 +56,7 @@ export default function BarraRevision({
   const [modo, setModo] = useState<Modo>("cerrado");
   const [seccion, setSeccion] = useState("general");
   const [texto, setTexto] = useState("");
+  const [imagen, setImagen] = useState<File | null>(null);
   const [nombre, setNombre] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
@@ -84,13 +87,48 @@ export default function BarraRevision({
   };
 
   const comentar = async () => {
-    if (texto.trim().length < 2) return;
-    if (await llamar("comentario", { seccion, texto })) {
+    if (texto.trim().length < 2 && !imagen) return;
+
+    // Con imagen va como multipart; sin ella, el JSON de siempre.
+    let exito: boolean;
+    if (imagen) {
+      setEnviando(true);
+      setError("");
+      try {
+        const cuerpo = new FormData();
+        cuerpo.set("seccion", seccion);
+        cuerpo.set("texto", texto);
+        cuerpo.set("imagen", imagen);
+        const res = await fetch(`/api/revision/${token}/comentario`, {
+          method: "POST",
+          body: cuerpo,
+        });
+        const json = await res.json().catch(() => ({}));
+        exito = res.ok;
+        if (!res.ok) setError(json.error ?? "No se pudo enviar. Inténtalo de nuevo.");
+      } catch {
+        exito = false;
+        setError("No se pudo enviar. Revisa tu conexión.");
+      } finally {
+        setEnviando(false);
+      }
+    } else {
+      exito = await llamar("comentario", { seccion, texto });
+    }
+
+    if (exito) {
       setComentarios([
         ...comentarios,
-        { seccion, texto: texto.trim(), estado: "abierto", creado_en: new Date().toISOString() },
+        {
+          seccion,
+          texto: texto.trim() || "(imagen de referencia)",
+          estado: "abierto",
+          creado_en: new Date().toISOString(),
+          tieneImagen: imagen !== null,
+        },
       ]);
       setTexto("");
+      setImagen(null);
       setModo("cerrado");
     }
   };
@@ -168,7 +206,37 @@ export default function BarraRevision({
                 placeholder="Ej: En la portada, ¿pueden poner primero el nombre de ella?"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
               />
-              <BotonPrincipal onClick={comentar} cargando={enviando} texto="Enviar comentario" />
+              {/* "Quiero algo así" necesita un así: una imagen de referencia */}
+              <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+                <ImagePlus className="w-4 h-4 text-gray-400 shrink-0" />
+                {imagen ? (
+                  <span className="flex items-center gap-1.5 text-gray-700">
+                    {imagen.name}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setImagen(null); }}
+                      aria-label="Quitar imagen"
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ) : (
+                  "Adjuntar una imagen de referencia (opcional)"
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => setImagen(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <BotonPrincipal
+                onClick={comentar}
+                cargando={enviando}
+                texto="Enviar comentario"
+                deshabilitado={texto.trim().length < 2 && !imagen}
+              />
             </div>
           )}
 
@@ -229,6 +297,9 @@ export default function BarraRevision({
                     <li key={i} className="text-[11px] text-gray-600">
                       <b className="text-gray-400">{NOMBRE_SECCION[c.seccion as keyof typeof NOMBRE_SECCION] ?? c.seccion}:</b>{" "}
                       {c.texto}
+                      {c.tieneImagen && (
+                        <Paperclip className="w-3 h-3 inline ml-1 text-gray-400" aria-label="Con imagen" />
+                      )}
                     </li>
                   ))}
                 </ul>

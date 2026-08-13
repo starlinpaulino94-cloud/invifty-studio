@@ -23,7 +23,7 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('generaciones',  17, 3, 2),
     ('versiones',     10, 2, 2),
     ('revisiones',    13, 3, 1),
-    ('comentarios',    9, 2, 1),
+    ('comentarios',   10, 2, 1),
     ('hogares',        6, 4, 1),
     ('entradas',       9, 2, 1),
     ('avisos',        15, 2, 1),
