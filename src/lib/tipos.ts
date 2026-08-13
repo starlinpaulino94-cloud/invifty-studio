@@ -160,6 +160,12 @@ export interface DatosInvitacion {
     whatsapp: string;        // número que recibe las confirmaciones
     fechaLimite: string;
     acompanantes: boolean;
+    /**
+     * Preguntas extra configurables (menú, alergias, transporte o
+     * propias del evento). Solo se pregunta lo que el equipo activa:
+     * "no pedir información innecesaria". Ver lib/rsvp.ts.
+     */
+    preguntas?: import("./rsvp").PreguntaRsvp[];
   };
   secciones: {
     historia: boolean;
@@ -238,6 +244,8 @@ export interface Confirmacion {
   /** Personas en total, incluyendo al invitado. 0 si no asiste. */
   cantidad: number;
   nota: string | null;
+  /** Respuestas a las preguntas extra: { "<id de pregunta>": "<respuesta>" }. */
+  respuestas?: Record<string, string>;
   creado_en: string;
   actualizado_en: string;
 }

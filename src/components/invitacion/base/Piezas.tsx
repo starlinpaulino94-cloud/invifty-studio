@@ -9,6 +9,7 @@ import { fechaLarga } from "./Marco";
 import { useInvitacion } from "./Contexto";
 import { sumarHoras, fechaCompacta, HORAS_EVENTO, HORA_POR_DEFECTO, ZONA_HORARIA } from "@/lib/ics";
 import { fechaVencida } from "@/lib/fechas";
+import type { PreguntaRsvp } from "@/lib/rsvp";
 import { FotoInvitacion } from "@/lib/tipos";
 
 /* ============================================================
@@ -419,11 +420,14 @@ export function Rsvp({
   whatsapp,
   fechaLimite,
   acompanantes,
+  preguntas = [],
 }: {
   titulo: string;
   whatsapp: string;
   fechaLimite: string;
   acompanantes: boolean;
+  /** Preguntas extra que ESTE evento activó en el editor (lib/rsvp.ts). */
+  preguntas?: PreguntaRsvp[];
 }) {
   const { slug, esBorrador, hogar } = useInvitacion();
   // El enlace personal trae el nombre del hogar puesto (editable: quien
@@ -432,6 +436,7 @@ export function Rsvp({
   const [asiste, setAsiste] = useState<"si" | "no">("si");
   const [cantidad, setCantidad] = useState(1);
   const [nota, setNota] = useState("");
+  const [respuestas, setRespuestas] = useState<Record<string, string>>({});
   const [enviado, setEnviado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState("");
@@ -444,6 +449,12 @@ export function Rsvp({
     `👤 *Nombre:* ${nombre}`,
     `📌 *Asistencia:* ${asiste === "si" ? "CONFIRMADO ✓" : "No podré asistir"}`,
     asiste === "si" && acompanantes ? `👥 *Total de personas:* ${cantidad}` : "",
+    // Las respuestas a las preguntas extra también viajan en el aviso.
+    ...(asiste === "si"
+      ? preguntas
+          .filter((p) => respuestas[p.id])
+          .map((p) => `▪ *${p.texto}* ${respuestas[p.id]}`)
+      : []),
     nota ? `📝 *Nota:* ${nota}` : "",
     "--------------------------------",
     "Enviado desde la invitación digital.",
@@ -484,6 +495,7 @@ export function Rsvp({
           cantidad,
           nota,
           hogar: hogar?.token,
+          respuestas,
         }),
       });
       if (!res.ok) {
@@ -681,6 +693,40 @@ export function Rsvp({
           />
         </div>
       )}
+
+      {/* Las preguntas extra que ESTE evento activó: solo si asiste (a
+          quien no viene no se le pregunta el menú), y siempre opcionales
+          — una pregunta sin responder no bloquea la confirmación. */}
+      {asiste === "si" &&
+        preguntas.map((p) => (
+          <div key={p.id}>
+            <label className="block text-xs mb-1.5" style={{ color: "var(--inv-texto-suave)" }}>
+              {p.texto}
+            </label>
+            {p.tipo === "opciones" ? (
+              <select
+                value={respuestas[p.id] ?? ""}
+                onChange={(e) => setRespuestas({ ...respuestas, [p.id]: e.target.value })}
+                className={campo}
+                style={estiloCampo}
+              >
+                <option value="">Elige…</option>
+                {(p.opciones ?? []).map((opcion) => (
+                  <option key={opcion} value={opcion}>{opcion}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                maxLength={200}
+                value={respuestas[p.id] ?? ""}
+                onChange={(e) => setRespuestas({ ...respuestas, [p.id]: e.target.value })}
+                className={campo}
+                style={estiloCampo}
+              />
+            )}
+          </div>
+        ))}
 
       <textarea
         rows={2}

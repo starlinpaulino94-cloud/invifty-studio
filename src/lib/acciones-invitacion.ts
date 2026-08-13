@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { crearClienteServidor } from "./supabase/servidor";
 import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { derivarDatosInvitacion } from "./invitacion";
+import { sanearPreguntas } from "./rsvp";
 import { slugificar, slugConSufijo } from "./slug";
 import { normalizarDominio, dominioValido } from "./dominios";
 import { calcularVencimiento } from "./vencimientos";
@@ -122,6 +123,13 @@ export async function guardarInvitacion(
       error:
         "El cliente aprobó esta invitación y está bloqueada. Para editarla, desbloquéala desde la tarjeta de revisión (quedará en auditoría).",
     };
+  }
+
+  // Las preguntas extra del RSVP se sanean también AQUÍ, no solo en el
+  // editor: topes de cantidad y de texto (lib/rsvp.ts) pase lo que pase
+  // en el navegador.
+  if (datos.rsvp?.preguntas !== undefined) {
+    datos = { ...datos, rsvp: { ...datos.rsvp, preguntas: sanearPreguntas(datos.rsvp.preguntas) } };
   }
 
   const { error } = await supabase

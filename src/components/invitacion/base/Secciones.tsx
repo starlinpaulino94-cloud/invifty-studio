@@ -426,6 +426,7 @@ export function BloqueRsvp({ datos, variante }: { datos: DatosInvitacion; varian
             whatsapp={datos.rsvp.whatsapp}
             fechaLimite={datos.rsvp.fechaLimite}
             acompanantes={datos.rsvp.acompanantes}
+            preguntas={datos.rsvp.preguntas}
           />
         </Revelar>
       </div>

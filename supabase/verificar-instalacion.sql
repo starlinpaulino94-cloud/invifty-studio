@@ -13,7 +13,7 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('pagos',         16, 3, 1),
     ('formularios',    8, 3, 1),
     ('invitaciones',  13, 5, 1),
-    ('confirmaciones',10, 3, 1),
+    ('confirmaciones',11, 3, 1),
     ('visitas',        5, 3, 1),
     ('invitados',      6, 3, 1),
     ('leads',         19, 4, 1),

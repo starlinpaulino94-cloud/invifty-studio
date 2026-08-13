@@ -3,6 +3,7 @@ import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { limitarCompartido, ipDePeticion } from "@/lib/limite";
 import { normalizarNombre } from "@/lib/nombres";
 import { fechaVencida } from "@/lib/fechas";
+import { validarRespuestas, type PreguntaRsvp } from "@/lib/rsvp";
 import { registrarError } from "@/lib/registro";
 
 /**
@@ -96,7 +97,7 @@ export async function POST(
 
   const datosInvitacion = invitacion.datos as {
     secciones?: { rsvp?: boolean };
-    rsvp?: { fechaLimite?: string };
+    rsvp?: { fechaLimite?: string; preguntas?: PreguntaRsvp[] };
   };
 
   if (datosInvitacion?.secciones?.rsvp === false) {
@@ -156,14 +157,23 @@ export async function POST(
     .eq("nombre_normalizado", nombreNormalizado)
     .maybeSingle();
 
-  // `hogar_id` solo viaja cuando hay hogar: así una base sin la migración
-  // de la Etapa E sigue aceptando confirmaciones normales sin quejarse.
+  // Las respuestas a las preguntas extra se validan contra la
+  // configuración REAL de esta invitación (lib/rsvp.ts): id desconocido
+  // u opción inventada se descartan; el texto se recorta. La pantalla se
+  // la salta cualquiera; esto no.
+  const respuestas = asiste
+    ? validarRespuestas(datosInvitacion?.rsvp?.preguntas ?? [], body.respuestas)
+    : {};
+
+  // `hogar_id` y `respuestas` solo viajan cuando aportan algo: así una
+  // base sin las migraciones nuevas sigue aceptando confirmaciones.
   const extraHogar = hogarId ? { hogar_id: hogarId } : {};
+  const extraRespuestas = Object.keys(respuestas).length > 0 ? { respuestas } : {};
 
   if (previa) {
     const { error } = await supabase
       .from("confirmaciones")
-      .update({ nombre, asiste, cantidad, nota, ...extraHogar })
+      .update({ nombre, asiste, cantidad, nota, ...extraHogar, ...extraRespuestas })
       .eq("id", previa.id);
     if (error) {
       registrarError("rsvp", error, { slug, codigo: error.code, paso: "actualizar" });
@@ -192,6 +202,7 @@ export async function POST(
     cantidad,
     nota,
     ...extraHogar,
+    ...extraRespuestas,
   });
 
   if (error) {

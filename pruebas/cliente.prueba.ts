@@ -18,6 +18,7 @@ import {
   type EntradaRegistrada,
 } from "@/lib/checkin";
 import { construirAviso, debeReintentar, MAX_INTENTOS } from "@/lib/avisos";
+import { sanearPreguntas, validarRespuestas, PREGUNTAS_PREDEFINIDAS } from "@/lib/rsvp";
 
 /**
  * CLIENTE E INVITADOS (Etapa E)
@@ -192,4 +193,64 @@ test("los reintentos se agotan a los 5, no antes ni infinitos", () => {
   assert.ok(debeReintentar(MAX_INTENTOS - 1));
   assert.ok(!debeReintentar(MAX_INTENTOS));
   assert.ok(!debeReintentar(MAX_INTENTOS + 3));
+});
+
+/* ---------- Las preguntas extra del RSVP ---------- */
+
+test("sanear preguntas acota todo: cantidad, textos, opciones e ids únicos", () => {
+  const limpias = sanearPreguntas([
+    { id: "menu", texto: "¿Qué menú prefieren?", tipo: "opciones", opciones: ["Res", "Pollo"] },
+    { texto: "  ¿Necesitan   transporte?  ", tipo: "texto" },
+    { id: "menu", texto: "Otra con id repetido", tipo: "texto" },
+    { texto: "x", tipo: "texto" },                            // demasiado corta
+    { texto: "¿Opción única?", tipo: "opciones", opciones: ["Sí"] }, // 1 opción no es pregunta
+    { texto: "y".repeat(500), tipo: "texto" },                // se recorta
+    "basura",
+  ]);
+  assert.equal(limpias.length, 4);
+  assert.equal(limpias[1].texto, "¿Necesitan transporte?");
+  assert.notEqual(limpias[0].id, limpias[2].id, "ids repetidos se distinguen");
+  assert.ok(limpias[3].texto.length <= 120);
+});
+
+test("más de 5 preguntas no entran: cada campo de más espanta confirmaciones", () => {
+  const muchas = Array.from({ length: 9 }, (_, i) => ({
+    texto: `¿Pregunta número ${i}?`,
+    tipo: "texto" as const,
+  }));
+  assert.equal(sanearPreguntas(muchas).length, 5);
+});
+
+test("la respuesta del invitado se valida contra la configuración REAL", () => {
+  const preguntas = sanearPreguntas([
+    { id: "menu", texto: "¿Menú?", tipo: "opciones", opciones: ["Res", "Pollo"] },
+    { id: "alergias", texto: "¿Alergias?", tipo: "texto" },
+  ]);
+  const limpias = validarRespuestas(preguntas, {
+    menu: "Pollo",
+    alergias: "maní",
+    menu_falso: "lo que sea",          // id desconocido: fuera
+    __proto__: "veneno",
+  });
+  assert.deepEqual(limpias, { menu: "Pollo", alergias: "maní" });
+});
+
+test("una opción inventada se descarta, no se corrige a escondidas", () => {
+  const preguntas = sanearPreguntas([
+    { id: "menu", texto: "¿Menú?", tipo: "opciones", opciones: ["Res", "Pollo"] },
+  ]);
+  assert.deepEqual(validarRespuestas(preguntas, { menu: "Langosta" }), {});
+});
+
+test("los textos del invitado se recortan y lo vacío no se guarda", () => {
+  const preguntas = sanearPreguntas([{ id: "alergias", texto: "¿Alergias?", tipo: "texto" }]);
+  const limpias = validarRespuestas(preguntas, { alergias: "z".repeat(1000) });
+  assert.equal(limpias.alergias.length, 200);
+  assert.deepEqual(validarRespuestas(preguntas, { alergias: "   " }), {});
+  assert.deepEqual(validarRespuestas(preguntas, null), {});
+  assert.deepEqual(validarRespuestas(preguntas, "basura"), {});
+});
+
+test("los atajos predefinidos pasan su propio saneo", () => {
+  assert.equal(sanearPreguntas(PREGUNTAS_PREDEFINIDAS).length, PREGUNTAS_PREDEFINIDAS.length);
 });
