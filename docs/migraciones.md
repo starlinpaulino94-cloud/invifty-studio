@@ -36,6 +36,7 @@ te fíes de la memoria ni de este documento.
 | `20260805210000_cliente-e-invitados` | `versiones`, `revisiones`, `comentarios`, `hogares`, `entradas`, `avisos`; candado `bloqueada_en`; `hogar_id` |
 | `20260805230000_escala` | Tabla `frenos` + función atómica `frenar()` (rate limit compartido); índice del tablero |
 | `20260806010000_pagos-completos` | `pagos`: referencia, fecha efectiva, firma, idempotencia y comprobante |
+| `20260806030000_rsvp-avanzado` | `confirmaciones.respuestas` (preguntas extra configurables del RSVP) |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).

@@ -46,13 +46,19 @@ export default async function FichaPedido({
 
   const { data: invitacionData } = await supabase
     .from("invitaciones")
-    .select("id, slug, estado, token_lista")
+    .select("id, slug, estado, token_lista, datos")
     .eq("pedido_id", id)
     .maybeSingle();
   const invitacion = invitacionData as Pick<
     Invitacion,
-    "id" | "slug" | "estado" | "token_lista"
+    "id" | "slug" | "estado" | "token_lista" | "datos"
   > | null;
+
+  // Texto de cada pregunta extra del RSVP, para enseñar las respuestas
+  // con la pregunta delante y no con su id.
+  const etiquetasRsvp = Object.fromEntries(
+    (invitacion?.datos?.rsvp?.preguntas ?? []).map((p) => [p.id, p.texto])
+  );
 
   // Confirmaciones de asistencia que enviaron los invitados
   const { data: confirmacionesData } = invitacion
@@ -324,7 +330,11 @@ export default async function FichaPedido({
       {invitacion?.estado === "publicada" && (
         <>
           <Visitas resumen={resumenVisitas} nombreEvento={cliente.nombre} />
-          <Confirmaciones confirmaciones={confirmaciones} nombreEvento={cliente.nombre} />
+          <Confirmaciones
+            confirmaciones={confirmaciones}
+            nombreEvento={cliente.nombre}
+            etiquetas={etiquetasRsvp}
+          />
         </>
       )}
 

@@ -6,6 +6,7 @@ import {
   UserCheck, UserX, Clock, Users, Loader2, Plus, X, Copy, Check, MessageCircle,
 } from "lucide-react";
 import { fechaLarga } from "@/lib/fechas";
+import { normalizarNombre } from "@/lib/nombres";
 import type { Cruce, InvitadoDeLista } from "@/lib/lista";
 import Hogares, { type HogarDeLista } from "./Hogares";
 import Recepcion, { type EntradaDeLista } from "./Recepcion";
@@ -36,6 +37,8 @@ export default function PanelInvitados({
   hogares,
   entradas,
   confirmadosPorHogar,
+  respuestasPorInvitado = {},
+  etiquetasRsvp = {},
 }: {
   token: string;
   titulo: string;
@@ -47,6 +50,10 @@ export default function PanelInvitados({
   hogares: HogarDeLista[];
   entradas: EntradaDeLista[];
   confirmadosPorHogar: Record<string, number>;
+  /** Respuestas a las preguntas extra, por nombre normalizado. */
+  respuestasPorInvitado?: Record<string, Record<string, string>>;
+  /** Texto de cada pregunta extra, por id. */
+  etiquetasRsvp?: Record<string, string>;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -176,7 +183,13 @@ export default function PanelInvitados({
 
         {/* ---------- La lista del grupo elegido ---------- */}
         <div className={`${tarjeta} p-5 mb-6`}>
-          <Lista grupo={grupo} cruce={cruce} sinLista={cruce.sinLista} />
+          <Lista
+            grupo={grupo}
+            cruce={cruce}
+            sinLista={cruce.sinLista}
+            respuestasPorInvitado={respuestasPorInvitado}
+            etiquetasRsvp={etiquetasRsvp}
+          />
         </div>
 
         {/* ---------- Los que no estaban en la lista ---------- */}
@@ -303,7 +316,19 @@ export default function PanelInvitados({
 
 /* ---------- La lista de un grupo ---------- */
 
-function Lista({ grupo, cruce, sinLista }: { grupo: Grupo; cruce: Cruce; sinLista: boolean }) {
+function Lista({
+  grupo,
+  cruce,
+  sinLista,
+  respuestasPorInvitado,
+  etiquetasRsvp,
+}: {
+  grupo: Grupo;
+  cruce: Cruce;
+  sinLista: boolean;
+  respuestasPorInvitado: Record<string, Record<string, string>>;
+  etiquetasRsvp: Record<string, string>;
+}) {
   if (grupo === "sinResponder" && sinLista) {
     return (
       <p className="text-white/40 text-sm text-center py-6">
@@ -357,6 +382,15 @@ function Lista({ grupo, cruce, sinLista }: { grupo: Grupo; cruce: Cruce; sinList
             <f.Icono className={`w-4 h-4 shrink-0 mt-0.5 ${f.color}`} />
             <div className="min-w-0">
               <p className="text-sm text-white/90">{f.nombre}</p>
+              {/* Lo que contestó a las preguntas extra (menú, alergias…) */}
+              {grupo === "vienen" &&
+                respuestasPorInvitado[normalizarNombre(f.nombre)] && (
+                  <p className="text-xs text-[#D4AF37]/80 mt-1">
+                    {Object.entries(respuestasPorInvitado[normalizarNombre(f.nombre)])
+                      .map(([id, valor]) => `${etiquetasRsvp[id] ?? id}: ${valor}`)
+                      .join(" · ")}
+                  </p>
+                )}
               {f.nota && (
                 <p className="text-xs text-white/40 mt-1 whitespace-pre-line">{f.nota}</p>
               )}

@@ -231,6 +231,10 @@ create table public.confirmaciones (
   -- 0 cuando la respuesta es "no podré ir", para poder sumar la columna.
   cantidad      integer not null default 1 check (cantidad >= 0 and cantidad <= 20),
   nota          text,
+  -- Respuestas a las preguntas extra del RSVP (menú, alergias…), con la
+  -- forma { "<id>": "<respuesta>" }. Las preguntas las configura cada
+  -- invitación en el editor; el servidor valida antes de guardar.
+  respuestas    jsonb not null default '{}'::jsonb,
   creado_en     timestamptz not null default now(),
   actualizado_en timestamptz not null default now()
 );

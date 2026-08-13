@@ -55,6 +55,7 @@ export default async function PaginaLista({
     { data: hogaresData },
     { data: entradasData },
     { data: confirmacionesConHogar },
+    { data: confirmacionesConRespuestas },
   ] = await Promise.all([
     supabase
       .from("invitados")
@@ -82,6 +83,11 @@ export default async function PaginaLista({
       .select("hogar_id, asiste, cantidad")
       .eq("invitacion_id", invitacion.id)
       .not("hogar_id", "is", null),
+    supabase
+      .from("confirmaciones")
+      .select("nombre_normalizado, respuestas")
+      .eq("invitacion_id", invitacion.id)
+      .neq("respuestas", "{}"),
   ]);
 
   // Cuántas personas confirmó cada hogar (para el cupo y la puerta).
@@ -103,6 +109,22 @@ export default async function PaginaLista({
 
   const datos = (invitacion.datos ?? {}) as DatosInvitacion;
 
+  // Respuestas a las preguntas extra del RSVP, por invitado (clave: el
+  // nombre normalizado, la misma que usa el cruce), con el texto de cada
+  // pregunta para enseñarlas legibles.
+  const respuestasPorInvitado: Record<string, Record<string, string>> = {};
+  for (const c of (confirmacionesConRespuestas ?? []) as {
+    nombre_normalizado: string;
+    respuestas: Record<string, string>;
+  }[]) {
+    if (c.respuestas && Object.keys(c.respuestas).length > 0) {
+      respuestasPorInvitado[c.nombre_normalizado] = c.respuestas;
+    }
+  }
+  const etiquetasRsvp = Object.fromEntries(
+    (datos.rsvp?.preguntas ?? []).map((p) => [p.id, p.texto])
+  );
+
   return (
     <PanelInvitados
       token={token}
@@ -115,6 +137,8 @@ export default async function PaginaLista({
       hogares={(hogaresData ?? []) as HogarDeLista[]}
       entradas={(entradasData ?? []) as EntradaDeLista[]}
       confirmadosPorHogar={confirmadosPorHogar}
+      respuestasPorInvitado={respuestasPorInvitado}
+      etiquetasRsvp={etiquetasRsvp}
     />
   );
 }

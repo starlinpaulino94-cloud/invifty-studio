@@ -45,6 +45,26 @@ alimenta dos cosas:
 Los hogares son opcionales, como la lista de nombres: sin ellos todo
 sigue funcionando igual que antes.
 
+## Las preguntas extra del RSVP
+
+"No pedir información innecesaria" hecho sistema: el RSVP nace solo con
+nombre / asistencia / acompañantes, y el equipo activa en el editor
+ÚNICAMENTE las preguntas que ese evento necesita (tarjeta RSVP →
+"Preguntas extra"). Menú, alergias y transporte son atajos de un mismo
+mecanismo genérico; una pregunta propia es una línea más. Máximo 5.
+
+- La configuración vive en `datos.rsvp.preguntas` (viaja con las
+  versiones y la IA la tiene vetada como todo el bloque rsvp) y se sanea
+  al guardar (`lib/rsvp.ts`).
+- La respuesta del invitado se valida EN EL SERVIDOR contra la
+  configuración real: id desconocido u opción inventada se descartan,
+  texto recortado a 200. Solo se pregunta a quien asiste, y todo es
+  opcional — una pregunta sin responder no bloquea la confirmación.
+- Las respuestas se guardan en `confirmaciones.respuestas` (jsonb,
+  migración `20260806030000`), llegan al mensaje de WhatsApp del
+  anfitrión, a su panel `/lista/<token>` (bajo cada nombre en "vienen")
+  y a la ficha del pedido con el resumen copiable del equipo.
+
 ## La recepción (check-in)
 
 Pestaña **Recepción** del panel del anfitrión, pensada para el día del

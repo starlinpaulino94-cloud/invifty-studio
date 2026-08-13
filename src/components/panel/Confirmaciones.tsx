@@ -11,13 +11,22 @@ import { UserCheck, UserX, Users } from "lucide-react";
 export default function Confirmaciones({
   confirmaciones,
   nombreEvento,
+  etiquetas = {},
 }: {
   confirmaciones: Confirmacion[];
   nombreEvento: string;
+  /** Texto de cada pregunta extra del RSVP, por id (para las respuestas). */
+  etiquetas?: Record<string, string>;
 }) {
   const asisten = confirmaciones.filter((c) => c.asiste);
   const noAsisten = confirmaciones.filter((c) => !c.asiste);
   const totalPersonas = asisten.reduce((s, c) => s + c.cantidad, 0);
+
+  /** "¿Qué menú prefieren? Pollo · ¿Transporte? Sí" — o vacío. */
+  const textoRespuestas = (c: Confirmacion) =>
+    Object.entries(c.respuestas ?? {})
+      .map(([id, valor]) => `${etiquetas[id] ?? id}: ${valor}`)
+      .join(" · ");
 
   /** Resumen en texto plano, listo para pegar en WhatsApp al anfitrión. */
   const resumenTexto = [
@@ -29,6 +38,7 @@ export default function Confirmaciones({
       (c) =>
         `• ${c.nombre}` +
         (c.cantidad > 1 ? ` (${c.cantidad} personas)` : "") +
+        (textoRespuestas(c) ? ` — ${textoRespuestas(c)}` : "") +
         (c.nota ? ` — ${c.nota}` : "")
     ),
     ...(noAsisten.length
@@ -100,6 +110,9 @@ export default function Confirmaciones({
                       </span>
                     )}
                   </p>
+                  {textoRespuestas(c) && (
+                    <p className="text-xs text-gray-500 mt-1 ml-[22px]">{textoRespuestas(c)}</p>
+                  )}
                   {c.nota && (
                     <p className="text-xs text-gray-500 mt-1 ml-[22px] whitespace-pre-line">
                       {c.nota}

@@ -6,6 +6,7 @@ import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/ti
 import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import ConceptosIA from "./ConceptosIA";
+import PreguntasRsvp from "./PreguntasRsvp";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import { escribirEnRuta } from "@/lib/rutas";
@@ -844,6 +845,11 @@ export default function EditorInvitacion({
             </select>
           </div>
         </div>
+
+        <PreguntasRsvp
+          preguntas={datos.rsvp.preguntas ?? []}
+          onChange={(preguntas) => set("rsvp", { ...datos.rsvp, preguntas })}
+        />
       </Tarjeta>
 
       <Tarjeta titulo="Cierre" id="cierre" resaltada={resaltada === "cierre"}>
