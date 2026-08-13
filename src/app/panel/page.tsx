@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { ESTADOS, PLANES, TIPOS_EVENTO, formatoFecha, formatoDOP } from "@/lib/planes";
-import { EstadoPedido, PedidoConCliente, Plan, TipoEvento } from "@/lib/tipos";
+import { desglosePagos } from "@/lib/pagos";
+import { EstadoPedido, Pago, PedidoConCliente, Plan, TipoEvento } from "@/lib/tipos";
 import { AlertTriangle, ClipboardCheck, PlusCircle, CalendarDays } from "lucide-react";
+import {
+  TiraDeTareas, AlertaRevisiones, type TareaDeHoy,
+} from "@/components/panel/HoyTeToca";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +19,49 @@ const TOPE_TABLERO = 400;
 
 export default async function Tablero() {
   const supabase = await crearClienteServidor();
-  const { data, count } = await supabase
-    .from("pedidos")
-    .select("*, clientes(*)", { count: "exact" })
-    .order("creado_en", { ascending: false })
-    .limit(TOPE_TABLERO);
+
+  /**
+   * LO QUE TE TOCA HOY se pregunta en paralelo con el kanban. Cada
+   * consulta extra es un conteo o una lista corta, y cada una falla SOLA
+   * si su migración no corrió (data null → tarjeta oculta): el tablero
+   * clásico nunca se cae por una función nueva.
+   */
+  const [
+    { data, count },
+    { count: leadsNuevos },
+    { data: cambiosData },
+    { data: aprobadasData },
+    { count: avisosFallidos },
+    { data: pagosData },
+  ] = await Promise.all([
+    supabase
+      .from("pedidos")
+      .select("*, clientes(*)", { count: "exact" })
+      .order("creado_en", { ascending: false })
+      .limit(TOPE_TABLERO),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("estado", "nuevo"),
+    // Clientes que pidieron cambios: la pelota está en nuestro tejado.
+    supabase
+      .from("revisiones")
+      .select("invitacion_id, invitaciones(pedidos(clientes(nombre)))")
+      .eq("estado", "cambios_solicitados")
+      .is("revocada_en", null)
+      .order("actualizado_en", { ascending: false })
+      .limit(20),
+    // Aprobadas (bloqueadas) que siguen en borrador: falta el último paso.
+    supabase
+      .from("invitaciones")
+      .select("id, pedidos(clientes(nombre))")
+      .not("bloqueada_en", "is", null)
+      .eq("estado", "borrador")
+      .limit(20),
+    supabase.from("avisos").select("id", { count: "exact", head: true }).eq("estado", "fallido"),
+    supabase
+      .from("pagos")
+      .select("pedido_id, monto, tipo, anulado_en")
+      .order("fecha", { ascending: false })
+      .limit(5000),
+  ]);
 
   const pedidos = (data ?? []) as PedidoConCliente[];
   const totalPedidos = count ?? pedidos.length;
@@ -41,6 +83,85 @@ export default async function Tablero() {
 
   const porEstado = (estado: EstadoPedido) => pedidos.filter((p) => p.estado === estado);
 
+  /* ---------- Los números de "hoy te toca" ---------- */
+
+  // Cobros pendientes: pedidos vivos (ni cancelados ni vencidos) que aún
+  // deben dinero, con el saldo total. El mismo desglose de la ficha.
+  const pagosPorPedido = new Map<string, Pick<Pago, "monto" | "tipo" | "anulado_en">[]>();
+  for (const pago of (pagosData ?? []) as Pago[]) {
+    const lista = pagosPorPedido.get(pago.pedido_id) ?? [];
+    lista.push(pago);
+    pagosPorPedido.set(pago.pedido_id, lista);
+  }
+  let porCobrar = 0;
+  let pedidosConDeuda = 0;
+  for (const pedido of pedidos) {
+    if (["cancelado", "vencida"].includes(pedido.estado)) continue;
+    const saldo = Number(pedido.precio) - desglosePagos(pagosPorPedido.get(pedido.id) ?? []).neto;
+    if (saldo > 0.01) {
+      porCobrar += saldo;
+      pedidosConDeuda++;
+    }
+  }
+
+  // Vencen en 30 días: el momento de vender la renovación.
+  const en30dias = new Date(hoy);
+  en30dias.setDate(en30dias.getDate() + 30);
+  const porVencer = pedidos.filter((p) => {
+    if (!p.fecha_vencimiento || !["entregada", "activa"].includes(p.estado)) return false;
+    const fecha = new Date(p.fecha_vencimiento + "T12:00:00");
+    return fecha >= hoy && fecha <= en30dias;
+  }).length;
+
+  // Nombre del cliente detrás de cada revisión/invitación pendiente.
+  type ConCliente = { pedidos: { clientes: { nombre: string } | null } | null };
+  const nombreDe = (fila: ConCliente | null | undefined) =>
+    fila?.pedidos?.clientes?.nombre ?? "Cliente";
+
+  const cambiosSolicitados = ((cambiosData ?? []) as unknown as ({
+    invitacion_id: string;
+    invitaciones: ConCliente | null;
+  })[]).map((r) => ({ id: r.invitacion_id, nombre: nombreDe(r.invitaciones) }));
+
+  const aprobadasSinPublicar = ((aprobadasData ?? []) as unknown as ({
+    id: string;
+  } & ConCliente)[]).map((i) => ({ id: i.id, nombre: nombreDe(i) }));
+
+  // La tira de "hoy te toca": solo tarjetas con destino real, y solo si
+  // hay algo. Un cero no es una tarea. El dibujo vive en HoyTeToca.tsx.
+  const tareas: TareaDeHoy[] = [
+    {
+      cuenta: leadsNuevos ?? 0,
+      etiqueta: "leads nuevos sin contactar",
+      href: "/panel/leads",
+      icono: "leads",
+      tono: "text-blue-700 bg-blue-50 border-blue-200",
+    },
+    {
+      cuenta: pedidosConDeuda,
+      etiqueta: `por cobrar (${formatoDOP(porCobrar)})`,
+      href: "/panel/metricas",
+      icono: "cobrar",
+      tono: "text-gray-700 bg-gray-50 border-gray-200",
+    },
+    {
+      cuenta: porVencer,
+      etiqueta: "vencen en 30 días",
+      href: "/panel/vencimientos",
+      icono: "vencer",
+      tono: "text-orange-700 bg-orange-50 border-orange-200",
+    },
+    {
+      // Sin página propia todavía: la tarjeta informa (el detalle está en
+      // la tabla `avisos` y el log), no manda a un callejón.
+      cuenta: avisosFallidos ?? 0,
+      etiqueta: "avisos por email fallidos — revisa Resend",
+      href: null,
+      icono: "avisos",
+      tono: "text-red-700 bg-red-50 border-red-200",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -60,9 +181,17 @@ export default async function Tablero() {
         </Link>
       </div>
 
+      {/* Hoy te toca: solo aparece lo que necesita acción */}
+      <TiraDeTareas tareas={tareas} />
+
       {/* Alertas */}
-      {(eventosProximos.length > 0 || pendientesDiseno.length > 0) && (
+      {(eventosProximos.length > 0 ||
+        pendientesDiseno.length > 0 ||
+        cambiosSolicitados.length > 0 ||
+        aprobadasSinPublicar.length > 0) && (
         <div className="grid sm:grid-cols-2 gap-3">
+          <AlertaRevisiones variante="cambios" invitaciones={cambiosSolicitados} />
+          <AlertaRevisiones variante="publicar" invitaciones={aprobadasSinPublicar} />
           {eventosProximos.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
               <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm mb-2">
