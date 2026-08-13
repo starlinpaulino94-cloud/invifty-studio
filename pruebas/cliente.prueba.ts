@@ -8,6 +8,8 @@ import {
   tokenOpaco,
   seccionValida,
   REVISION_DIAS_VIGENCIA,
+  comentarioValido,
+  REFERENCIA_TIPOS,
   type RevisionVigencia,
 } from "@/lib/revision";
 import {
@@ -253,4 +255,21 @@ test("los textos del invitado se recortan y lo vacío no se guarda", () => {
 
 test("los atajos predefinidos pasan su propio saneo", () => {
   assert.equal(sanearPreguntas(PREGUNTAS_PREDEFINIDAS).length, PREGUNTAS_PREDEFINIDAS.length);
+});
+
+/* ---------- La imagen de referencia del comentario ---------- */
+
+test("un comentario vale con texto O con imagen; vacío del todo, no", () => {
+  assert.ok(comentarioValido("La portada más clara", false));
+  assert.ok(comentarioValido("", true), "una imagen sola es un comentario legítimo");
+  assert.ok(comentarioValido("  ", true));
+  assert.ok(!comentarioValido("", false));
+  assert.ok(!comentarioValido("x", false), "una letra no dice nada");
+});
+
+test("las referencias son imágenes, no cualquier archivo", () => {
+  assert.equal(REFERENCIA_TIPOS["image/jpeg"], "jpg");
+  assert.equal(REFERENCIA_TIPOS["image/webp"], "webp");
+  assert.equal(REFERENCIA_TIPOS["application/pdf"], undefined, "un PDF no es una referencia visual");
+  assert.equal(REFERENCIA_TIPOS["text/html"], undefined);
 });

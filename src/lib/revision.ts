@@ -108,3 +108,28 @@ export const NOMBRE_SECCION: Record<SeccionComentable, string> = {
   rsvp: "Confirmación",
   textos: "Textos",
 };
+
+/* ============================================================
+   LA IMAGEN DE REFERENCIA DEL COMENTARIO
+   ============================================================ */
+
+/** "Quiero algo así" necesita un así: imágenes, no cualquier archivo. */
+export const REFERENCIA_TIPOS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+export const REFERENCIA_MAX_MB = 8;
+
+/** Tope de imágenes por revisión: protege el Storage sin limitar a nadie real. */
+export const MAX_REFERENCIAS_POR_REVISION = 10;
+
+/**
+ * Un comentario vale si trae texto O imagen: "mira esta referencia" sin
+ * palabras es un comentario legítimo, y un texto sin imagen también.
+ * Vacío del todo, no.
+ */
+export function comentarioValido(texto: string, tieneImagen: boolean): boolean {
+  return texto.trim().length >= 2 || tieneImagen;
+}

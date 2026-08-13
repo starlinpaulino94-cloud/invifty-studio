@@ -549,6 +549,9 @@ create table public.comentarios (
   seccion       text not null default 'general',
   texto         text not null,
   autor         text not null default 'cliente',
+  -- Imagen de referencia adjunta ("quiero algo así"): ruta en el bucket
+  -- privado bajo referencias/; se enseña con URL firmada.
+  imagen_ruta   text,
   estado        text not null default 'abierto'
                 check (estado in ('abierto','en_proceso','resuelto','descartado')),
   resuelto_por  text,

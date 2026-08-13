@@ -8,7 +8,7 @@ import RevisionCliente, {
 import { PLANES, TIPOS_EVENTO } from "@/lib/planes";
 import type { Cliente, DatosInvitacion, Invitacion, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
-import { listarArchivos, urlsDeFoto } from "@/lib/fotos";
+import { BUCKET, HORAS_FIRMA, listarArchivos, urlsDeFoto } from "@/lib/fotos";
 import { urlBase as resolverUrlBase } from "@/lib/url";
 import { ArrowLeft, Link2 } from "lucide-react";
 
@@ -52,32 +52,58 @@ export default async function PaginaEditorInvitacion({
   // El ciclo de revisión con el cliente: versiones enviadas, su estado y
   // los comentarios de cada una. Si las tablas aún no están migradas, la
   // tarjeta simplemente aparece vacía (data = null).
+  // `comentarios(*)` a propósito: trae imagen_ruta cuando la migración de
+  // referencias corrió, y funciona igual si todavía no.
   const { data: revisionesData } = await supabase
     .from("revisiones")
     .select(
       "id, estado, expira_en, revocada_en, aprobada_en, aprobada_por, creado_en, token, " +
-        "versiones(numero), comentarios(id, seccion, texto, estado, creado_en)"
+        "versiones(numero), comentarios(*)"
     )
     .eq("invitacion_id", invitacion.id)
     .order("creado_en", { ascending: false });
 
   type RevisionCruda = Omit<RevisionPanel, "numeroVersion" | "comentarios"> & {
     versiones: { numero: number } | null;
-    comentarios: ComentarioPanel[] | null;
+    comentarios: (ComentarioPanel & { imagen_ruta?: string | null })[] | null;
   };
 
-  const revisiones: RevisionPanel[] = ((revisionesData ?? []) as unknown as RevisionCruda[]).map((r) => ({
-    id: r.id,
-    estado: r.estado,
-    expira_en: r.expira_en,
-    revocada_en: r.revocada_en,
-    aprobada_en: r.aprobada_en,
-    aprobada_por: r.aprobada_por,
-    creado_en: r.creado_en,
-    token: r.token,
-    numeroVersion: r.versiones?.numero ?? 0,
-    comentarios: (r.comentarios ?? []).sort((a, b) => a.creado_en.localeCompare(b.creado_en)),
-  }));
+  // La imagen de referencia del cliente se enseña con URL firmada del
+  // bucket privado, como las fotos y los comprobantes.
+  const revisiones: RevisionPanel[] = await Promise.all(
+    ((revisionesData ?? []) as unknown as RevisionCruda[]).map(async (r) => ({
+      id: r.id,
+      estado: r.estado,
+      expira_en: r.expira_en,
+      revocada_en: r.revocada_en,
+      aprobada_en: r.aprobada_en,
+      aprobada_por: r.aprobada_por,
+      creado_en: r.creado_en,
+      token: r.token,
+      numeroVersion: r.versiones?.numero ?? 0,
+      comentarios: await Promise.all(
+        (r.comentarios ?? [])
+          .sort((a, b) => a.creado_en.localeCompare(b.creado_en))
+          .map(async (c) => {
+            let imagenUrl: string | undefined;
+            if (c.imagen_ruta) {
+              const { data: firmada } = await admin.storage
+                .from(BUCKET)
+                .createSignedUrl(c.imagen_ruta, HORAS_FIRMA * 3600);
+              imagenUrl = firmada?.signedUrl;
+            }
+            return {
+              id: c.id,
+              seccion: c.seccion,
+              texto: c.texto,
+              estado: c.estado,
+              creado_en: c.creado_en,
+              imagenUrl,
+            };
+          })
+      ),
+    }))
+  );
 
   return (
     // Más ancho que el resto del panel: aquí conviven el formulario y la
