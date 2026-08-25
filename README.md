@@ -703,6 +703,7 @@ Cada pieza grande del sistema tiene su documento en [`docs/`](./docs):
 | [`docs/integracion-invifty-web.md`](./docs/integracion-invifty-web.md) | Los endpoints públicos que consume la web (catálogo, demos, leads) |
 | [`docs/pipeline-ia.md`](./docs/pipeline-ia.md) | El pipeline creativo con IA: aduana, proveedores y costos |
 | [`docs/cliente-e-invitados.md`](./docs/cliente-e-invitados.md) | Revisión y aprobación del cliente, hogares, RSVP con cupo y recepción |
+| [`docs/portal-clientes.md`](./docs/portal-clientes.md) | El portal de clientes: cómo se opera, qué hacer ante cada aviso y sus reglas de seguridad |
 | [`docs/observabilidad.md`](./docs/observabilidad.md) | Qué se registra, dónde mirar cuando algo falla |
 | [`docs/privacidad-y-retencion.md`](./docs/privacidad-y-retencion.md) | Cuánto vive cada dato y los derechos del cliente (propuesta) |
 | [`docs/backups-y-recuperacion.md`](./docs/backups-y-recuperacion.md) | La estrategia de copias y cómo restaurar |

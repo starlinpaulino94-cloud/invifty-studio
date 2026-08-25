@@ -14,6 +14,7 @@ import {
 } from "@/lib/portal";
 import { contratoDePedido } from "@/lib/capacidades";
 import { construirAviso } from "@/lib/avisos";
+import { PERMISOS_COLABORADOR } from "@/lib/cuentas";
 
 /**
  * LO QUE EL PORTAL LE ENSEÑA AL CLIENTE
@@ -123,6 +124,31 @@ test("los avisos nuevos del portal tienen asunto propio y escapan el nombre", ()
   assert.match(construirAviso("portal_password", ctx).asunto, /recuperación/);
   for (const tipo of ["portal_activado", "portal_textos", "portal_password"] as const) {
     assert.ok(!construirAviso(tipo, ctx).cuerpo_html.includes("<script>"), `${tipo} coló HTML`);
+  }
+});
+
+/* ---------- El manual de operación no se queda atrás (Fase 8) ---------- */
+
+test("el manual del portal documenta cada permiso y cada aviso", () => {
+  // docs/portal-clientes.md es lo que el equipo consulta. Si el código
+  // gana un permiso o un aviso y el manual no lo menciona, el equipo
+  // opera a ciegas — esta prueba los mantiene pegados.
+  const raiz = path.resolve(import.meta.dirname, "..");
+  const manual = readFileSync(path.join(raiz, "docs/portal-clientes.md"), "utf8");
+
+  for (const { id } of PERMISOS_COLABORADOR) {
+    assert.ok(manual.includes(`\`${id}\``), `el manual no menciona el permiso ${id}`);
+  }
+  for (const seccion of [
+    "Portal activado",
+    "Colaborador activado",
+    "Textos editados",
+    "Contraseña restablecida",
+    "probar-aislamiento.sql",
+    "Nunca se envía una contraseña",
+    "Suspender no borra nada",
+  ]) {
+    assert.ok(manual.includes(seccion), `el manual perdió la sección "${seccion}"`);
   }
 });
 
