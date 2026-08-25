@@ -362,6 +362,37 @@ test("el portal se guarda en el servidor: proxy y layout", () => {
 });
 
 /* =====================================================================
+ * 1c. Borrar y corregir desde el panel
+ * ===================================================================== */
+
+test("borrar exige el permiso, la confirmación escrita y el rastro ANTES", () => {
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones.ts"), "utf8");
+  for (const accion of ["eliminarPedido", "eliminarCliente"]) {
+    const cuerpo = new RegExp(`export async function ${accion}[\\s\\S]*?\\n\\}`).exec(contenido);
+    assert.ok(cuerpo, `no encuentro ${accion}`);
+    assert.match(cuerpo[0], /exigirPermiso\(supabase, "eliminar_datos"\)/, `${accion} sin permiso`);
+    assert.match(cuerpo[0], /confirmacionCorrecta\(/, `${accion} sin confirmación escrita`);
+    // La auditoría se escribe ANTES del delete: su fila no tiene FK y
+    // sobrevive contando qué había.
+    const auditoria = cuerpo[0].indexOf("registrarAccion");
+    const borrado = cuerpo[0].indexOf(".delete()");
+    assert.ok(auditoria > 0 && borrado > 0 && auditoria < borrado, `${accion}: el rastro va antes del borrado`);
+  }
+  // Un cliente con pedidos no se borra: primero se mira lo que se lleva.
+  const cliente = /export async function eliminarCliente[\s\S]*?\n\}/.exec(contenido)!;
+  assert.match(cliente[0], /count/, "eliminarCliente debe contar los pedidos antes");
+});
+
+test("cambiar el plan de un pedido vuelve a congelar el contrato y lo firma", () => {
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones.ts"), "utf8");
+  const cuerpo = /export async function actualizarPedido[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(cuerpo, "no encuentro actualizarPedido");
+  assert.match(cuerpo[0], /exigirPermiso\(supabase, "editar_fichas"\)/, "sin permiso editar_fichas");
+  assert.match(cuerpo[0], /cambioDePlan.*snapshotDeContrato|snapshotDeContrato[\s\S]*?cambioDePlan/, "no re-congela la foto al cambiar plan");
+  assert.match(cuerpo[0], /plan_anterior/, "el cambio de plan debe firmar el plan anterior");
+});
+
+/* =====================================================================
  * 2. Las cabeceras de seguridad
  * =====================================================================
  * Y, sobre todo, la que NO se puede poner: ver el comentario largo de

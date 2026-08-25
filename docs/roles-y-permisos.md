@@ -29,8 +29,16 @@ debe.
 | Convertir leads | ✅ | ✅ | ✅ | ✅ | — | — |
 | Marcar demos | ✅ | ✅ | — | ✅ | — | — |
 | Mantenimiento | ✅ | ✅ | — | — | — | — |
+| Gestionar cuentas del portal | ✅ | ✅ | — | — | — | — |
+| Editar fichas (cliente y pedido) | ✅ | ✅ | ✅ | ✅ | — | — |
+| **Eliminar datos (pedidos y clientes)** | ✅ | — | — | — | — | — |
 
 Decisiones deliberadas:
+
+- **Eliminar es SOLO del propietario del negocio.** Borrar un pedido
+  arrastra pagos, invitación, invitados y fotos, y no tiene vuelta
+  atrás; corregir (editar) es trabajo diario, destruir no. Además exige
+  escribir la confirmación y deja rastro en auditoría ANTES de borrar.
 
 - **Anular pagos es de propietario/admin.** Registrar dinero es trabajo
   diario; hacerlo desaparecer del balance es otra categoría.
