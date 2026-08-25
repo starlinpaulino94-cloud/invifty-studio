@@ -3,6 +3,7 @@ import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { PLANES, TIPOS_EVENTO, formatoFecha, formatoDOP } from "@/lib/planes";
 import { Cliente, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import { ChipEstado } from "@/components/panel/Interactivos";
+import { EditarCliente, EliminarCliente } from "@/components/panel/EditarFicha";
 import { Users, ChevronDown, Phone } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -103,6 +104,11 @@ export default async function PaginaClientes({
                     </div>
                   </Link>
                 ))}
+
+                <div className="flex flex-wrap items-center gap-2 py-3">
+                  <EditarCliente cliente={cliente} />
+                  <EliminarCliente clienteId={cliente.id} pedidos={susPedidos.length} />
+                </div>
               </div>
             </details>
           );

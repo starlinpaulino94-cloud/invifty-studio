@@ -12,6 +12,8 @@ import { formatearValor, textoDeBloque } from "@/lib/respuestas";
 import { Cliente, Confirmacion, EstadoPedido, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import Confirmaciones from "@/components/panel/Confirmaciones";
 import AccesoPortal from "@/components/panel/AccesoPortal";
+import { EditarCliente, EditarPedido, EliminarPedido } from "@/components/panel/EditarFicha";
+import { queSeLleva } from "@/lib/eliminar";
 import Visitas from "@/components/panel/Visitas";
 import { resumirVisitas } from "@/lib/visitas";
 import { urlBase as resolverUrlBase } from "@/lib/url";
@@ -154,6 +156,16 @@ export default async function FichaPedido({
   // necesita el equipo de diseño); la vista previa usa la miniatura, para
   // no cargar 200 MB de fotos al abrir la ficha.
   const archivos = await listarArchivos(admin, pedido.id, 200);
+
+  // Cuántos invitados tiene la lista: solo para que la zona de peligro
+  // diga la verdad completa de lo que se llevaría un borrado.
+  const { count: numeroInvitadosData } = invitacion
+    ? await supabase
+        .from("invitados")
+        .select("id", { count: "exact", head: true })
+        .eq("invitacion_id", invitacion.id)
+    : { count: 0 };
+  const numeroInvitados = numeroInvitadosData ?? 0;
   const fotos = await Promise.all(
     archivos.map(async (a) => {
       const [{ data: firmada }, urls] = await Promise.all([
@@ -244,6 +256,11 @@ export default async function FichaPedido({
             {pedido.extras.map((e) => EXTRAS.find((x) => x.id === e)?.nombre ?? e).join(" · ")}
           </p>
         )}
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          <EditarCliente cliente={cliente} />
+          <EditarPedido pedido={pedido} />
+        </div>
 
         <SelectorEstado pedidoId={pedido.id} estado={pedido.estado} />
 
@@ -646,6 +663,18 @@ export default async function FichaPedido({
           </button>
         </form>
       </div>
+
+      {/* Zona de peligro: borrar es del propietario y se firma escribiendo */}
+      <EliminarPedido
+        pedidoId={pedido.id}
+        detalles={queSeLleva({
+          pagos: pagos.length,
+          fotos: archivos.length,
+          invitados: numeroInvitados,
+          confirmaciones: confirmaciones.length,
+          tieneInvitacion: invitacion?.estado === "publicada",
+        })}
+      />
     </div>
   );
 }

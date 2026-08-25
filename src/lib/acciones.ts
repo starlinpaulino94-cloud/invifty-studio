@@ -8,6 +8,8 @@ import { calcularVencimiento } from "./vencimientos";
 import { transicionValida } from "./estados";
 import { fechaEfectivaValida, motivoRechazoTransaccion } from "./pagos";
 import { snapshotDeContrato } from "./capacidades";
+import { CONFIRMACION_ELIMINAR, confirmacionCorrecta } from "./eliminar";
+import { PLANES, TIPOS_EVENTO } from "./planes";
 import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { crearClienteAdmin } from "./supabase/admin";
 import { BUCKET } from "./fotos";
@@ -319,6 +321,187 @@ export async function guardarFicha(pedidoId: string, formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath(`/panel/pedidos/${pedidoId}`);
+}
+
+/**
+ * Corrige la ficha del cliente: nombre, teléfono, correo y cómo nos
+ * conoció. El teléfono se normaliza igual que al crear — es la llave con
+ * la que se reconoce a un cliente que vuelve.
+ */
+export async function actualizarCliente(clienteId: string, formData: FormData) {
+  const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "editar_fichas");
+
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const telefono = normalizarTelefono(String(formData.get("telefono") ?? ""));
+  const email = String(formData.get("email") ?? "").trim() || null;
+  const como = String(formData.get("como_nos_conocio") ?? "").trim() || null;
+  if (!nombre || !telefono) throw new Error("Nombre y teléfono son obligatorios.");
+
+  const { error } = await supabase
+    .from("clientes")
+    .update({ nombre, telefono, email, como_nos_conocio: como })
+    .eq("id", clienteId);
+  if (error) throw new Error(`No se pudo guardar: ${error.message}`);
+
+  await registrarAccion(supabase, quien, "cliente:editar", "cliente", clienteId, { nombre });
+  revalidatePath("/panel");
+}
+
+/**
+ * Corrige la ficha del pedido: tipo de evento, plan, fecha, precio y
+ * extras. Si cambia el PLAN, la foto del contrato se congela otra vez:
+ * cambiar de plan ES un contrato nuevo, y eso queda firmado con el plan
+ * anterior y el nuevo en la auditoría.
+ */
+export async function actualizarPedido(pedidoId: string, formData: FormData) {
+  const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "editar_fichas");
+
+  const tipoEvento = String(formData.get("tipo_evento") ?? "");
+  const plan = String(formData.get("plan") ?? "");
+  const fechaEvento = String(formData.get("fecha_evento") ?? "") || null;
+  const precio = Number(formData.get("precio") ?? 0);
+  const extras = formData.getAll("extras").map(String);
+
+  if (!(tipoEvento in TIPOS_EVENTO)) throw new Error("Tipo de evento no válido.");
+  if (!(plan in PLANES)) throw new Error("Plan no válido.");
+  if (!Number.isFinite(precio) || precio < 0) throw new Error("El precio no es válido.");
+
+  const { data: anterior } = await supabase
+    .from("pedidos")
+    .select("plan")
+    .eq("id", pedidoId)
+    .single();
+  if (!anterior) throw new Error("Ese pedido no existe.");
+
+  const cambioDePlan = anterior.plan !== plan;
+  const fila: Record<string, unknown> = {
+    tipo_evento: tipoEvento, plan, fecha_evento: fechaEvento, precio, extras,
+  };
+  // El contrato cambió: la foto se toma de nuevo, del catálogo de HOY.
+  if (cambioDePlan) fila.capacidades_contratadas = snapshotDeContrato(plan as Plan, new Date());
+
+  let { error } = await supabase.from("pedidos").update(fila).eq("id", pedidoId);
+  if (error && cambioDePlan && /column|capacidades_contratadas|schema/i.test(error.message)) {
+    registrarError("pedidos", error, { nota: "sin columna de contrato; pedido editado sin foto" });
+    delete fila.capacidades_contratadas;
+    ({ error } = await supabase.from("pedidos").update(fila).eq("id", pedidoId));
+  }
+  if (error) throw new Error(`No se pudo guardar: ${error.message}`);
+
+  await registrarAccion(supabase, quien, "pedido:editar", "pedido", pedidoId, {
+    plan, precio, tipo_evento: tipoEvento,
+    ...(cambioDePlan ? { plan_anterior: anterior.plan, contrato_recongelado: true } : {}),
+  });
+  revalidatePath(`/panel/pedidos/${pedidoId}`);
+}
+
+/**
+ * Borra el pedido PARA SIEMPRE, con todo lo suyo: formularios, pagos,
+ * invitación, confirmaciones, invitados y las fotos del Storage. Solo
+ * con el permiso eliminar_datos (hoy: el propietario), escribiendo la
+ * confirmación. La auditoría se escribe ANTES — su fila no tiene FK al
+ * pedido, así que sobrevive y cuenta qué había.
+ */
+export async function eliminarPedido(pedidoId: string, confirmacion: string) {
+  const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "eliminar_datos");
+  if (!confirmacionCorrecta(confirmacion)) {
+    throw new Error(`Escribe ${CONFIRMACION_ELIMINAR} para confirmar.`);
+  }
+
+  const { data: pedido } = await supabase
+    .from("pedidos")
+    .select("id, plan, precio, estado, clientes(nombre), invitaciones(id, slug)")
+    .eq("id", pedidoId)
+    .maybeSingle();
+  if (!pedido) throw new Error("Ese pedido no existe.");
+  const invitacion = (pedido.invitaciones as { id: string; slug: string }[] | null)?.[0];
+
+  // El rastro, ANTES de que desaparezca contra qué escribirlo.
+  await registrarAccion(supabase, quien, "pedido:eliminar", "pedido", pedidoId, {
+    cliente: (pedido.clientes as unknown as { nombre: string } | null)?.nombre ?? null,
+    plan: pedido.plan, precio: Number(pedido.precio), estado: pedido.estado,
+    slug: invitacion?.slug ?? null,
+  });
+
+  // Las fotos del Storage no van en la cascada de la base: se barren a
+  // mano, mejor-esfuerzo — un archivo huérfano no justifica dejar vivo
+  // el pedido si el borrado de abajo sí funciona.
+  const admin = crearClienteAdmin();
+  try {
+    const rutas: string[] = [];
+    for (const carpeta of [
+      pedidoId, `${pedidoId}/derivados`, `comprobantes/${pedidoId}`,
+      ...(invitacion ? [`referencias/${invitacion.id}`] : []),
+    ]) {
+      const { data: archivos } = await admin.storage.from(BUCKET).list(carpeta, { limit: 1000 });
+      for (const archivo of archivos ?? []) {
+        if (archivo.id) rutas.push(`${carpeta}/${archivo.name}`);
+      }
+    }
+    if (rutas.length) await admin.storage.from(BUCKET).remove(rutas);
+  } catch (e) {
+    registrarError("fotos", e, { nota: "limpieza de storage al eliminar pedido", pedidoId });
+  }
+
+  const { error } = await supabase.from("pedidos").delete().eq("id", pedidoId);
+  if (error) throw new Error(`No se pudo eliminar: ${error.message}`);
+
+  revalidatePath("/panel");
+  redirect("/panel?eliminado=1");
+}
+
+/**
+ * Borra un cliente PARA SIEMPRE — solo cuando ya no tiene pedidos, para
+ * que nadie borre "un cliente" sin haber visto primero todo lo que se
+ * lleva. Si tenía cuenta del portal, su usuario de auth también se va.
+ */
+export async function eliminarCliente(clienteId: string, confirmacion: string) {
+  const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "eliminar_datos");
+  if (!confirmacionCorrecta(confirmacion)) {
+    throw new Error(`Escribe ${CONFIRMACION_ELIMINAR} para confirmar.`);
+  }
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("id, nombre")
+    .eq("id", clienteId)
+    .maybeSingle();
+  if (!cliente) throw new Error("Ese cliente no existe.");
+
+  const { count } = await supabase
+    .from("pedidos")
+    .select("id", { count: "exact", head: true })
+    .eq("cliente_id", clienteId);
+  if ((count ?? 0) > 0) {
+    throw new Error(
+      `Este cliente tiene ${count} pedido${count === 1 ? "" : "s"}: elimínalos primero desde su ficha.`
+    );
+  }
+
+  await registrarAccion(supabase, quien, "cliente:eliminar", "cliente", clienteId, {
+    nombre: cliente.nombre,
+  });
+
+  // Su usuario del portal, si activó cuenta: fuera también.
+  const admin = crearClienteAdmin();
+  const { data: cuenta } = await admin
+    .from("cuentas_cliente")
+    .select("usuario_id")
+    .eq("cliente_id", clienteId)
+    .maybeSingle();
+  if (cuenta?.usuario_id) {
+    const { error: errorUsuario } = await admin.auth.admin.deleteUser(cuenta.usuario_id);
+    if (errorUsuario) registrarError("cuentas", errorUsuario, { nota: "deleteUser al eliminar cliente" });
+  }
+
+  const { error } = await supabase.from("clientes").delete().eq("id", clienteId);
+  if (error) throw new Error(`No se pudo eliminar: ${error.message}`);
+
+  revalidatePath("/panel/clientes");
 }
 
 /** Cierra la sesión del panel. */

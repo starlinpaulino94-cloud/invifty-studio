@@ -36,21 +36,26 @@ export type Permiso =
   | "marcar_demos"
   | "mantenimiento"
   // Crear, reenviar, suspender y reactivar cuentas del PORTAL de clientes.
-  | "gestionar_cuentas";
+  | "gestionar_cuentas"
+  // Editar la ficha del cliente y del pedido (corregir datos capturados).
+  | "editar_fichas"
+  // Borrar pedidos y clientes PARA SIEMPRE. No está en TODO a propósito:
+  // borrar es irreversible y lo firma solo el propietario del negocio.
+  | "eliminar_datos";
 
 const TODO: Permiso[] = [
   "gestionar_equipo", "crear_pedidos", "cambiar_estado", "registrar_pagos",
   "anular_pagos", "editar_invitaciones", "publicar", "convertir_leads",
-  "marcar_demos", "mantenimiento", "gestionar_cuentas",
+  "marcar_demos", "mantenimiento", "gestionar_cuentas", "editar_fichas",
 ];
 
 export const PERMISOS: Record<RolEquipo, Permiso[]> = {
-  propietario: TODO,
+  propietario: [...TODO, "eliminar_datos"],
   admin: TODO,
-  ventas: ["crear_pedidos", "cambiar_estado", "registrar_pagos", "convertir_leads"],
+  ventas: ["crear_pedidos", "cambiar_estado", "registrar_pagos", "convertir_leads", "editar_fichas"],
   operaciones: [
     "crear_pedidos", "cambiar_estado", "registrar_pagos",
-    "editar_invitaciones", "publicar", "convertir_leads", "marcar_demos",
+    "editar_invitaciones", "publicar", "convertir_leads", "marcar_demos", "editar_fichas",
   ],
   disenador: ["editar_invitaciones"],
   lectura: [],
