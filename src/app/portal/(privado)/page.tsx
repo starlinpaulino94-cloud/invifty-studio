@@ -2,7 +2,7 @@ import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { PLANES, nombreEstado, formatoFecha, TIPOS_EVENTO } from "@/lib/planes";
 import type { Plan, TipoEvento, EstadoPedido } from "@/lib/tipos";
-import { FileText, ExternalLink, Users, Eye } from "lucide-react";
+import { FileText, ExternalLink, Users, Eye, ChevronRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +115,13 @@ export default async function PaginaPortal() {
                   </p>
                 )}
               </div>
+
+              <Link
+                href={`/portal/pedidos/${pedido.id}`}
+                className="inline-flex items-center gap-1.5 text-[#D4AF37] hover:text-[#F2D06B] text-xs font-medium"
+              >
+                Ver plan, pagos y detalle <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           );
         })

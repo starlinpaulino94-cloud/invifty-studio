@@ -173,6 +173,32 @@ test("las acciones de cuentas exigen el permiso en el servidor", () => {
   assert.match(activar[0], /token_activacion: null/, "activarCuenta no quema el token (un solo uso)");
 });
 
+test("el portal lee SOLO con la sesión del cliente, nunca con la llave administrativa", () => {
+  // Si una página del portal importara el cliente admin, saltaría el RLS
+  // y una consulta mal filtrada enseñaría datos de OTRO cliente sin que
+  // nada falle a la vista. La activación (/activar) es la excepción a
+  // propósito: ahí todavía no hay sesión y la credencial es el token.
+  const dirPortal = path.join(raiz, "src/app/portal");
+  const archivos: string[] = [];
+  const recorrer = (dir: string) => {
+    for (const entrada of readdirSync(dir, { withFileTypes: true })) {
+      const ruta = path.join(dir, entrada.name);
+      if (entrada.isDirectory()) recorrer(ruta);
+      else if (/\.tsx?$/.test(entrada.name)) archivos.push(ruta);
+    }
+  };
+  recorrer(dirPortal);
+  assert.ok(archivos.length >= 4, "el portal perdió páginas: revisa esta prueba");
+
+  for (const archivo of archivos) {
+    assert.doesNotMatch(
+      readFileSync(archivo, "utf8"),
+      /supabase\/admin/,
+      `${path.relative(raiz, archivo)} importa la llave administrativa: el portal lee con la sesión del cliente`
+    );
+  }
+});
+
 test("el portal se guarda en el servidor: proxy y layout", () => {
   const proxy = readFileSync(path.join(raiz, "src/proxy.ts"), "utf8");
   assert.match(proxy, /\/portal\/entrar/, "el proxy no conoce la puerta del portal");
