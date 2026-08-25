@@ -88,6 +88,105 @@ test("la lista del equipo no se la puede escribir uno mismo", () => {
 });
 
 /* =====================================================================
+ * 1b. El RLS multicuenta del portal de clientes
+ * =====================================================================
+ * El cliente firmado LEE lo suyo y nada más. Si una de estas guardas se
+ * afloja, el fallo no se nota en ninguna pantalla: un cliente vería (o
+ * escribiría) datos de otro hablando directo con la API de Supabase.
+ */
+
+test("las políticas del cliente son SOLO de lectura", () => {
+  // Toda política cuyo nombre empiece por "cliente" o "miembro" es de la
+  // capa del portal: si alguna deja de ser `for select`, un cliente puede
+  // escribir en tablas cuyas validaciones viven en acciones de servidor.
+  for (const { archivo, contenido } of sqlDelProyecto()) {
+    const delPortal = contenido.match(/create policy "(cliente|miembro)[^"]*"[^;]*;/g) ?? [];
+    for (const politica of delPortal) {
+      assert.match(
+        politica,
+        /for\s+select/,
+        `${archivo}: ${politica.slice(0, 60)}… debe ser solo de lectura`
+      );
+    }
+    assert.ok(
+      archivo !== "schema.sql" || delPortal.length >= 14,
+      `schema.sql: faltan políticas del portal (hay ${delPortal.length})`
+    );
+  }
+});
+
+test("las tablas nuevas del portal también piden ser del equipo", () => {
+  const esquema = readFileSync(path.join(raiz, "supabase", "schema.sql"), "utf8");
+  for (const tabla of ["cuentas_cliente", "miembros_cuenta"]) {
+    const politica = new RegExp(
+      `create policy "equipo[^"]*" on public\\.${tabla}[\\s\\S]{0,200}?;`
+    ).exec(esquema);
+    assert.ok(politica, `no encuentro la política del equipo sobre ${tabla}`);
+    assert.match(politica[0], /es_del_equipo\(\)/);
+  }
+});
+
+test("la pertenencia exige cuenta ACTIVA: suspender cierra todo", () => {
+  // mi_cliente_id() es la llave de todas las políticas del cliente. Si
+  // deja de exigir estado = 'activa', suspender una cuenta no cierra nada.
+  for (const archivo of [
+    "supabase/schema.sql",
+    "supabase/migrations/20260814090000_portal-cuentas.sql",
+  ]) {
+    const contenido = readFileSync(path.join(raiz, archivo), "utf8");
+    const funcion = /function public\.mi_cliente_id\(\)[\s\S]*?\$\$;/.exec(contenido);
+    assert.ok(funcion, `${archivo}: no encuentro mi_cliente_id()`);
+    assert.match(funcion[0], /estado = 'activa'/, `${archivo}: mi_cliente_id ignora la suspensión`);
+    assert.match(funcion[0], /security definer/, `${archivo}: mi_cliente_id necesita security definer`);
+    assert.match(
+      contenido,
+      /revoke all on function public\.mi_cliente_id\(\) from public, anon/,
+      `${archivo}: mi_cliente_id no puede quedar ejecutable para anon`
+    );
+  }
+});
+
+test("las acciones de cuentas exigen el permiso en el servidor", () => {
+  // Esconder el botón no es seguridad: cada acción de gestión llama a
+  // exigirPermiso("gestionar_cuentas") antes de tocar nada.
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones-cuentas.ts"), "utf8");
+  for (const accion of [
+    "crearAccesoPortal",
+    "reenviarActivacion",
+    "suspenderCuenta",
+    "reactivarCuenta",
+  ]) {
+    const cuerpo = new RegExp(
+      `export async function ${accion}[\\s\\S]*?\\n\\}`
+    ).exec(contenido);
+    assert.ok(cuerpo, `no encuentro ${accion}`);
+    assert.match(
+      cuerpo[0],
+      /exigirPermiso\(supabase, "gestionar_cuentas"\)/,
+      `${accion} no exige el permiso gestionar_cuentas`
+    );
+  }
+  // La única pública valida el token y su vigencia antes de crear nada.
+  const activar = /export async function activarCuenta[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(activar, "no encuentro activarCuenta");
+  assert.match(activar[0], /activacionVigente\(/, "activarCuenta no comprueba la vigencia");
+  assert.match(activar[0], /token_activacion: null/, "activarCuenta no quema el token (un solo uso)");
+});
+
+test("el portal se guarda en el servidor: proxy y layout", () => {
+  const proxy = readFileSync(path.join(raiz, "src/proxy.ts"), "utf8");
+  assert.match(proxy, /\/portal\/entrar/, "el proxy no conoce la puerta del portal");
+
+  const layout = readFileSync(
+    path.join(raiz, "src/app/portal/(privado)/layout.tsx"),
+    "utf8"
+  );
+  assert.match(layout, /getUser\(\)/, "el layout del portal no comprueba la sesión");
+  assert.match(layout, /miembros_cuenta/, "el layout del portal no comprueba la membresía");
+  assert.match(layout, /suspendida/, "el layout del portal no distingue la suspensión");
+});
+
+/* =====================================================================
  * 2. Las cabeceras de seguridad
  * =====================================================================
  * Y, sobre todo, la que NO se puede poner: ver el comentario largo de

@@ -11,6 +11,7 @@ import { construirFormulario } from "@/config/formularios";
 import { formatearValor, textoDeBloque } from "@/lib/respuestas";
 import { Cliente, Confirmacion, EstadoPedido, Formulario, Invitacion, Pago, Pedido, Plan, TipoEvento } from "@/lib/tipos";
 import Confirmaciones from "@/components/panel/Confirmaciones";
+import AccesoPortal from "@/components/panel/AccesoPortal";
 import Visitas from "@/components/panel/Visitas";
 import { resumirVisitas } from "@/lib/visitas";
 import { urlBase as resolverUrlBase } from "@/lib/url";
@@ -123,6 +124,21 @@ export default async function FichaPedido({
       .createSignedUrl(pago.comprobante_ruta, HORAS_FIRMA * 60 * 60);
     if (firmada?.signedUrl) comprobantes.set(pago.id, firmada.signedUrl);
   }
+
+  // El acceso al portal es del CLIENTE (no del pedido): si aún no corrió
+  // la migración de cuentas, la consulta falla y la tarjeta sale como
+  // "sin acceso" sin romper la ficha.
+  const { data: cuentaPortalData } = await supabase
+    .from("cuentas_cliente")
+    .select("estado, email, token_activacion, activacion_expira")
+    .eq("cliente_id", cliente.id)
+    .maybeSingle();
+  const cuentaPortal = (cuentaPortalData ?? null) as {
+    estado: string;
+    email: string;
+    token_activacion: string | null;
+    activacion_expira: string | null;
+  } | null;
 
   const urlBase = resolverUrlBase();
   const urlFormulario = formulario ? `${urlBase}/f/${formulario.token}` : "";
@@ -282,6 +298,15 @@ export default async function FichaPedido({
           <BotonMensajeWhatsApp pedidoId={pedido.id} mensaje={mensaje} telefono={cliente.telefono} />
         </div>
       )}
+
+      {/* Acceso del cliente a su portal (cuenta con contraseña propia) */}
+      <AccesoPortal
+        clienteId={cliente.id}
+        nombreCliente={cliente.nombre}
+        emailSugerido={cliente.email ?? ""}
+        cuenta={cuentaPortal}
+        urlBase={urlBase}
+      />
 
       {/* Invitación (Fase 2) */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">

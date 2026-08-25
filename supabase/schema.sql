@@ -723,3 +723,181 @@ revoke all on function public.frenar(text, integer, integer) from public, anon, 
 
 create index pedidos_creado_idx
   on public.pedidos (creado_en desc);
+
+-- ============================================================
+-- PORTAL DE CLIENTES (Fase 2): cuentas, miembros, snapshot del
+-- contrato y RLS multicuenta de solo lectura.
+-- ============================================================
+
+-- ---------- CUENTAS DEL CLIENTE ----------
+
+create table public.cuentas_cliente (
+  id                uuid primary key default gen_random_uuid(),
+  cliente_id        uuid not null unique references public.clientes(id) on delete cascade,
+  -- Se llena al activar; si el usuario de auth se borrara, la cuenta
+  -- queda desvinculada pero el historial comercial no desaparece.
+  usuario_id        uuid unique references auth.users(id) on delete set null,
+  -- El correo ES el usuario del portal. Se captura al crear el acceso.
+  email             text not null,
+  estado            text not null default 'pendiente'
+                    check (estado in ('pendiente','activa','suspendida')),
+  token_activacion  text unique,
+  activacion_expira timestamptz,
+  creado_por_email  text,
+  creado_en         timestamptz not null default now(),
+  actualizado_en    timestamptz not null default now()
+);
+
+create trigger cuentas_cliente_tocar before update on public.cuentas_cliente
+  for each row execute function public.tocar_actualizado_en();
+
+-- ---------- MIEMBROS DE LA CUENTA ----------
+
+create table public.miembros_cuenta (
+  id         uuid primary key default gen_random_uuid(),
+  cuenta_id  uuid not null references public.cuentas_cliente(id) on delete cascade,
+  usuario_id uuid not null references auth.users(id) on delete cascade,
+  rol        text not null default 'propietario'
+             check (rol in ('propietario','colaborador')),
+  -- Permisos finos del colaborador (fase 7); el propietario los ignora.
+  permisos   jsonb not null default '{}'::jsonb,
+  creado_en  timestamptz not null default now()
+);
+
+create unique index miembros_cuenta_unicos_idx
+  on public.miembros_cuenta (cuenta_id, usuario_id);
+create index miembros_cuenta_usuario_idx
+  on public.miembros_cuenta (usuario_id);
+
+-- ---------- LA FOTO DEL CONTRATO ----------
+
+alter table public.pedidos
+  add column capacidades_contratadas jsonb;
+
+-- ---------- PERTENENCIA (las tres funciones del portal) ----------
+
+-- ¿De qué cliente es el usuario firmado? null si no es de ninguno o su
+-- cuenta no está activa (suspendida = todo cerrado, sin borrar nada).
+create or replace function public.mi_cliente_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select c.cliente_id
+  from public.cuentas_cliente c
+  join public.miembros_cuenta m on m.cuenta_id = c.id
+  where m.usuario_id = auth.uid()
+    and c.estado = 'activa'
+  limit 1;
+$$;
+
+create or replace function public.es_mi_pedido(p_pedido uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1 from public.pedidos p
+    where p.id = p_pedido and p.cliente_id = public.mi_cliente_id()
+  );
+$$;
+
+create or replace function public.es_mi_invitacion(p_invitacion uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.invitaciones i
+    join public.pedidos p on p.id = i.pedido_id
+    where i.id = p_invitacion and p.cliente_id = public.mi_cliente_id()
+  );
+$$;
+
+revoke all on function public.mi_cliente_id() from public, anon;
+revoke all on function public.es_mi_pedido(uuid) from public, anon;
+revoke all on function public.es_mi_invitacion(uuid) from public, anon;
+grant execute on function public.mi_cliente_id() to authenticated;
+grant execute on function public.es_mi_pedido(uuid) to authenticated;
+grant execute on function public.es_mi_invitacion(uuid) to authenticated;
+
+-- ---------- RLS: el cliente LEE lo suyo ----------
+
+alter table public.cuentas_cliente enable row level security;
+alter table public.miembros_cuenta enable row level security;
+
+create policy "equipo acceso total cuentas" on public.cuentas_cliente
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- El cliente ve SU cuenta (aunque esté suspendida: para poder decírselo).
+create policy "cliente ve su cuenta" on public.cuentas_cliente
+  for select to authenticated
+  using (exists (
+    select 1 from public.miembros_cuenta m
+    where m.cuenta_id = id and m.usuario_id = (select auth.uid())
+  ));
+
+create policy "equipo acceso total miembros" on public.miembros_cuenta
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+create policy "miembro ve su fila" on public.miembros_cuenta
+  for select to authenticated
+  using (usuario_id = (select auth.uid()));
+
+-- Lo suyo, tabla por tabla. SOLO lectura: las escrituras del portal van
+-- por acciones de servidor que validan pertenencia y capacidad.
+create policy "cliente ve su ficha" on public.clientes
+  for select to authenticated using (id = public.mi_cliente_id());
+
+create policy "cliente ve sus pedidos" on public.pedidos
+  for select to authenticated using (cliente_id = public.mi_cliente_id());
+
+create policy "cliente ve sus pagos" on public.pagos
+  for select to authenticated using (public.es_mi_pedido(pedido_id));
+
+create policy "cliente ve sus formularios" on public.formularios
+  for select to authenticated using (public.es_mi_pedido(pedido_id));
+
+create policy "cliente ve su invitacion" on public.invitaciones
+  for select to authenticated using (public.es_mi_pedido(pedido_id));
+
+create policy "cliente ve sus confirmaciones" on public.confirmaciones
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus invitados" on public.invitados
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus hogares" on public.hogares
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus entradas" on public.entradas
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus visitas" on public.visitas
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus versiones" on public.versiones
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus revisiones" on public.revisiones
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus comentarios" on public.comentarios
+  for select to authenticated
+  using (exists (
+    select 1 from public.revisiones r
+    where r.id = revision_id and public.es_mi_invitacion(r.invitacion_id)
+  ));
+
+-- Lo que el cliente NO ve, a propósito: leads, demos, equipo, auditoría,
+-- historial, generaciones de IA, avisos internos y frenos. Son de la
+-- operación de Invifty, no del contrato del cliente.

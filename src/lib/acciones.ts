@@ -7,6 +7,7 @@ import { crearClienteServidor } from "./supabase/servidor";
 import { calcularVencimiento } from "./vencimientos";
 import { transicionValida } from "./estados";
 import { fechaEfectivaValida, motivoRechazoTransaccion } from "./pagos";
+import { snapshotDeContrato } from "./capacidades";
 import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { crearClienteAdmin } from "./supabase/admin";
 import { BUCKET } from "./fotos";
@@ -52,22 +53,40 @@ export async function crearPedido(formData: FormData) {
     clienteId = nuevo.id;
   }
 
-  // Pedido
-  const { data: pedido, error: errorPedido } = await supabase
+  // Pedido, con la FOTO del contrato congelada: lo que este cliente
+  // contrató hoy no se mueve si mañana cambia el catálogo. Si la columna
+  // aún no está migrada, el pedido entra igual y se anota qué falta.
+  const filaPedido = {
+    cliente_id: clienteId,
+    tipo_evento: tipoEvento,
+    plan,
+    extras,
+    fecha_evento: fechaEvento,
+    precio,
+    notas,
+    estado: "nuevo",
+  };
+  let { data: pedido, error: errorPedido } = await supabase
     .from("pedidos")
     .insert({
-      cliente_id: clienteId,
-      tipo_evento: tipoEvento,
-      plan,
-      extras,
-      fecha_evento: fechaEvento,
-      precio,
-      notas,
-      estado: "nuevo",
+      ...filaPedido,
+      capacidades_contratadas: snapshotDeContrato(plan as Plan, new Date()),
     })
     .select("id")
     .single();
-  if (errorPedido) throw new Error(`No se pudo crear el pedido: ${errorPedido.message}`);
+  if (errorPedido && /column|capacidades_contratadas|schema/i.test(errorPedido.message)) {
+    registrarError("pedidos", errorPedido, {
+      nota: "falta la migración 20260814090000_portal-cuentas; pedido sin foto del contrato",
+    });
+    ({ data: pedido, error: errorPedido } = await supabase
+      .from("pedidos")
+      .insert(filaPedido)
+      .select("id")
+      .single());
+  }
+  if (errorPedido || !pedido) {
+    throw new Error(`No se pudo crear el pedido: ${errorPedido?.message ?? "sin respuesta"}`);
+  }
 
   // Formulario con token único
   const token = crypto.randomUUID().replace(/-/g, "");

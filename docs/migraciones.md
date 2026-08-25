@@ -38,6 +38,7 @@ te fíes de la memoria ni de este documento.
 | `20260806010000_pagos-completos` | `pagos`: referencia, fecha efectiva, firma, idempotencia y comprobante |
 | `20260806030000_rsvp-avanzado` | `confirmaciones.respuestas` (preguntas extra configurables del RSVP) |
 | `20260806050000_referencias-revision` | `comentarios.imagen_ruta` (imagen de referencia del cliente) |
+| `20260814090000_portal-cuentas` | Cuentas del portal de clientes: `cuentas_cliente`, `miembros_cuenta`, snapshot `capacidades_contratadas` y RLS multicuenta de lectura |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).
