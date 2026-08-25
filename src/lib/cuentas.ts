@@ -66,6 +66,24 @@ export const PERMISOS_COLABORADOR = [
 export type PermisoColaborador = (typeof PERMISOS_COLABORADOR)[number]["id"];
 
 /**
+ * Limpia lo que llegó del navegador antes de guardarlo como permisos:
+ * SOLO ids del catálogo y SOLO el booleano true. Importa porque
+ * mi_permiso() en la base hace `(permisos->>x)::boolean` — y el string
+ * "true" también castea a true: un objeto sin sanear podría conceder
+ * en la base lo que la pantalla cree negado.
+ */
+export function sanearPermisos(
+  crudo: unknown
+): Partial<Record<PermisoColaborador, boolean>> {
+  const limpios: Partial<Record<PermisoColaborador, boolean>> = {};
+  if (!crudo || typeof crudo !== "object") return limpios;
+  for (const { id } of PERMISOS_COLABORADOR) {
+    if ((crudo as Record<string, unknown>)[id] === true) limpios[id] = true;
+  }
+  return limpios;
+}
+
+/**
  * ¿Este miembro tiene este permiso? La misma regla que mi_permiso() en
  * la base: propietario = todo; colaborador = solo lo concedido.
  */

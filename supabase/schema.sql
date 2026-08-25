@@ -929,7 +929,11 @@ create policy "cliente ve su cuenta" on public.cuentas_cliente
   for select to authenticated
   using (exists (
     select 1 from public.miembros_cuenta m
-    where m.cuenta_id = id and m.usuario_id = (select auth.uid())
+    -- OJO: cuentas_cliente.id CALIFICADO. Un `id` a secas se resuelve
+    -- contra miembros_cuenta (que también tiene id) y la condición se
+    -- vuelve siempre falsa — pasó de verdad y lo cazó probar-aislamiento.
+    where m.cuenta_id = cuentas_cliente.id
+      and m.usuario_id = (select auth.uid())
   ));
 
 create policy "equipo acceso total miembros" on public.miembros_cuenta

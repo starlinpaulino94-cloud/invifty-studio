@@ -139,12 +139,17 @@ create policy "equipo acceso total cuentas" on public.cuentas_cliente
   using (public.es_del_equipo()) with check (public.es_del_equipo());
 
 -- El cliente ve SU cuenta (aunque esté suspendida: para poder decírselo).
+-- (Texto corregido por 20260825150000: cuentas_cliente.id calificado —
+--  un `id` a secas se resolvía contra m.id y la condición era siempre
+--  falsa. Se corrige también aquí para que re-correr esta migración en
+--  cualquier orden nunca reponga la versión rota.)
 drop policy if exists "cliente ve su cuenta" on public.cuentas_cliente;
 create policy "cliente ve su cuenta" on public.cuentas_cliente
   for select to authenticated
   using (exists (
     select 1 from public.miembros_cuenta m
-    where m.cuenta_id = id and m.usuario_id = (select auth.uid())
+    where m.cuenta_id = cuentas_cliente.id
+      and m.usuario_id = (select auth.uid())
   ));
 
 drop policy if exists "equipo acceso total miembros" on public.miembros_cuenta;

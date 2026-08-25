@@ -115,6 +115,24 @@ test("las políticas del cliente son SOLO de lectura", () => {
   }
 });
 
+test("las políticas con subconsulta califican la referencia externa", () => {
+  // Pasó de verdad: "cliente ve su cuenta" decía `m.cuenta_id = id` y ese
+  // `id` se resolvía contra miembros_cuenta (que también tiene id) — la
+  // condición era siempre falsa y el cliente no veía su propia cuenta.
+  // Lo cazó probar-aislamiento.sql en producción (fila 15 en ❌).
+  for (const { archivo, contenido } of sqlDelProyecto()) {
+    assert.doesNotMatch(
+      contenido,
+      /m\.cuenta_id = id\b/,
+      `${archivo}: referencia externa sin calificar — usa cuentas_cliente.id`
+    );
+  }
+  const esquema = readFileSync(path.join(raiz, "supabase", "schema.sql"), "utf8");
+  const politica = /create policy "cliente ve su cuenta"[\s\S]*?;/.exec(esquema);
+  assert.ok(politica, "no encuentro la política cliente ve su cuenta");
+  assert.match(politica[0], /m\.cuenta_id = cuentas_cliente\.id/, "la política perdió la calificación");
+});
+
 test("las tablas nuevas del portal también piden ser del equipo", () => {
   const esquema = readFileSync(path.join(raiz, "supabase", "schema.sql"), "utf8");
   for (const tabla of ["cuentas_cliente", "miembros_cuenta"]) {
@@ -240,6 +258,46 @@ test("la recuperación quema el token ANTES de cambiar la contraseña", () => {
   const quema = cuerpo[0].indexOf('.is("usado_en", null)');
   const cambia = cuerpo[0].indexOf("updateUserById");
   assert.ok(quema > 0 && cambia > 0 && quema < cambia, "el token debe quemarse antes del cambio");
+});
+
+test("los permisos de un colaborador se cambian saneados y solo por el propietario", () => {
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones-portal.ts"), "utf8");
+  const cuerpo = /export async function actualizarPermisosColaborador[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(cuerpo, "no encuentro actualizarPermisosColaborador");
+  assert.match(cuerpo[0], /propietarioFirmado\(\)/, "no exige al propietario");
+  assert.match(cuerpo[0], /rol !== "colaborador"/, "podría tocar la fila del propietario");
+  assert.match(cuerpo[0], /sanearPermisos\(/, "guarda permisos sin sanear");
+
+  // Y en TODO camino que escribe permisos: invitar y activar también.
+  const invitar = /export async function invitarColaborador[\s\S]*?\n\}/.exec(contenido)!;
+  assert.match(invitar[0], /sanearPermisos\(/, "invitarColaborador guarda permisos sin sanear");
+  assert.match(
+    invitar[0],
+    /invitacionVigente\(/,
+    "el cupo y los duplicados deben contar solo invitaciones vigentes"
+  );
+  const cuentas = readFileSync(path.join(raiz, "src/lib/acciones-cuentas.ts"), "utf8");
+  const activar = /export async function activarColaborador[\s\S]*?\n\}/.exec(cuentas)!;
+  assert.match(activar[0], /sanearPermisos\(/, "activarColaborador copia permisos sin sanear");
+});
+
+test("la prueba de aislamiento existe y cubre lo que no perdona errores", () => {
+  // El RLS multicuenta solo se prueba de verdad contra la base: este
+  // script lo hace (dos cuentas de mentira, suplantación con claims,
+  // limpieza total). Aquí se vigila que siga cubriendo los casos duros.
+  const sql = readFileSync(path.join(raiz, "supabase/probar-aislamiento.sql"), "utf8");
+  assert.match(sql, /set_config\('request\.jwt\.claims'/, "sin claims no hay suplantación real");
+  assert.match(sql, /set role authenticated/, "debe probar como usuario firmado");
+  assert.match(sql, /set role anon/, "debe probar como anónimo");
+  assert.match(sql, /suspendida/, "debe probar que suspender cierra todo");
+  assert.match(sql, /colaborador SIN permiso NO ve pagos/i, "debe probar el permiso de pagos en la base");
+  assert.match(sql, /delete from public\.clientes where id in/, "debe borrar lo que creó");
+  assert.match(sql, /delete from auth\.users where email like '%@aislamiento\.invifty\.test'/,
+    "debe borrar los usuarios de mentira");
+  assert.ok(
+    sql.indexOf("delete from auth.users") < sql.indexOf("select orden, que, estado"),
+    "la limpieza va ANTES del veredicto: el editor solo enseña la última consulta"
+  );
 });
 
 test("la edición del cliente revalida permiso, pertenencia y candado en el servidor", () => {

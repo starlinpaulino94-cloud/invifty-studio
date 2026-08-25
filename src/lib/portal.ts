@@ -73,6 +73,7 @@ export const ACCIONES_PORTAL: Record<string, string> = {
   "cuenta:invitar_colaborador": "invitó a un colaborador",
   "cuenta:revocar_invitacion": "revocó una invitación",
   "cuenta:quitar_colaborador": "quitó a un colaborador",
+  "cuenta:cambiar_permisos": "cambió los permisos de un colaborador",
   "cuenta:recuperar_password": "eligió una contraseña nueva",
   "invitacion:contenido_cliente": "editó los textos de su invitación",
 };

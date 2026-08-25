@@ -18,6 +18,14 @@ tablas, columnas, índices, RLS y políticas contra lo esperado y señala
 exactamente qué falta. Esa es la verificación automatizada del esquema — no
 te fíes de la memoria ni de este documento.
 
+**Y el aislamiento se prueba, no se supone:** `supabase/probar-aislamiento.sql`
+crea dos cuentas de mentira, se hace pasar por cada usuario (propietario,
+colaborador sin permisos, anónimo) y comprueba que nadie ve nada ajeno —
+incluida la suspensión, que debe cerrarlo todo. Al final borra lo que creó:
+la base queda igual que antes. Todas las filas deben decir ✅ OK; un ❌ FUGA
+significa que un cliente puede leer datos de otro por la API. Córrelo después
+de cada migración que toque políticas del portal.
+
 ## La secuencia
 
 | Migración | Qué agrega |
@@ -40,6 +48,7 @@ te fíes de la memoria ni de este documento.
 | `20260806050000_referencias-revision` | `comentarios.imagen_ruta` (imagen de referencia del cliente) |
 | `20260814090000_portal-cuentas` | Cuentas del portal de clientes: `cuentas_cliente`, `miembros_cuenta`, snapshot `capacidades_contratadas` y RLS multicuenta de lectura |
 | `20260825090000_colaboradores-recuperacion` | Colaboradores con permisos acotados (`invitaciones_cuenta`, `soy_propietario()`, `mi_permiso()`, pagos con permiso en la base) y recuperación de contraseña (`recuperaciones`) |
+| `20260825150000_cuenta-visible-para-su-miembro` | Arreglo: la política "cliente ve su cuenta" comparaba `id` sin calificar (siempre falsa) y el cliente no veía su propia cuenta. Lo cazó `probar-aislamiento.sql` |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).

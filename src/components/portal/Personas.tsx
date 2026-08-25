@@ -6,6 +6,7 @@ import {
   invitarColaborador,
   revocarInvitacionColaborador,
   quitarColaborador,
+  actualizarPermisosColaborador,
 } from "@/lib/acciones-portal";
 import {
   PERMISOS_COLABORADOR,
@@ -106,15 +107,37 @@ export default function Personas({
                     <span className="text-white/35"> (tú)</span>
                   )}
                 </p>
-                <p className="text-white/35 text-[11px]">
-                  {m.rol === "propietario"
-                    ? "Propietario — acceso completo"
-                    : `Colaborador — ${
-                        PERMISOS_COLABORADOR.filter((p) => tienePermiso(m, p.id))
-                          .map((p) => p.nombre.toLowerCase())
-                          .join(", ") || "solo consulta"
-                      }`}
-                </p>
+                {m.rol === "propietario" ? (
+                  <p className="text-white/35 text-[11px]">Propietario — acceso completo</p>
+                ) : (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                    {/* Cambiar aquí cambia YA: mi_permiso() en la base lee la fila viva. */}
+                    {PERMISOS_COLABORADOR.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-1.5 text-white/45 text-[11px] cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={tienePermiso(m, p.id)}
+                          disabled={cargando}
+                          onChange={(e) =>
+                            ejecutar(() =>
+                              actualizarPermisosColaborador(m.id, {
+                                ...Object.fromEntries(
+                                  PERMISOS_COLABORADOR.map((otro) => [otro.id, tienePermiso(m, otro.id)])
+                                ),
+                                [p.id]: e.target.checked,
+                              })
+                            )
+                          }
+                          className="accent-[#D4AF37]"
+                        />
+                        {p.nombre}
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
               {m.rol === "colaborador" && (
                 <button
