@@ -32,7 +32,11 @@ export type TipoAviso =
   | "formulario_completado"
   | "revision_aprobada"
   | "revision_cambios"
-  | "comentario_nuevo";
+  | "comentario_nuevo"
+  | "portal_activado"
+  | "portal_colaborador"
+  | "portal_textos"
+  | "portal_password";
 
 export interface ContextoAviso {
   /** Nombre del cliente o del evento; se escapa aquí, no en quien llama. */
@@ -83,6 +87,30 @@ export function construirAviso(
       texto: `<strong>${nombre}</strong> dejó un comentario en su revisión${detalle ? ` (sección ${detalle})` : ""}.`,
       boton: "Ver comentario →",
     },
+    portal_activado: {
+      asunto: `🔑 ${ctx.nombre} activó su portal`,
+      titulo: "🔑 Portal activado",
+      texto: `<strong>${nombre}</strong> activó su cuenta del portal de clientes${detalle ? ` (${detalle})` : ""}. Ya puede entrar con su propia contraseña.`,
+      boton: "Ver en el panel →",
+    },
+    portal_colaborador: {
+      asunto: `👥 Colaborador nuevo en la cuenta de ${ctx.nombre}`,
+      titulo: "👥 Colaborador activado",
+      texto: `Un colaborador de <strong>${nombre}</strong> activó su acceso al portal${detalle ? ` (${detalle})` : ""}.`,
+      boton: "Ver en el panel →",
+    },
+    portal_textos: {
+      asunto: `📝 ${ctx.nombre} editó los textos de su invitación`,
+      titulo: "📝 Textos editados",
+      texto: `<strong>${nombre}</strong> ajustó los textos de su invitación desde el portal${detalle ? ` (${detalle})` : ""}. Échales un vistazo antes del próximo envío.`,
+      boton: "Ver invitación →",
+    },
+    portal_password: {
+      asunto: `🔐 ${ctx.nombre} usó su enlace de recuperación`,
+      titulo: "🔐 Contraseña restablecida",
+      texto: `<strong>${nombre}</strong> eligió una contraseña nueva con el enlace de recuperación. Si nadie la pidió, hay que revisarlo.`,
+      boton: "Ver en el panel →",
+    },
   };
 
   const p = piezas[tipo];
@@ -99,7 +127,7 @@ export function construirAviso(
 }
 
 export interface ReferenciaAviso {
-  tipo: "pedido" | "invitacion" | "revision";
+  tipo: "pedido" | "invitacion" | "revision" | "cliente";
   id: string;
 }
 

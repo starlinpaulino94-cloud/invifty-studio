@@ -34,12 +34,14 @@ export type Permiso =
   | "publicar"
   | "convertir_leads"
   | "marcar_demos"
-  | "mantenimiento";
+  | "mantenimiento"
+  // Crear, reenviar, suspender y reactivar cuentas del PORTAL de clientes.
+  | "gestionar_cuentas";
 
 const TODO: Permiso[] = [
   "gestionar_equipo", "crear_pedidos", "cambiar_estado", "registrar_pagos",
   "anular_pagos", "editar_invitaciones", "publicar", "convertir_leads",
-  "marcar_demos", "mantenimiento",
+  "marcar_demos", "mantenimiento", "gestionar_cuentas",
 ];
 
 export const PERMISOS: Record<RolEquipo, Permiso[]> = {

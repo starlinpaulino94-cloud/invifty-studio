@@ -57,10 +57,15 @@ export default async function proxy(request: NextRequest) {
 
   const esPanel = ruta.startsWith("/panel");
   const esLogin = ruta.startsWith("/login");
+  // El portal del cliente tiene su propia puerta (/portal/entrar). La
+  // activación (/activar) queda fuera a propósito: es pública por diseño,
+  // su credencial es el token de un solo uso del enlace.
+  const esEntradaPortal = ruta.startsWith("/portal/entrar");
+  const esPortal = ruta.startsWith("/portal") && !esEntradaPortal;
 
   // La sesión solo se comprueba donde hace falta: el resto de páginas son
   // públicas y no tienen por qué pagar una llamada a Supabase.
-  if (!esPanel && !esLogin) return respuesta;
+  if (!esPanel && !esLogin && !esPortal && !esEntradaPortal) return respuesta;
 
   const {
     data: { user },
@@ -75,6 +80,20 @@ export default async function proxy(request: NextRequest) {
   if (esLogin && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/panel";
+    return NextResponse.redirect(url);
+  }
+
+  if (esPortal && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal/entrar";
+    return NextResponse.redirect(url);
+  }
+
+  if (esEntradaPortal && user) {
+    // Quién es (¿miembro?, ¿suspendido?) lo decide el layout del portal,
+    // que sí puede consultar la base; el proxy solo mira si hay sesión.
+    const url = request.nextUrl.clone();
+    url.pathname = "/portal";
     return NextResponse.redirect(url);
   }
 
