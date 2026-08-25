@@ -3,11 +3,18 @@ import assert from "node:assert/strict";
 
 import {
   DIAS_ACTIVACION,
+  HORAS_RECUPERACION,
   expiraActivacion,
+  expiraRecuperacion,
   activacionVigente,
+  invitacionVigente,
+  recuperacionVigente,
+  tienePermiso,
   passwordValida,
   MIN_PASSWORD,
   mensajeWhatsAppActivacion,
+  mensajeWhatsAppInvitacionColaborador,
+  mensajeWhatsAppRecuperacion,
 } from "@/lib/cuentas";
 
 /**
@@ -56,6 +63,70 @@ test("la contraseña mínima es la que decimos", () => {
   assert.equal(passwordValida("a".repeat(MIN_PASSWORD)), true);
   assert.equal(passwordValida("a".repeat(MIN_PASSWORD - 1)), false);
   assert.equal(passwordValida(""), false);
+});
+
+/* =====================================================================
+ * Colaboradores y recuperación (Fase 4)
+ * ===================================================================== */
+
+test("una invitación de colaborador muere por uso, revocación o fecha", () => {
+  const manana = new Date(AHORA.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  const ayer = new Date(AHORA.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const viva = { expira_en: manana, usado_en: null, revocada_en: null };
+
+  assert.equal(invitacionVigente(viva, AHORA), true);
+  // Un solo uso: activada una vez, el enlace de WhatsApp queda muerto.
+  assert.equal(invitacionVigente({ ...viva, usado_en: ayer }, AHORA), false);
+  // Revocar cierra al instante, aunque no haya vencido.
+  assert.equal(invitacionVigente({ ...viva, revocada_en: ayer }, AHORA), false);
+  assert.equal(invitacionVigente({ ...viva, expira_en: ayer }, AHORA), false);
+  assert.equal(invitacionVigente({ ...viva, expira_en: null }, AHORA), false);
+});
+
+test("la recuperación vence en horas, no en días", () => {
+  const expira = new Date(expiraRecuperacion(AHORA));
+  const horas = (expira.getTime() - AHORA.getTime()) / (60 * 60 * 1000);
+  assert.equal(horas, HORAS_RECUPERACION);
+  assert.ok(
+    horas < DIAS_ACTIVACION * 24,
+    "un enlace que cambia contraseñas no puede vivir tanto como uno de activación"
+  );
+});
+
+test("un enlace de recuperación usado no vuelve a servir", () => {
+  const manana = new Date(AHORA.getTime() + 60 * 60 * 1000).toISOString();
+  assert.equal(recuperacionVigente({ expira_en: manana, usado_en: null }, AHORA), true);
+  assert.equal(
+    recuperacionVigente({ expira_en: manana, usado_en: AHORA.toISOString() }, AHORA),
+    false
+  );
+  assert.equal(recuperacionVigente({ expira_en: null, usado_en: null }, AHORA), false);
+});
+
+test("el propietario lo puede todo; el colaborador, solo lo concedido", () => {
+  assert.equal(tienePermiso({ rol: "propietario", permisos: {} }, "ver_pagos"), true);
+  assert.equal(tienePermiso({ rol: "propietario", permisos: null }, "ver_pagos"), true);
+  assert.equal(tienePermiso({ rol: "colaborador", permisos: { ver_pagos: true } }, "ver_pagos"), true);
+  // Lo no concedido es NO: ni permisos vacíos, ni null, ni valores raros.
+  assert.equal(tienePermiso({ rol: "colaborador", permisos: {} }, "ver_pagos"), false);
+  assert.equal(tienePermiso({ rol: "colaborador", permisos: null }, "ver_pagos"), false);
+  assert.equal(
+    tienePermiso({ rol: "colaborador", permisos: { ver_pagos: "true" } }, "ver_pagos"),
+    false,
+    "solo el booleano true concede; un string no"
+  );
+});
+
+test("los mensajes nuevos llevan el enlace y la advertencia, nunca una contraseña", () => {
+  const invitacion = mensajeWhatsAppInvitacionColaborador("https://x/activar/tok");
+  assert.ok(invitacion.includes("https://x/activar/tok"));
+  assert.match(invitacion, /nunca te pedirá tu contraseña/i);
+
+  const recuperacion = mensajeWhatsAppRecuperacion("Ana Gómez", "https://x/recuperar/tok");
+  assert.ok(recuperacion.includes("Ana"));
+  assert.ok(recuperacion.includes("https://x/recuperar/tok"));
+  assert.ok(recuperacion.includes(`${HORAS_RECUPERACION} horas`));
+  assert.match(recuperacion, /si tú no lo pediste/i, "avisa qué hacer ante un enlace no pedido");
 });
 
 test("el mensaje de WhatsApp lleva el enlace, la caducidad y la advertencia", () => {

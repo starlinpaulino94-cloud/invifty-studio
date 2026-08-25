@@ -173,6 +173,75 @@ test("las acciones de cuentas exigen el permiso en el servidor", () => {
   assert.match(activar[0], /token_activacion: null/, "activarCuenta no quema el token (un solo uso)");
 });
 
+test("los pagos exigen el permiso ver_pagos EN LA BASE", () => {
+  // Si la política de pagos vuelve a ser solo es_mi_pedido, un colaborador
+  // sin permiso vería el dinero hablando directo con la API — con la
+  // sección escondida en pantalla y todo.
+  const esquema = readFileSync(path.join(raiz, "supabase", "schema.sql"), "utf8");
+  const politica = /create policy "cliente ve sus pagos"[^;]*;/.exec(esquema);
+  assert.ok(politica, "no encuentro la política de pagos del cliente");
+  assert.match(politica[0], /mi_permiso\('ver_pagos'\)/, "pagos no exige el permiso en la base");
+
+  const migracion = readFileSync(
+    path.join(raiz, "supabase/migrations/20260825090000_colaboradores-recuperacion.sql"),
+    "utf8"
+  );
+  assert.match(migracion, /mi_permiso\('ver_pagos'\)/, "la migración no rehace la política de pagos");
+});
+
+test("las funciones nuevas del portal son security definer y no ejecutables por anon", () => {
+  for (const archivo of [
+    "supabase/schema.sql",
+    "supabase/migrations/20260825090000_colaboradores-recuperacion.sql",
+  ]) {
+    const contenido = readFileSync(path.join(raiz, archivo), "utf8");
+    for (const funcion of ["soy_propietario", "mi_permiso"]) {
+      const cuerpo = new RegExp(`function public\\.${funcion}\\([^)]*\\)[\\s\\S]*?\\$\\$;`).exec(contenido);
+      assert.ok(cuerpo, `${archivo}: no encuentro ${funcion}()`);
+      assert.match(cuerpo[0], /security definer/, `${archivo}: ${funcion} sin security definer`);
+      assert.match(cuerpo[0], /estado = 'activa'/, `${archivo}: ${funcion} ignora la suspensión`);
+      assert.match(
+        contenido,
+        new RegExp(`revoke all on function public\\.${funcion}\\([^)]*\\) from public, anon`),
+        `${archivo}: ${funcion} ejecutable por anon`
+      );
+    }
+  }
+});
+
+test("las acciones del propietario validan al firmante en el servidor", () => {
+  // Cada acción del portal pasa por propietarioFirmado(), que comprueba
+  // sesión + rol propietario + cuenta activa ANTES de que el admin toque
+  // nada. Y la pertenencia de lo que se toca se compara contra la cuenta
+  // del firmante, no contra lo que mande el navegador.
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones-portal.ts"), "utf8");
+  for (const accion of ["invitarColaborador", "revocarInvitacionColaborador", "quitarColaborador"]) {
+    const cuerpo = new RegExp(`export async function ${accion}[\\s\\S]*?\\n\\}`).exec(contenido);
+    assert.ok(cuerpo, `no encuentro ${accion}`);
+    assert.match(cuerpo[0], /propietarioFirmado\(\)/, `${accion} no valida al propietario`);
+  }
+  assert.match(
+    contenido,
+    /rol !== "propietario"/,
+    "propietarioFirmado no exige el rol propietario"
+  );
+  // Al propietario no lo quita nadie desde el portal.
+  const quitar = /export async function quitarColaborador[\s\S]*?\n\}/.exec(contenido)!;
+  assert.match(quitar[0], /miembro\.rol !== "colaborador"/, "quitarColaborador podría quitar al propietario");
+});
+
+test("la recuperación quema el token ANTES de cambiar la contraseña", () => {
+  // Un solo uso de verdad: si el orden se invierte, dos peticiones
+  // simultáneas con el mismo enlace cambiarían la contraseña dos veces.
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones-cuentas.ts"), "utf8");
+  const cuerpo = /export async function recuperarPassword[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(cuerpo, "no encuentro recuperarPassword");
+  assert.match(cuerpo[0], /recuperacionVigente\(/, "no comprueba la vigencia");
+  const quema = cuerpo[0].indexOf('.is("usado_en", null)');
+  const cambia = cuerpo[0].indexOf("updateUserById");
+  assert.ok(quema > 0 && cambia > 0 && quema < cambia, "el token debe quemarse antes del cambio");
+});
+
 test("el portal lee SOLO con la sesión del cliente, nunca con la llave administrativa", () => {
   // Si una página del portal importara el cliente admin, saltaría el RLS
   // y una consulta mal filtrada enseñaría datos de OTRO cliente sin que

@@ -53,11 +53,18 @@ export default function DetallePedido({
   confirmaciones,
   revision,
   ahora,
+  verPagos = true,
 }: {
   pedido: PedidoDelPortal;
   confirmaciones: { asiste: boolean; cantidad: number }[];
   revision: RevisionDelPortal | null;
   ahora: Date;
+  /**
+   * El permiso ver_pagos del miembro firmado. El RLS ya devuelve pagos
+   * vacíos a un colaborador sin permiso; esto además QUITA la sección —
+   * enseñarla vacía diría "RD$ 0 abonado", que es mentira.
+   */
+  verPagos?: boolean;
 }) {
   const contrato = contratoDePedido(pedido);
   const capacidades = capacidadesDelCliente(contrato);
@@ -200,6 +207,7 @@ export default function DetallePedido({
       </section>
 
       {/* Tus pagos */}
+      {verPagos && (
       <section className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-sm font-semibold flex items-center gap-2">
@@ -245,6 +253,7 @@ export default function DetallePedido({
           </p>
         )}
       </section>
+      )}
     </div>
   );
 }

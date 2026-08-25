@@ -759,8 +759,10 @@ create table public.miembros_cuenta (
   usuario_id uuid not null references auth.users(id) on delete cascade,
   rol        text not null default 'propietario'
              check (rol in ('propietario','colaborador')),
-  -- Permisos finos del colaborador (fase 7); el propietario los ignora.
+  -- Permisos finos del colaborador (ej. ver_pagos); el propietario los ignora.
   permisos   jsonb not null default '{}'::jsonb,
+  -- Para que el propietario vea QUIÉN tiene acceso (auth.users no se lee).
+  email      text,
   creado_en  timestamptz not null default now()
 );
 
@@ -828,6 +830,91 @@ grant execute on function public.mi_cliente_id() to authenticated;
 grant execute on function public.es_mi_pedido(uuid) to authenticated;
 grant execute on function public.es_mi_invitacion(uuid) to authenticated;
 
+-- ¿El usuario firmado es PROPIETARIO de esta cuenta (activa)? Security
+-- definer para no recursar sobre el RLS de la propia tabla de miembros.
+create or replace function public.soy_propietario(p_cuenta uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.miembros_cuenta m
+    join public.cuentas_cliente c on c.id = m.cuenta_id
+    where m.cuenta_id = p_cuenta
+      and m.usuario_id = auth.uid()
+      and m.rol = 'propietario'
+      and c.estado = 'activa'
+  );
+$$;
+
+-- ¿El usuario firmado tiene este permiso en su cuenta? El propietario
+-- los tiene todos; el colaborador, solo los que le dieron al invitarlo.
+create or replace function public.mi_permiso(p_permiso text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.miembros_cuenta m
+    join public.cuentas_cliente c on c.id = m.cuenta_id
+    where m.usuario_id = auth.uid()
+      and c.estado = 'activa'
+      and (m.rol = 'propietario'
+           or coalesce((m.permisos ->> p_permiso)::boolean, false))
+  );
+$$;
+
+revoke all on function public.soy_propietario(uuid) from public, anon;
+revoke all on function public.mi_permiso(text) from public, anon;
+grant execute on function public.soy_propietario(uuid) to authenticated;
+grant execute on function public.mi_permiso(text) to authenticated;
+
+-- ---------- INVITACIONES DE COLABORADOR (Fase 4) ----------
+-- El propietario invita con permisos acotados; el colaborador activa con
+-- SU contraseña. Token opaco, caduca, un solo uso — como todo aquí.
+
+create table public.invitaciones_cuenta (
+  id          uuid primary key default gen_random_uuid(),
+  cuenta_id   uuid not null references public.cuentas_cliente(id) on delete cascade,
+  email       text not null,
+  rol         text not null default 'colaborador'
+              check (rol in ('colaborador')),
+  permisos    jsonb not null default '{}'::jsonb,
+  token       text not null unique,
+  expira_en   timestamptz not null,
+  usado_en    timestamptz,
+  revocada_en timestamptz,
+  creado_por  uuid,
+  creado_en   timestamptz not null default now()
+);
+
+create index invitaciones_cuenta_cuenta_idx
+  on public.invitaciones_cuenta (cuenta_id, creado_en desc);
+
+-- ---------- RECUPERACIÓN DE CONTRASEÑA (Fase 4) ----------
+-- La genera el EQUIPO (el negocio corre por WhatsApp: el cliente escribe,
+-- el equipo manda el enlace). Caduca en horas y se usa una vez.
+
+create table public.recuperaciones (
+  id         uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references auth.users(id) on delete cascade,
+  email      text not null,
+  token      text not null unique,
+  expira_en  timestamptz not null,
+  usado_en   timestamptz,
+  creado_por_email text,
+  creado_en  timestamptz not null default now()
+);
+
+create index recuperaciones_usuario_idx
+  on public.recuperaciones (usuario_id, creado_en desc);
+
 -- ---------- RLS: el cliente LEE lo suyo ----------
 
 alter table public.cuentas_cliente enable row level security;
@@ -853,6 +940,29 @@ create policy "miembro ve su fila" on public.miembros_cuenta
   for select to authenticated
   using (usuario_id = (select auth.uid()));
 
+-- El propietario ve TODOS los miembros de su cuenta (quién tiene acceso).
+create policy "propietario ve los miembros" on public.miembros_cuenta
+  for select to authenticated
+  using (public.soy_propietario(cuenta_id));
+
+alter table public.invitaciones_cuenta enable row level security;
+alter table public.recuperaciones enable row level security;
+
+create policy "equipo acceso total invitaciones cuenta" on public.invitaciones_cuenta
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+-- Solo lectura para el propietario: crear y revocar van por acciones de
+-- servidor que validan.
+create policy "propietario ve invitaciones de su cuenta" on public.invitaciones_cuenta
+  for select to authenticated
+  using (public.soy_propietario(cuenta_id));
+
+-- Recuperaciones: solo el equipo. El cliente canjea su token por una
+-- ruta pública que valida en el servidor; nunca consulta la tabla.
+create policy "equipo lee recuperaciones" on public.recuperaciones
+  for select to authenticated using (public.es_del_equipo());
+
 -- Lo suyo, tabla por tabla. SOLO lectura: las escrituras del portal van
 -- por acciones de servidor que validan pertenencia y capacidad.
 create policy "cliente ve su ficha" on public.clientes
@@ -861,8 +971,11 @@ create policy "cliente ve su ficha" on public.clientes
 create policy "cliente ve sus pedidos" on public.pedidos
   for select to authenticated using (cliente_id = public.mi_cliente_id());
 
+-- Los pagos exigen ADEMÁS el permiso ver_pagos: un colaborador sin él no
+-- los ve ni hablando directo con la API. El propietario lo tiene siempre.
 create policy "cliente ve sus pagos" on public.pagos
-  for select to authenticated using (public.es_mi_pedido(pedido_id));
+  for select to authenticated
+  using (public.es_mi_pedido(pedido_id) and public.mi_permiso('ver_pagos'));
 
 create policy "cliente ve sus formularios" on public.formularios
   for select to authenticated using (public.es_mi_pedido(pedido_id));

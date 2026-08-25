@@ -29,7 +29,9 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('avisos',        15, 2, 1),
     ('frenos',         3, 2, 0),
     ('cuentas_cliente',10, 4, 2),
-    ('miembros_cuenta', 6, 3, 2)
+    ('miembros_cuenta', 7, 3, 3),
+    ('invitaciones_cuenta', 11, 3, 2),
+    ('recuperaciones',  8, 3, 1)
 )
 select
   e.tabla,

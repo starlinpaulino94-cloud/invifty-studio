@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
+import { tienePermiso } from "@/lib/cuentas";
 import DetallePedido, {
   type PedidoDelPortal,
   type RevisionDelPortal,
@@ -22,6 +23,19 @@ export default async function PaginaDetallePedido({
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const supabase = await crearClienteServidor();
+
+  // El permiso del miembro firmado decide si la sección de pagos existe.
+  // El RLS lo exige igual en la base; esto evita enseñar cifras vacías.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: miembro } = await supabase
+    .from("miembros_cuenta")
+    .select("rol, permisos")
+    .eq("usuario_id", user?.id ?? "")
+    .maybeSingle();
+  const verPagos = miembro ? tienePermiso(miembro, "ver_pagos") : false;
+
   const { data } = await supabase
     .from("pedidos")
     .select(
@@ -57,6 +71,7 @@ export default async function PaginaDetallePedido({
       confirmaciones={confirmaciones ?? []}
       revision={(revisiones?.[0] as RevisionDelPortal | undefined) ?? null}
       ahora={new Date()}
+      verPagos={verPagos}
     />
   );
 }

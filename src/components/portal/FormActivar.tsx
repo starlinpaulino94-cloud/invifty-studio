@@ -3,16 +3,31 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { crearClienteNavegador } from "@/lib/supabase/cliente";
-import { activarCuenta } from "@/lib/acciones-cuentas";
+import { activarCuenta, activarColaborador, recuperarPassword } from "@/lib/acciones-cuentas";
 import { MIN_PASSWORD } from "@/lib/cuentas";
 import { Loader2, KeyRound } from "lucide-react";
 
+const ACCIONES = {
+  cuenta: { ejecutar: activarCuenta, boton: "Activar mi portal" },
+  colaborador: { ejecutar: activarColaborador, boton: "Activar mi acceso" },
+  recuperacion: { ejecutar: recuperarPassword, boton: "Guardar mi contraseña nueva" },
+} as const;
+
 /**
- * El cliente elige su contraseña y activa la cuenta. La acción del
- * servidor valida el token (un solo uso, con fecha) y crea el usuario;
- * después se firma aquí mismo y entra directo al portal.
+ * El cliente elige su contraseña y canjea su token: activar la cuenta,
+ * activar una invitación de colaborador o recuperar la contraseña. Las
+ * tres acciones validan en el servidor (token de un solo uso, con
+ * fecha); después se firma aquí mismo y entra directo al portal.
  */
-export default function FormActivar({ token, email }: { token: string; email: string }) {
+export default function FormActivar({
+  token,
+  email,
+  accion = "cuenta",
+}: {
+  token: string;
+  email: string;
+  accion?: keyof typeof ACCIONES;
+}) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmacion, setConfirmacion] = useState("");
@@ -34,7 +49,7 @@ export default function FormActivar({ token, email }: { token: string; email: st
 
     setCargando(true);
     try {
-      const { email: correo } = await activarCuenta(token, password);
+      const { email: correo } = await ACCIONES[accion].ejecutar(token, password);
       const supabase = crearClienteNavegador();
       const { error: errorFirma } = await supabase.auth.signInWithPassword({
         email: correo,
@@ -59,7 +74,9 @@ export default function FormActivar({ token, email }: { token: string; email: st
       className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-5"
     >
       <div>
-        <p className="text-white text-sm mb-1">Elige tu contraseña</p>
+        <p className="text-white text-sm mb-1">
+          {accion === "recuperacion" ? "Elige tu contraseña nueva" : "Elige tu contraseña"}
+        </p>
         <p className="text-white/40 text-xs">
           Tu usuario es <span className="text-white/70">{email}</span>. La
           contraseña la eliges tú y solo la sabes tú.
@@ -109,7 +126,7 @@ export default function FormActivar({ token, email }: { token: string; email: st
         className="w-full bg-[#D4AF37] hover:bg-[#F2D06B] disabled:opacity-60 text-black font-semibold text-xs uppercase tracking-[0.2em] py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
       >
         {cargando ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-        Activar mi portal
+        {ACCIONES[accion].boton}
       </button>
     </form>
   );

@@ -1,13 +1,14 @@
 import { crearClienteAdmin } from "@/lib/supabase/admin";
-import { activacionVigente } from "@/lib/cuentas";
+import { activacionVigente, invitacionVigente } from "@/lib/cuentas";
 import FormActivar from "@/components/portal/FormActivar";
 
 export const dynamic = "force-dynamic";
 
 /**
  * ACTIVACIÓN DEL PORTAL — la única puerta de entrada de un cliente nuevo.
- * No hay registro público: se llega solo con el enlace que Invifty mandó
- * por WhatsApp. El token caduca y es de un solo uso; aquí el cliente
+ * No hay registro público: se llega solo con el enlace que llegó por
+ * WhatsApp — el del equipo (propietario) o el del propietario a su
+ * colaborador. El token caduca y es de un solo uso; aquí quien llega
  * elige SU contraseña (que jamás viajó por ningún chat).
  */
 export default async function PaginaActivar({
@@ -16,20 +17,35 @@ export default async function PaginaActivar({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const ahora = new Date();
 
   // Sin sesión no hay RLS que ayude: mira el token el administrador.
-  let cuenta: { estado: string; token_activacion: string | null; activacion_expira: string | null; email: string } | null = null;
+  // El mismo enlace sirve para las dos activaciones; se busca en orden.
+  let email: string | null = null;
+  let accion: "cuenta" | "colaborador" = "cuenta";
   if (/^[a-f0-9]{32}$/i.test(token)) {
     const admin = crearClienteAdmin();
-    const { data } = await admin
+    const { data: cuenta } = await admin
       .from("cuentas_cliente")
       .select("estado, token_activacion, activacion_expira, email")
       .eq("token_activacion", token)
       .maybeSingle();
-    cuenta = data;
+    if (cuenta && activacionVigente(cuenta, ahora)) {
+      email = cuenta.email;
+    } else {
+      const { data: invitacion } = await admin
+        .from("invitaciones_cuenta")
+        .select("email, expira_en, usado_en, revocada_en")
+        .eq("token", token)
+        .maybeSingle();
+      if (invitacion && invitacionVigente(invitacion, ahora)) {
+        email = invitacion.email;
+        accion = "colaborador";
+      }
+    }
   }
 
-  const vigente = cuenta !== null && activacionVigente(cuenta, new Date());
+  const vigente = email !== null;
 
   return (
     <div className="min-h-dvh bg-[#0D0D0F] flex items-center justify-center px-5">
@@ -44,7 +60,7 @@ export default async function PaginaActivar({
         </div>
 
         {vigente ? (
-          <FormActivar token={token} email={cuenta!.email} />
+          <FormActivar token={token} email={email!} accion={accion} />
         ) : (
           <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-center">
             <p className="text-white text-sm mb-2">Este enlace ya no sirve.</p>

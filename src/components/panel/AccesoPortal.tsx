@@ -7,10 +7,16 @@ import {
   reenviarActivacion,
   suspenderCuenta,
   reactivarCuenta,
+  generarRecuperacion,
 } from "@/lib/acciones-cuentas";
-import { mensajeWhatsAppActivacion, activacionVigente } from "@/lib/cuentas";
+import {
+  mensajeWhatsAppActivacion,
+  mensajeWhatsAppRecuperacion,
+  activacionVigente,
+  HORAS_RECUPERACION,
+} from "@/lib/cuentas";
 import { BotonCopiar } from "@/components/panel/Interactivos";
-import { Loader2, UserPlus, RefreshCw, Ban, Undo2 } from "lucide-react";
+import { Loader2, UserPlus, RefreshCw, Ban, Undo2, KeyRound } from "lucide-react";
 
 interface CuentaPortal {
   estado: string;
@@ -46,6 +52,8 @@ export default function AccesoPortal({
   // El token recién creado/renovado: el servidor solo lo devuelve a quien
   // acaba de ejecutar la acción; al recargar, se lee de la cuenta.
   const [tokenFresco, setTokenFresco] = useState("");
+  // El de recuperación solo vive en esta pantalla: la tabla no se relee.
+  const [tokenRecuperacion, setTokenRecuperacion] = useState("");
 
   const ejecutar = async (accion: () => Promise<unknown>) => {
     setError("");
@@ -70,6 +78,7 @@ export default function AccesoPortal({
 
   const token = tokenFresco || cuenta?.token_activacion || "";
   const urlActivacion = token ? `${urlBase}/activar/${token}` : "";
+  const urlRecuperacion = tokenRecuperacion ? `${urlBase}/recuperar/${tokenRecuperacion}` : "";
   const vigente =
     cuenta !== null &&
     activacionVigente(
@@ -160,14 +169,41 @@ export default function AccesoPortal({
             Cuenta activa con el correo <span className="text-gray-800">{cuenta.email}</span>. El
             cliente entra por <span className="text-gray-800">{urlBase}/portal</span>.
           </p>
-          <button
-            onClick={() => ejecutar(() => suspenderCuenta(clienteId))}
-            disabled={cargando}
-            className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-400 rounded-xl px-3 py-2 flex items-center gap-2 disabled:opacity-60"
-          >
-            {cargando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
-            Suspender acceso
-          </button>
+          {urlRecuperacion && (
+            <div className="flex flex-wrap items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+              <code className="text-[11px] break-all">{urlRecuperacion}</code>
+              <BotonCopiar
+                texto={mensajeWhatsAppRecuperacion(nombreCliente, urlRecuperacion)}
+                etiqueta="Copiar mensaje de WhatsApp"
+              />
+              <span className="text-[10px] text-amber-700 w-full">
+                Vence en {HORAS_RECUPERACION} horas y se usa una sola vez.
+              </span>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() =>
+                ejecutar(async () => {
+                  const { token } = await generarRecuperacion(clienteId);
+                  setTokenRecuperacion(token);
+                })
+              }
+              disabled={cargando}
+              className="text-xs font-semibold text-gray-700 border border-gray-200 hover:border-gray-400 rounded-xl px-3 py-2 flex items-center gap-2 disabled:opacity-60"
+            >
+              {cargando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <KeyRound className="w-3.5 h-3.5" />}
+              Enlace de recuperación
+            </button>
+            <button
+              onClick={() => ejecutar(() => suspenderCuenta(clienteId))}
+              disabled={cargando}
+              className="text-xs font-semibold text-red-600 border border-red-200 hover:border-red-400 rounded-xl px-3 py-2 flex items-center gap-2 disabled:opacity-60"
+            >
+              {cargando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+              Suspender acceso
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">

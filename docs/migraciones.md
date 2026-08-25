@@ -39,6 +39,7 @@ te fíes de la memoria ni de este documento.
 | `20260806030000_rsvp-avanzado` | `confirmaciones.respuestas` (preguntas extra configurables del RSVP) |
 | `20260806050000_referencias-revision` | `comentarios.imagen_ruta` (imagen de referencia del cliente) |
 | `20260814090000_portal-cuentas` | Cuentas del portal de clientes: `cuentas_cliente`, `miembros_cuenta`, snapshot `capacidades_contratadas` y RLS multicuenta de lectura |
+| `20260825090000_colaboradores-recuperacion` | Colaboradores con permisos acotados (`invitaciones_cuenta`, `soy_propietario()`, `mi_permiso()`, pagos con permiso en la base) y recuperación de contraseña (`recuperaciones`) |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { cerrarSesionPortal } from "@/lib/acciones-cuentas";
@@ -61,14 +62,22 @@ export default async function PortalLayout({ children }: { children: React.React
             Portal de clientes
           </span>
         </div>
-        <form action={cerrarSesionPortal}>
-          <button
-            type="submit"
+        <nav className="flex items-center gap-4">
+          <Link
+            href="/portal/personas"
             className="text-white/50 hover:text-white text-[11px] uppercase tracking-[0.2em]"
           >
-            Salir
-          </button>
-        </form>
+            Personas
+          </Link>
+          <form action={cerrarSesionPortal}>
+            <button
+              type="submit"
+              className="text-white/50 hover:text-white text-[11px] uppercase tracking-[0.2em]"
+            >
+              Salir
+            </button>
+          </form>
+        </nav>
       </header>
       <main className="max-w-3xl mx-auto px-5 py-8">{children}</main>
     </div>
