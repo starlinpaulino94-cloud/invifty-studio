@@ -99,8 +99,12 @@ insert into resultados values
         then '✅ OK' else '❌ FUGA' end),
   (7, 'A ve los miembros de SU cuenta (2)',
    case when (select count(*) from public.miembros_cuenta) = 2 then '✅ OK' else '❌ FALLA' end),
-  (8, 'A NO ve la cuenta de B',
-   case when (select count(*) from public.cuentas_cliente where id = 'b2000000-0000-4000-8000-000000000002') = 0
+  (8, 'A ve SU cuenta y NO la de B',
+   -- Las dos mitades a la vez: ver la ajena es una fuga, y NO ver la
+   -- propia es el bug que esta prueba cazó en producción (política con
+   -- `id` sin calificar, siempre falsa).
+   case when (select count(*) from public.cuentas_cliente) = 1
+         and (select count(*) from public.cuentas_cliente where id = 'b2000000-0000-4000-8000-000000000002') = 0
         then '✅ OK' else '❌ FUGA' end);
 
 -- ---------- Como COLABORADOR de A (sin ver_pagos) ----------

@@ -115,6 +115,24 @@ test("las políticas del cliente son SOLO de lectura", () => {
   }
 });
 
+test("las políticas con subconsulta califican la referencia externa", () => {
+  // Pasó de verdad: "cliente ve su cuenta" decía `m.cuenta_id = id` y ese
+  // `id` se resolvía contra miembros_cuenta (que también tiene id) — la
+  // condición era siempre falsa y el cliente no veía su propia cuenta.
+  // Lo cazó probar-aislamiento.sql en producción (fila 15 en ❌).
+  for (const { archivo, contenido } of sqlDelProyecto()) {
+    assert.doesNotMatch(
+      contenido,
+      /m\.cuenta_id = id\b/,
+      `${archivo}: referencia externa sin calificar — usa cuentas_cliente.id`
+    );
+  }
+  const esquema = readFileSync(path.join(raiz, "supabase", "schema.sql"), "utf8");
+  const politica = /create policy "cliente ve su cuenta"[\s\S]*?;/.exec(esquema);
+  assert.ok(politica, "no encuentro la política cliente ve su cuenta");
+  assert.match(politica[0], /m\.cuenta_id = cuentas_cliente\.id/, "la política perdió la calificación");
+});
+
 test("las tablas nuevas del portal también piden ser del equipo", () => {
   const esquema = readFileSync(path.join(raiz, "supabase", "schema.sql"), "utf8");
   for (const tabla of ["cuentas_cliente", "miembros_cuenta"]) {

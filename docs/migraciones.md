@@ -48,6 +48,7 @@ de cada migración que toque políticas del portal.
 | `20260806050000_referencias-revision` | `comentarios.imagen_ruta` (imagen de referencia del cliente) |
 | `20260814090000_portal-cuentas` | Cuentas del portal de clientes: `cuentas_cliente`, `miembros_cuenta`, snapshot `capacidades_contratadas` y RLS multicuenta de lectura |
 | `20260825090000_colaboradores-recuperacion` | Colaboradores con permisos acotados (`invitaciones_cuenta`, `soy_propietario()`, `mi_permiso()`, pagos con permiso en la base) y recuperación de contraseña (`recuperaciones`) |
+| `20260825150000_cuenta-visible-para-su-miembro` | Arreglo: la política "cliente ve su cuenta" comparaba `id` sin calificar (siempre falsa) y el cliente no veía su propia cuenta. Lo cazó `probar-aislamiento.sql` |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).
