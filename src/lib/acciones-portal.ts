@@ -7,7 +7,9 @@ import { registrarError } from "./registro";
 import { tokenOpaco } from "./revision";
 import {
   expiraActivacion,
+  invitacionVigente,
   MAX_MIEMBROS,
+  sanearPermisos,
   tienePermiso,
   type PermisoColaborador,
 } from "./cuentas";
@@ -115,20 +117,23 @@ export async function invitarColaborador(
     .from("miembros_cuenta")
     .select("id, email")
     .eq("cuenta_id", quien.cuentaId);
-  const { data: pendientes } = await admin
+  const { data: pendientesData } = await admin
     .from("invitaciones_cuenta")
     .select("id, email, usado_en, revocada_en, expira_en")
     .eq("cuenta_id", quien.cuentaId)
     .is("usado_en", null)
     .is("revocada_en", null);
+  // Solo cuentan las VIGENTES: una invitación caducada no ocupa cupo ni
+  // bloquea reinvitar al mismo correo (caducar ya la mató).
+  const pendientes = (pendientesData ?? []).filter((i) => invitacionVigente(i, new Date()));
 
-  if ((miembros?.length ?? 0) + (pendientes?.length ?? 0) >= MAX_MIEMBROS) {
+  if ((miembros?.length ?? 0) + pendientes.length >= MAX_MIEMBROS) {
     throw new Error("Esta cuenta llegó al máximo de miembros. Escríbenos si necesitas más.");
   }
   if (miembros?.some((m) => m.email?.toLowerCase() === correo)) {
     throw new Error("Ese correo ya tiene acceso a esta cuenta.");
   }
-  if (pendientes?.some((i) => i.email.toLowerCase() === correo)) {
+  if (pendientes.some((i) => i.email.toLowerCase() === correo)) {
     throw new Error("Ese correo ya tiene una invitación pendiente: revócala para crear otra.");
   }
 
@@ -137,7 +142,8 @@ export async function invitarColaborador(
     cuenta_id: quien.cuentaId,
     email: correo,
     rol: "colaborador",
-    permisos,
+    // Saneados: solo ids del catálogo y solo el booleano true.
+    permisos: sanearPermisos(permisos),
     token,
     expira_en: expiraActivacion(new Date()),
     creado_por: quien.usuarioId,
@@ -259,6 +265,46 @@ export async function guardarContenidoInvitacion(
 
   revalidatePath("/portal");
   return { guardado: true };
+}
+
+/**
+ * Cambia los permisos de un colaborador YA activo, sin quitarlo y sin
+ * reinvitarlo. Solo el propietario, solo sobre colaboradores de SU
+ * cuenta, y los permisos entran saneados — el efecto es inmediato
+ * porque mi_permiso() en la base lee la fila viva.
+ */
+export async function actualizarPermisosColaborador(
+  miembroId: string,
+  permisos: Partial<Record<PermisoColaborador, boolean>>
+) {
+  const quien = await propietarioFirmado();
+
+  const admin = crearClienteAdmin();
+  const { data: miembro } = await admin
+    .from("miembros_cuenta")
+    .select("id, cuenta_id, rol, email")
+    .eq("id", miembroId)
+    .maybeSingle();
+
+  if (!miembro || miembro.cuenta_id !== quien.cuentaId) {
+    throw new Error("Ese miembro no existe.");
+  }
+  if (miembro.rol !== "colaborador") {
+    throw new Error("El propietario no lleva permisos: lo tiene todo siempre.");
+  }
+
+  const limpios = sanearPermisos(permisos);
+  const { error } = await admin
+    .from("miembros_cuenta")
+    .update({ permisos: limpios })
+    .eq("id", miembroId);
+  if (error) throw new Error(`No se pudieron guardar los permisos: ${error.message}`);
+
+  await auditarPortal(quien, "cuenta:cambiar_permisos", {
+    email: miembro.email ?? null,
+    permisos: Object.keys(limpios).join(", ") || "ninguno",
+  });
+  revalidatePath("/portal/personas");
 }
 
 /** Quita a un colaborador. Al propietario no lo quita nadie desde aquí. */

@@ -16,6 +16,7 @@ import {
   invitacionVigente,
   passwordValida,
   recuperacionVigente,
+  sanearPermisos,
 } from "./cuentas";
 
 /**
@@ -355,7 +356,9 @@ export async function activarColaborador(token: string, password: string) {
     cuenta_id: cuenta.id,
     usuario_id: creado.user.id,
     rol: "colaborador",
-    permisos: invitacion.permisos ?? {},
+    // Saneados otra vez al nacer el miembro: la fila de la invitación
+    // pudo escribirse con un código anterior a la limpieza.
+    permisos: sanearPermisos(invitacion.permisos),
     email: invitacion.email,
   });
   if (errorMiembro) {

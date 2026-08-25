@@ -9,6 +9,7 @@ import {
   activacionVigente,
   invitacionVigente,
   recuperacionVigente,
+  sanearPermisos,
   tienePermiso,
   passwordValida,
   MIN_PASSWORD,
@@ -101,6 +102,23 @@ test("un enlace de recuperación usado no vuelve a servir", () => {
     false
   );
   assert.equal(recuperacionVigente({ expira_en: null, usado_en: null }, AHORA), false);
+});
+
+test("sanearPermisos deja pasar SOLO el catálogo y SOLO el booleano true", () => {
+  // mi_permiso() en la base hace (permisos->>x)::boolean, y el string
+  // "true" también castea a true: sin esta limpieza, el navegador podría
+  // conceder en la base lo que la pantalla cree negado.
+  assert.deepEqual(sanearPermisos({ ver_pagos: true }), { ver_pagos: true });
+  assert.deepEqual(sanearPermisos({ ver_pagos: "true" }), {}, "un string no concede");
+  assert.deepEqual(sanearPermisos({ ver_pagos: 1 }), {}, "un número no concede");
+  assert.deepEqual(sanearPermisos({ inventado: true }), {}, "fuera del catálogo no existe");
+  assert.deepEqual(sanearPermisos({ ver_pagos: false }), {}, "false no se guarda: ausente ES negado");
+  assert.deepEqual(sanearPermisos(null), {});
+  assert.deepEqual(sanearPermisos("basura"), {});
+  assert.deepEqual(
+    sanearPermisos({ ver_pagos: true, editar_invitacion: true, otro: true }),
+    { ver_pagos: true, editar_invitacion: true }
+  );
 });
 
 test("el propietario lo puede todo; el colaborador, solo lo concedido", () => {
