@@ -56,3 +56,48 @@ export const NOTA_ESTADO_CAPACIDAD: Record<Exclude<EstadoCapacidad, "no_disponib
   manual: "La gestiona el equipo de Invifty por ti",
   vendida_sin_implementar: "Incluida en tu plan — disponible pronto",
 };
+
+/* =====================================================================
+ * LA ACTIVIDAD DEL PORTAL, contada al equipo
+ * =====================================================================
+ * Todo lo que un cliente hace en su portal ya queda en `auditoria`;
+ * esto lo traduce a frases que el tablero puede enseñar. Si una acción
+ * del portal no está aquí, el tablero no la cuenta — así que cada
+ * acción nueva del portal AGREGA su frase (hay una prueba que compara
+ * esta lista con las acciones que las acciones de servidor registran).
+ */
+
+export const ACCIONES_PORTAL: Record<string, string> = {
+  "cuenta:activar": "activó su portal",
+  "cuenta:activar_colaborador": "activó su acceso como colaborador",
+  "cuenta:invitar_colaborador": "invitó a un colaborador",
+  "cuenta:revocar_invitacion": "revocó una invitación",
+  "cuenta:quitar_colaborador": "quitó a un colaborador",
+  "cuenta:recuperar_password": "eligió una contraseña nueva",
+  "invitacion:contenido_cliente": "editó los textos de su invitación",
+};
+
+export interface FilaActividad {
+  accion: string;
+  usuario_email: string | null;
+  creado_en: string;
+}
+
+/** La frase del tablero, o null si la acción no es del portal. */
+export function describirActividad(fila: FilaActividad): string | null {
+  const frase = ACCIONES_PORTAL[fila.accion];
+  if (!frase) return null;
+  return `${fila.usuario_email ?? "Alguien"} ${frase}`;
+}
+
+/** "hace 5 min", "hace 3 h", "hace 2 días" — para la lista de actividad. */
+export function haceCuanto(fecha: string, ahora: Date): string {
+  const ms = ahora.getTime() - new Date(fecha).getTime();
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return "ahora mismo";
+  if (min < 60) return `hace ${min} min`;
+  const horas = Math.floor(min / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return `hace ${dias} día${dias === 1 ? "" : "s"}`;
+}

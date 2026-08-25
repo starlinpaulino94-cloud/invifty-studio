@@ -7,6 +7,8 @@ import { crearClienteAdmin } from "./supabase/admin";
 import { exigirPermiso, registrarAccion } from "./auditoria";
 import { registrarError } from "./registro";
 import { tokenOpaco } from "./revision";
+import { encolarAvisoEquipo } from "./avisos";
+import { urlBase } from "./url";
 import {
   activacionVigente,
   expiraActivacion,
@@ -260,7 +262,43 @@ export async function activarCuenta(token: string, password: string) {
   });
   if (errorAud) registrarError("auditoria", errorAud, { accion: "cuenta:activar" });
 
+  await avisarPortal(admin, "portal_activado", cuenta.cliente_id, cuenta.email);
+
   return { email: cuenta.email };
+}
+
+/**
+ * Aviso al equipo por la bandeja de salida: los hitos del portal no
+ * pasan en silencio. Si falla, la operación del cliente NO se cae — un
+ * portal activado vale más que su correo interno.
+ */
+async function avisarPortal(
+  admin: ReturnType<typeof crearClienteAdmin>,
+  tipo: "portal_activado" | "portal_colaborador" | "portal_password",
+  clienteId: string | null,
+  detalle: string,
+  /** UUID de referencia cuando no hay cliente (ej. el usuario de auth). */
+  referenciaId?: string
+) {
+  try {
+    let nombre = detalle;
+    if (clienteId) {
+      const { data: cliente } = await admin
+        .from("clientes")
+        .select("nombre")
+        .eq("id", clienteId)
+        .maybeSingle();
+      if (cliente?.nombre) nombre = cliente.nombre;
+    }
+    await encolarAvisoEquipo(
+      admin,
+      tipo,
+      { nombre, detalle, rutaPanel: "/panel/clientes", urlBase: urlBase() },
+      { tipo: "cliente", id: clienteId ?? referenciaId ?? "" }
+    );
+  } catch (e) {
+    registrarError("avisos", e, { tipo, paso: "aviso portal" });
+  }
 }
 
 /**
@@ -343,6 +381,8 @@ export async function activarColaborador(token: string, password: string) {
     detalles: {},
   });
   if (errorAud) registrarError("auditoria", errorAud, { accion: "cuenta:activar_colaborador" });
+
+  await avisarPortal(admin, "portal_colaborador", cuenta.cliente_id, invitacion.email);
 
   return { email: invitacion.email };
 }
@@ -433,6 +473,9 @@ export async function recuperarPassword(token: string, password: string) {
     detalles: {},
   });
   if (errorAud) registrarError("auditoria", errorAud, { accion: "cuenta:recuperar_password" });
+
+  // Aviso de seguridad: si el cliente no lo pidió, el equipo debe verlo.
+  await avisarPortal(admin, "portal_password", null, rec.email, rec.usuario_id);
 
   return { email: rec.email };
 }

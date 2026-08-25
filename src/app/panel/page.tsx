@@ -7,6 +7,8 @@ import { AlertTriangle, ClipboardCheck, PlusCircle, CalendarDays } from "lucide-
 import {
   TiraDeTareas, AlertaRevisiones, type TareaDeHoy,
 } from "@/components/panel/HoyTeToca";
+import ActividadPortal from "@/components/panel/ActividadPortal";
+import { ACCIONES_PORTAL, type FilaActividad } from "@/lib/portal";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,7 @@ export default async function Tablero() {
     { data: aprobadasData },
     { count: avisosFallidos },
     { data: pagosData },
+    { data: actividadData },
   ] = await Promise.all([
     supabase
       .from("pedidos")
@@ -61,6 +64,14 @@ export default async function Tablero() {
       .select("pedido_id, monto, tipo, anulado_en")
       .order("fecha", { ascending: false })
       .limit(5000),
+    // Lo que los clientes hicieron solos en su portal. La lista de
+    // acciones viene de lib/portal.ts: una acción nueva se agrega allí.
+    supabase
+      .from("auditoria")
+      .select("accion, usuario_email, creado_en")
+      .in("accion", Object.keys(ACCIONES_PORTAL))
+      .order("creado_en", { ascending: false })
+      .limit(8),
   ]);
 
   const pedidos = (data ?? []) as PedidoConCliente[];
@@ -183,6 +194,9 @@ export default async function Tablero() {
 
       {/* Hoy te toca: solo aparece lo que necesita acción */}
       <TiraDeTareas tareas={tareas} />
+
+      {/* Lo que los clientes hicieron solos en su portal */}
+      <ActividadPortal filas={(actividadData ?? []) as FilaActividad[]} ahora={hoy} />
 
       {/* Alertas */}
       {(eventosProximos.length > 0 ||

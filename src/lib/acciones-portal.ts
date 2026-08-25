@@ -12,6 +12,8 @@ import {
   type PermisoColaborador,
 } from "./cuentas";
 import { aplicarContenido, puedeEditarContenido, validarContenido } from "./edicion";
+import { encolarAvisoEquipo } from "./avisos";
+import { urlBase } from "./url";
 import type { DatosInvitacion } from "./tipos";
 
 /**
@@ -231,6 +233,30 @@ export async function guardarContenidoInvitacion(
     invitacion: invitacionId,
     campos: Object.keys(cambios).join(", "),
   });
+
+  // Aviso al equipo: un texto cambiado por el cliente no pasa en
+  // silencio. Si el correo falla, el guardado NO se cae.
+  try {
+    const { data: cliente } = await admin
+      .from("clientes")
+      .select("nombre")
+      .eq("id", quien.clienteId)
+      .maybeSingle();
+    await encolarAvisoEquipo(
+      admin,
+      "portal_textos",
+      {
+        nombre: cliente?.nombre ?? quien.email ?? "Un cliente",
+        detalle: Object.keys(cambios).join(", "),
+        rutaPanel: `/panel/invitaciones/${invitacionId}`,
+        urlBase: urlBase(),
+      },
+      { tipo: "invitacion", id: invitacionId }
+    );
+  } catch (e) {
+    registrarError("avisos", e, { tipo: "portal_textos", paso: "aviso portal" });
+  }
+
   revalidatePath("/portal");
   return { guardado: true };
 }
