@@ -35,11 +35,12 @@ export default async function PaginaDetallePedido({
     .eq("usuario_id", user?.id ?? "")
     .maybeSingle();
   const verPagos = miembro ? tienePermiso(miembro, "ver_pagos") : false;
+  const puedeEditarTextos = miembro ? tienePermiso(miembro, "editar_invitacion") : false;
 
   const { data } = await supabase
     .from("pedidos")
     .select(
-      "id, plan, tipo_evento, estado, precio, fecha_evento, fecha_entrega, fecha_vencimiento, capacidades_contratadas, formularios(token, estado), invitaciones(id, slug, token_lista, estado), pagos(id, monto, tipo, metodo, fecha, fecha_efectiva, anulado_en)"
+      "id, plan, tipo_evento, estado, precio, fecha_evento, fecha_entrega, fecha_vencimiento, capacidades_contratadas, formularios(token, estado), invitaciones(id, slug, token_lista, estado, bloqueada_en), pagos(id, monto, tipo, metodo, fecha, fecha_efectiva, anulado_en)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -72,6 +73,7 @@ export default async function PaginaDetallePedido({
       revision={(revisiones?.[0] as RevisionDelPortal | undefined) ?? null}
       ahora={new Date()}
       verPagos={verPagos}
+      puedeEditarTextos={puedeEditarTextos}
     />
   );
 }

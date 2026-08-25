@@ -60,6 +60,7 @@ export function passwordValida(password: string): boolean {
  */
 export const PERMISOS_COLABORADOR = [
   { id: "ver_pagos", nombre: "Ver pagos y saldos" },
+  { id: "editar_invitacion", nombre: "Editar los textos de la invitación" },
 ] as const;
 
 export type PermisoColaborador = (typeof PERMISOS_COLABORADOR)[number]["id"];

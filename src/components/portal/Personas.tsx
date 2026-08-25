@@ -53,7 +53,7 @@ export default function Personas({
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [verPagos, setVerPagos] = useState(false);
+  const [permisos, setPermisos] = useState<Partial<Record<PermisoColaborador, boolean>>>({});
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [copiado, setCopiado] = useState("");
@@ -77,9 +77,9 @@ export default function Personas({
   const invitar = (e: FormEvent) => {
     e.preventDefault();
     void ejecutar(async () => {
-      await invitarColaborador(email, { ver_pagos: verPagos });
+      await invitarColaborador(email, permisos);
       setEmail("");
-      setVerPagos(false);
+      setPermisos({});
     });
   };
 
@@ -109,8 +109,10 @@ export default function Personas({
                 <p className="text-white/35 text-[11px]">
                   {m.rol === "propietario"
                     ? "Propietario — acceso completo"
-                    : `Colaborador${
-                        tienePermiso(m, "ver_pagos") ? " — puede ver pagos" : " — sin acceso a pagos"
+                    : `Colaborador — ${
+                        PERMISOS_COLABORADOR.filter((p) => tienePermiso(m, p.id))
+                          .map((p) => p.nombre.toLowerCase())
+                          .join(", ") || "solo consulta"
                       }`}
                 </p>
               </div>
@@ -174,8 +176,8 @@ export default function Personas({
             <label key={p.id} className="flex items-center gap-2.5 text-white/60 text-xs">
               <input
                 type="checkbox"
-                checked={p.id === ("ver_pagos" as PermisoColaborador) ? verPagos : false}
-                onChange={(e) => setVerPagos(e.target.checked)}
+                checked={permisos[p.id] ?? false}
+                onChange={(e) => setPermisos({ ...permisos, [p.id]: e.target.checked })}
                 className="accent-[#D4AF37]"
               />
               {p.nombre}

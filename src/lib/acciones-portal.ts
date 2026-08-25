@@ -8,8 +8,11 @@ import { tokenOpaco } from "./revision";
 import {
   expiraActivacion,
   MAX_MIEMBROS,
+  tienePermiso,
   type PermisoColaborador,
 } from "./cuentas";
+import { aplicarContenido, puedeEditarContenido, validarContenido } from "./edicion";
+import type { DatosInvitacion } from "./tipos";
 
 /**
  * ACCIONES DEL PROPIETARIO EN SU PORTAL
@@ -22,15 +25,17 @@ import {
  * pluma.
  */
 
-interface Propietario {
+interface MiembroFirmado {
   usuarioId: string;
   email: string | null;
   cuentaId: string;
   clienteId: string;
+  rol: string;
+  permisos: Record<string, unknown> | null;
 }
 
-/** El firmante debe ser propietario de una cuenta activa. Lanza si no. */
-async function propietarioFirmado(): Promise<Propietario> {
+/** El firmante debe ser miembro de una cuenta activa. Lanza si no. */
+async function miembroFirmado(): Promise<MiembroFirmado> {
   const supabase = await crearClienteServidor();
   const {
     data: { user },
@@ -41,7 +46,7 @@ async function propietarioFirmado(): Promise<Propietario> {
   // ejercita el RLS. Una cuenta suspendida no aparece como activa.
   const { data: miembro } = await supabase
     .from("miembros_cuenta")
-    .select("cuenta_id, rol, cuentas_cliente(cliente_id, estado)")
+    .select("cuenta_id, rol, permisos, cuentas_cliente(cliente_id, estado)")
     .eq("usuario_id", user.id)
     .maybeSingle();
 
@@ -50,9 +55,6 @@ async function propietarioFirmado(): Promise<Propietario> {
     | null
     | undefined;
   if (!miembro || !cuenta) throw new Error("Esta cuenta no tiene portal.");
-  if (miembro.rol !== "propietario") {
-    throw new Error("Solo el propietario de la cuenta puede gestionar el acceso.");
-  }
   if (cuenta.estado !== "activa") throw new Error("La cuenta no está activa.");
 
   return {
@@ -60,12 +62,23 @@ async function propietarioFirmado(): Promise<Propietario> {
     email: user.email ?? null,
     cuentaId: miembro.cuenta_id,
     clienteId: cuenta.cliente_id,
+    rol: miembro.rol,
+    permisos: (miembro.permisos as Record<string, unknown> | null) ?? null,
   };
+}
+
+/** El firmante debe ser PROPIETARIO de una cuenta activa. Lanza si no. */
+async function propietarioFirmado(): Promise<MiembroFirmado> {
+  const miembro = await miembroFirmado();
+  if (miembro.rol !== "propietario") {
+    throw new Error("Solo el propietario de la cuenta puede gestionar el acceso.");
+  }
+  return miembro;
 }
 
 /** Deja rastro en auditoría con el CLIENTE como actor (no hay equipo aquí). */
 async function auditarPortal(
-  quien: Propietario,
+  quien: MiembroFirmado,
   accion: string,
   detalles: Record<string, string | number | boolean | null> = {}
 ) {
@@ -160,6 +173,66 @@ export async function revocarInvitacionColaborador(invitacionId: string) {
 
   await auditarPortal(quien, "cuenta:revocar_invitacion", { invitacion: invitacionId });
   revalidatePath("/portal/personas");
+}
+
+/**
+ * Guarda los TEXTOS de la invitación que el cliente puede editar (lista
+ * blanca de lib/edicion.ts — el diseño no está en ella y por tanto no
+ * entra por aquí ni a propósito). Exige:
+ *  - miembro de cuenta activa con el permiso editar_invitacion
+ *    (el propietario lo tiene siempre);
+ *  - que la invitación sea SUYA — se lee con su sesión, RLS mediante;
+ *  - el candado: una invitación aprobada no se toca. El update lo exige
+ *    OTRA vez (`is bloqueada_en null`), así una aprobación que llegue
+ *    entre la lectura y la escritura también lo frena.
+ */
+export async function guardarContenidoInvitacion(
+  invitacionId: string,
+  crudo: Record<string, string>
+) {
+  const quien = await miembroFirmado();
+  if (!tienePermiso(quien, "editar_invitacion")) {
+    throw new Error("Tu acceso no incluye editar la invitación: pídeselo al propietario.");
+  }
+
+  // La pertenencia la decide el RLS: esta lectura va con la sesión del
+  // cliente y solo devuelve la invitación si es de su cuenta.
+  const supabase = await crearClienteServidor();
+  const { data: invitacion } = await supabase
+    .from("invitaciones")
+    .select("id, datos, bloqueada_en")
+    .eq("id", invitacionId)
+    .maybeSingle();
+  if (!invitacion) throw new Error("Esa invitación no existe.");
+
+  const candado = puedeEditarContenido(invitacion);
+  if (!candado.ok) throw new Error(candado.motivo);
+
+  const { cambios, errores } = validarContenido(crudo);
+  if (errores.length) throw new Error(errores.join(" "));
+  if (!Object.keys(cambios).length) return { guardado: false };
+
+  const datos = aplicarContenido(invitacion.datos as DatosInvitacion, cambios);
+
+  const admin = crearClienteAdmin();
+  const { data: filas, error } = await admin
+    .from("invitaciones")
+    .update({ datos })
+    .eq("id", invitacionId)
+    .is("bloqueada_en", null)
+    .select("id");
+  if (error) throw new Error(`No se pudo guardar: ${error.message}`);
+  if (!filas?.length) {
+    throw new Error("Tu invitación se aprobó hace un momento y quedó protegida: escríbenos si falta un cambio.");
+  }
+
+  // A la auditoría van los CAMPOS tocados, no sus textos (son personales).
+  await auditarPortal(quien, "invitacion:contenido_cliente", {
+    invitacion: invitacionId,
+    campos: Object.keys(cambios).join(", "),
+  });
+  revalidatePath("/portal");
+  return { guardado: true };
 }
 
 /** Quita a un colaborador. Al propietario no lo quita nadie desde aquí. */

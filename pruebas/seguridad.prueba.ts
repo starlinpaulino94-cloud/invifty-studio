@@ -242,6 +242,28 @@ test("la recuperación quema el token ANTES de cambiar la contraseña", () => {
   assert.ok(quema > 0 && cambia > 0 && quema < cambia, "el token debe quemarse antes del cambio");
 });
 
+test("la edición del cliente revalida permiso, pertenencia y candado en el servidor", () => {
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones-portal.ts"), "utf8");
+  const cuerpo = /export async function guardarContenidoInvitacion[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(cuerpo, "no encuentro guardarContenidoInvitacion");
+  assert.match(cuerpo[0], /miembroFirmado\(\)/, "no valida la sesión del miembro");
+  assert.match(
+    cuerpo[0],
+    /tienePermiso\(quien, "editar_invitacion"\)/,
+    "no exige el permiso editar_invitacion"
+  );
+  assert.match(cuerpo[0], /puedeEditarContenido\(/, "no comprueba el candado");
+  assert.match(cuerpo[0], /validarContenido\(/, "no valida contra la lista blanca");
+  // La pertenencia se lee con la SESIÓN del cliente (RLS), no con admin.
+  assert.match(cuerpo[0], /crearClienteServidor\(\)/, "la pertenencia debe leerse con la sesión");
+  // El update re-exige el candado: sin carrera entre leer y escribir.
+  assert.match(
+    cuerpo[0],
+    /\.is\("bloqueada_en", null\)/,
+    "el update debe exigir el candado otra vez"
+  );
+});
+
 test("el portal lee SOLO con la sesión del cliente, nunca con la llave administrativa", () => {
   // Si una página del portal importara el cliente admin, saltaría el RLS
   // y una consulta mal filtrada enseñaría datos de OTRO cliente sin que

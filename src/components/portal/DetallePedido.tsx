@@ -9,7 +9,7 @@ import {
 import type { EstadoCapacidad } from "@/lib/planes";
 import type { Plan, TipoEvento, EstadoPedido } from "@/lib/tipos";
 import {
-  ArrowLeft, FileText, ExternalLink, Users, Wallet, Sparkles, PenLine, Check, Clock,
+  ArrowLeft, FileText, ExternalLink, Users, Wallet, Sparkles, PenLine, Check, Clock, Type,
 } from "lucide-react";
 
 export interface PedidoDelPortal {
@@ -23,7 +23,13 @@ export interface PedidoDelPortal {
   fecha_vencimiento: string | null;
   capacidades_contratadas: unknown;
   formularios: { token: string; estado: string }[];
-  invitaciones: { id: string; slug: string; token_lista: string | null; estado: string }[];
+  invitaciones: {
+    id: string;
+    slug: string;
+    token_lista: string | null;
+    estado: string;
+    bloqueada_en: string | null;
+  }[];
   pagos: {
     id: string;
     monto: number;
@@ -54,6 +60,7 @@ export default function DetallePedido({
   revision,
   ahora,
   verPagos = true,
+  puedeEditarTextos = false,
 }: {
   pedido: PedidoDelPortal;
   confirmaciones: { asiste: boolean; cantidad: number }[];
@@ -65,6 +72,8 @@ export default function DetallePedido({
    * enseñarla vacía diría "RD$ 0 abonado", que es mentira.
    */
   verPagos?: boolean;
+  /** El permiso editar_invitacion del miembro firmado. */
+  puedeEditarTextos?: boolean;
 }) {
   const contrato = contratoDePedido(pedido);
   const capacidades = capacidadesDelCliente(contrato);
@@ -160,6 +169,14 @@ export default function DetallePedido({
                 Icono={FileText}
                 titulo="Completar el formulario"
                 detalle="Los datos de tu celebración"
+              />
+            )}
+            {puedeEditarTextos && !invitacion.bloqueada_en && (
+              <EnlacePortal
+                href={`/portal/pedidos/${pedido.id}/contenido`}
+                Icono={Type}
+                titulo="Editar mis textos"
+                detalle="Nombres, historia y mensajes"
               />
             )}
           </div>
