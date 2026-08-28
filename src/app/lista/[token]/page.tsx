@@ -7,6 +7,7 @@ import type { HogarDeLista } from "@/components/lista/Hogares";
 import type { EntradaDeLista } from "@/components/lista/Recepcion";
 import type { DatosInvitacion } from "@/lib/tipos";
 import { tieneGaleria } from "@/lib/galeria";
+import { tieneRecordatorios } from "@/lib/recordatorios";
 import { contratoDePedido } from "@/lib/capacidades";
 
 /**
@@ -140,10 +141,29 @@ export default async function PaginaLista({
       tieneGaleria(pedidoDeLista, contratoDePedido(pedidoDeLista))
   );
 
+  // Recordatorios: qué hogares YA respondieron (sí o no) — a esos no se
+  // les insiste. La capacidad viene del contrato del pedido.
+  const recordatoriosIncluidos = Boolean(
+    pedidoDeLista && tieneRecordatorios(contratoDePedido(pedidoDeLista))
+  );
+  const hogaresQueRespondieron = [
+    ...new Set(
+      ((confirmacionesConHogar ?? []) as { hogar_id: string }[]).map((c) => c.hogar_id)
+    ),
+  ];
+
   return (
     <PanelInvitados
       token={token}
       galeria={galeriaIncluida ? { abierta: Boolean(invitacion.galeria_abierta) } : null}
+      recordatorios={
+        recordatoriosIncluidos
+          ? {
+              fechaLimite: datos.rsvp?.fechaLimite || null,
+              hogaresQueRespondieron,
+            }
+          : null
+      }
       titulo={datos.titulo || "Tu evento"}
       fechaEvento={datos.fechaEvento ?? null}
       publicada={invitacion.estado === "publicada"}

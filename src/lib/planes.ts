@@ -108,7 +108,9 @@ export const CATALOGO: Record<Plan, FichaPlan> = {
       // La web los anuncia; el sistema todavía no los tiene. NO salen por
       // la API pública hasta que existan o se decida quitarlos de la venta.
       cap("qr_individual", "Código QR individual por invitado", "vendida_sin_implementar"),
-      cap("recordatorios", "Recordatorios a los invitados", "vendida_sin_implementar"),
+      // Desde 2026-08-26 es real: el panel del anfitrión genera los
+      // recordatorios personalizados por hogar, listos para reenviar.
+      cap("recordatorios", "Recordatorios a los invitados"),
     ],
   },
   luxury: {

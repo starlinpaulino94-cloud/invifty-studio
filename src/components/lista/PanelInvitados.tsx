@@ -11,6 +11,7 @@ import type { Cruce, InvitadoDeLista } from "@/lib/lista";
 import Hogares, { type HogarDeLista } from "./Hogares";
 import Recepcion, { type EntradaDeLista } from "./Recepcion";
 import GaleriaAnfitrion from "./GaleriaAnfitrion";
+import Recordatorios from "./Recordatorios";
 
 /**
  * EL PANEL DEL ANFITRIÓN
@@ -41,6 +42,7 @@ export default function PanelInvitados({
   respuestasPorInvitado = {},
   etiquetasRsvp = {},
   galeria = null,
+  recordatorios = null,
 }: {
   token: string;
   titulo: string;
@@ -58,6 +60,8 @@ export default function PanelInvitados({
   etiquetasRsvp?: Record<string, string>;
   /** La galería colaborativa, si el pedido la incluye. null = sin sección. */
   galeria?: { abierta: boolean } | null;
+  /** Recordatorios, si el contrato los incluye. null = sin sección. */
+  recordatorios?: { fechaLimite: string | null; hogaresQueRespondieron: string[] } | null;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -306,6 +310,16 @@ export default function PanelInvitados({
               hogares={hogares}
               entradas={entradas}
               confirmadosPorHogar={confirmadosPorHogar}
+            />
+          )}
+          {recordatorios && publicada && (
+            <Recordatorios
+              titulo={titulo}
+              slug={slug}
+              fechaEvento={fechaEvento}
+              fechaLimite={recordatorios.fechaLimite}
+              hogares={hogares}
+              hogaresQueRespondieron={recordatorios.hogaresQueRespondieron}
             />
           )}
           {galeria && (
