@@ -31,6 +31,9 @@ create table public.pedidos (
   fecha_entrega date,                                -- cuándo se entregó (base del vencimiento)
   fecha_vencimiento date,                            -- calculada al entregar según el plan
   aviso_vencimiento_en timestamptz,                  -- cuándo se avisó al equipo de que vence
+  -- Enlace de cobro del pedido (/pagar/<token>): opaco, lo genera el
+  -- equipo desde la ficha y viaja por WhatsApp con el saldo.
+  token_cobro   text unique,
   notas         text,
   creado_en     timestamptz not null default now(),
   actualizado_en timestamptz not null default now()
@@ -194,6 +197,10 @@ create table public.invitaciones (
   -- El interruptor de la galería colaborativa: el anfitrión la abre
   -- (normalmente el día del evento) y la cierra cuando quiera.
   galeria_abierta boolean not null default false,
+  -- Las cuentas bancarias del ANFITRIÓN para la mesa de regalos
+  -- (/regalos/<slug>); las gestiona él desde /lista. Este dinero es
+  -- suyo, no de Invifty.
+  cuentas_regalo jsonb not null default '[]'::jsonb,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
@@ -576,6 +583,26 @@ create policy "equipo acceso total comentarios" on public.comentarios
 
 -- ---------- HOGARES (cupo agrupado por familia) ----------
 
+-- ---------- MESAS (seating) ----------
+-- El anfitrión asigna HOGARES completos a mesas: las familias se
+-- sientan juntas. Borrar una mesa deja a sus hogares sin mesa.
+
+create table public.mesas (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,
+  capacidad     integer not null default 10 check (capacidad between 1 and 100),
+  creado_en     timestamptz not null default now()
+);
+
+create index mesas_invitacion_idx on public.mesas (invitacion_id, creado_en);
+
+alter table public.mesas enable row level security;
+
+create policy "equipo acceso total mesas" on public.mesas
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
 create table public.hogares (
   id            uuid primary key default gen_random_uuid(),
   invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
@@ -584,6 +611,8 @@ create table public.hogares (
   -- Token opaco: va en el enlace personal (/i/<slug>?h=<token>) y en el
   -- QR de la puerta. NUNCA lleva nombre, teléfono ni dirección.
   token         text not null unique,
+  -- A qué mesa va este hogar (seating). Sin mesa = null.
+  mesa_id       uuid references public.mesas(id) on delete set null,
   creado_en     timestamptz not null default now()
 );
 
@@ -918,6 +947,67 @@ create table public.recuperaciones (
 create index recuperaciones_usuario_idx
   on public.recuperaciones (usuario_id, creado_en desc);
 
+-- ---------- PAGOS REPORTADOS (cobro por transferencia guiado) ----------
+-- Lo que el CLIENTE dice que pagó (por /pagar/<token>): monto,
+-- referencia y comprobante. NO es un pago: el equipo lo confirma (se
+-- vuelve fila de `pagos`) o lo rechaza con motivo. El balance solo se
+-- mueve con pagos confirmados.
+
+create table public.pagos_reportados (
+  id               uuid primary key default gen_random_uuid(),
+  pedido_id        uuid not null references public.pedidos(id) on delete cascade,
+  monto            numeric(10,2) not null check (monto > 0),
+  referencia       text,
+  comprobante_ruta text,
+  nota             text,
+  estado           text not null default 'pendiente'
+                   check (estado in ('pendiente','confirmado','rechazado')),
+  motivo_rechazo   text,
+  revisado_en      timestamptz,
+  revisado_por_email text,
+  creado_en        timestamptz not null default now()
+);
+
+create index pagos_reportados_pedido_idx
+  on public.pagos_reportados (pedido_id, creado_en desc);
+create index pagos_reportados_pendientes_idx
+  on public.pagos_reportados (creado_en) where estado = 'pendiente';
+
+alter table public.pagos_reportados enable row level security;
+
+create policy "equipo acceso total pagos reportados" on public.pagos_reportados
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+create policy "cliente ve sus pagos reportados" on public.pagos_reportados
+  for select to authenticated
+  using (public.es_mi_pedido(pedido_id) and public.mi_permiso('ver_pagos'));
+
+-- ---------- MESA DE REGALOS (aportes) ----------
+-- Lo que cada invitado registró (por /regalos/<slug>): la lista de
+-- agradecimientos del anfitrión. Los montos son privados: la página
+-- pública jamás lista quién dio qué.
+
+create table public.aportes (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,
+  monto         numeric(10,2) check (monto is null or monto > 0),
+  mensaje       text,
+  estado        text not null default 'visible'
+                check (estado in ('visible','oculta')),
+  creado_en     timestamptz not null default now()
+);
+
+create index aportes_invitacion_idx
+  on public.aportes (invitacion_id, creado_en desc);
+
+alter table public.aportes enable row level security;
+
+create policy "equipo acceso total aportes" on public.aportes
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
 -- ---------- GALERÍA COLABORATIVA DEL EVENTO ----------
 -- Los invitados suben sus fotos por /galeria/<slug> (validado en el
 -- servidor con la clave secreta, como el RSVP); el anfitrión modera.
@@ -944,6 +1034,12 @@ create policy "equipo acceso total galeria" on public.fotos_galeria
   using (public.es_del_equipo()) with check (public.es_del_equipo());
 
 create policy "cliente ve su galeria" on public.fotos_galeria
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus mesas" on public.mesas
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus aportes" on public.aportes
   for select to authenticated using (public.es_mi_invitacion(invitacion_id));
 
 -- ---------- RLS: el cliente LEE lo suyo ----------

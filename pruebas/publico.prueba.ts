@@ -30,13 +30,15 @@ test("los derivados legados salen del catálogo: una sola fuente de verdad", () 
 });
 
 test("lo vendido-sin-implementar NO sale por la API pública", () => {
-  // El QR individual y los recordatorios se anuncian en la web pero el
-  // sistema no los tiene. Hasta que existan, la API no puede prometerlos.
+  // El QR individual se anuncia en la web pero el sistema no lo tiene.
+  // Hasta que exista, la API no puede prometerlo.
   const publico = catalogoPublico();
   const ids = publico.planes.flatMap((p) => p.capacidades.map((c) => c.id));
   assert.ok(!ids.includes("qr_individual"), "salió el QR sin existir");
-  assert.ok(!ids.includes("recordatorios"), "salieron los recordatorios sin existir");
-  // Y lo real sí sale:
+  // Y lo real sí sale — incluidas las dos promesas que YA se cumplieron
+  // (2026-08-26): recordatorios y galería colaborativa.
+  assert.ok(ids.includes("recordatorios"), "los recordatorios ya existen y deben anunciarse");
+  assert.ok(ids.includes("galeria_post_evento"), "la galería ya existe y debe anunciarse");
   assert.ok(ids.includes("rsvp"));
   assert.ok(ids.includes("panel_confirmaciones"));
 });

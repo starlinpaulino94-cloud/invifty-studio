@@ -528,6 +528,8 @@ test("las rutas MÁS públicas usan el freno compartido entre instancias", () =>
     "src/app/api/revision/[token]/comentario/route.ts",
     "src/app/api/revision/[token]/decidir/route.ts",
     "src/app/api/galeria/[slug]/fotos/route.ts",
+    "src/app/api/cobro/[token]/reportar/route.ts",
+    "src/app/api/regalos/[slug]/aportar/route.ts",
   ];
   for (const ruta of compartido) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
@@ -550,6 +552,27 @@ test("la subida de fotos frena ANTES de leer el archivo", () => {
   }
 });
 
+test("un reporte de pago NO es un pago: solo confirmar mueve el balance", () => {
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones.ts"), "utf8");
+  const cuerpo = /export async function confirmarPagoReportado[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(cuerpo, "no encuentro confirmarPagoReportado");
+  assert.match(cuerpo[0], /exigirPermiso\(supabase, "registrar_pagos"\)/, "confirmar sin permiso");
+  assert.match(
+    cuerpo[0],
+    /clave_idempotencia: `reporte:\$\{reporte\.id\}`/,
+    "sin idempotencia, confirmar dos veces duplica el dinero"
+  );
+  assert.match(cuerpo[0], /estado !== "pendiente"/, "un reporte ya revisado no se reconfirma");
+
+  // Y la API pública jamás toca la tabla `pagos`: solo reporta.
+  const api = readFileSync(
+    path.join(raiz, "src/app/api/cobro/[token]/reportar/route.ts"),
+    "utf8"
+  );
+  assert.ok(!api.includes('from("pagos")'), "la API pública no puede escribir pagos reales");
+  assert.match(api, /pagos_reportados/, "la API debe escribir en pagos_reportados");
+});
+
 test("la moderación de la galería exige la pertenencia en cada escritura", () => {
   // Ocultar o borrar una foto de OTRA invitación no puede pasar ni
   // sabiendo su id: el update y el select llevan el invitacion_id del
@@ -567,11 +590,51 @@ test("la moderación de la galería exige la pertenencia en cada escritura", () 
   );
 });
 
+test("los montos de los regalos son privados del anfitrión", () => {
+  // La página pública de la mesa jamás consulta los aportes: quién dio
+  // qué solo lo ve el anfitrión (por su token) y el cliente del portal.
+  const publica = readFileSync(path.join(raiz, "src/app/regalos/[slug]/page.tsx"), "utf8");
+  assert.ok(
+    !publica.includes('from("aportes")'),
+    "la página pública no puede listar aportes ajenos"
+  );
+  // Y el anfitrión guarda sus cuentas SIEMPRE saneadas.
+  const anfitrion = readFileSync(
+    path.join(raiz, "src/app/api/lista/[token]/regalos/route.ts"),
+    "utf8"
+  );
+  assert.match(anfitrion, /sanearCuentasRegalo\(body\.cuentas\)/, "las cuentas entran sin sanear");
+  const pertenencias = anfitrion.match(/\.eq\("invitacion_id", invitacion\.id\)/g) ?? [];
+  assert.ok(pertenencias.length >= 3, "cada consulta de aportes debe llevar la invitación del token");
+});
+
+test("las mesas exigen la pertenencia en cada escritura", () => {
+  // Igual que la galería: una mesa o un hogar de OTRA invitación no se
+  // toca ni sabiendo su id, y asignar valida que la mesa sea de la
+  // invitación del token.
+  const contenido = readFileSync(
+    path.join(raiz, "src/app/api/lista/[token]/mesas/route.ts"),
+    "utf8"
+  );
+  const pertenencias = contenido.match(/\.eq\("invitacion_id", invitacion\.id\)/g) ?? [];
+  assert.ok(
+    pertenencias.length >= 5,
+    "cada lectura y escritura de mesas/hogares debe llevar la invitación del token"
+  );
+  assert.match(
+    contenido,
+    /Esa mesa no existe/,
+    "asignar un hogar a una mesa ajena debe fallar como inexistente"
+  );
+});
+
 test("las rutas de mantenimiento siguen pidiendo sesión", () => {
   // Una de ellas reescribe fechas de vencimiento de todos los pedidos.
   for (const ruta of [
     "src/app/api/panel/mantenimiento/vencimientos/route.ts",
     "src/app/api/panel/mantenimiento/fotos/route.ts",
+    // La exportación entrega la cartera de clientes entera: sin sesión, no.
+    "src/app/api/panel/exportar/route.ts",
   ]) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
     const metodos = contenido.match(/export async function (GET|POST)/g) ?? [];

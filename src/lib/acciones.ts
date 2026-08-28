@@ -504,6 +504,119 @@ export async function eliminarCliente(clienteId: string, confirmacion: string) {
   revalidatePath("/panel/clientes");
 }
 
+/**
+ * El enlace de cobro del pedido (/pagar/<token>): lo genera una vez y lo
+ * reutiliza siempre — un enlace que cambia rompería chats viejos.
+ */
+export async function generarEnlaceCobro(pedidoId: string) {
+  const supabase = await crearClienteServidor();
+  await exigirPermiso(supabase, "registrar_pagos");
+
+  const { data: pedido } = await supabase
+    .from("pedidos")
+    .select("token_cobro")
+    .eq("id", pedidoId)
+    .maybeSingle();
+  if (!pedido) throw new Error("Ese pedido no existe.");
+  if (pedido.token_cobro) return { token: pedido.token_cobro };
+
+  const token = crypto.randomUUID().replace(/-/g, "");
+  const { error } = await supabase
+    .from("pedidos")
+    .update({ token_cobro: token })
+    .eq("id", pedidoId);
+  if (error) {
+    throw new Error(
+      /column|token_cobro|schema/i.test(error.message)
+        ? "Falta correr la migración 20260827090000_cobro-transferencia en Supabase."
+        : `No se pudo generar el enlace: ${error.message}`
+    );
+  }
+  revalidatePath(`/panel/pedidos/${pedidoId}`);
+  return { token };
+}
+
+/**
+ * Confirma un pago reportado: lo REVISASTE contra el banco y es real.
+ * Se vuelve fila de `pagos` con clave de idempotencia — confirmar dos
+ * veces el mismo reporte no duplica el dinero.
+ */
+export async function confirmarPagoReportado(reporteId: string, pedidoId: string) {
+  const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "registrar_pagos");
+
+  const { data: reporte } = await supabase
+    .from("pagos_reportados")
+    .select("id, pedido_id, monto, referencia, comprobante_ruta, estado")
+    .eq("id", reporteId)
+    .eq("pedido_id", pedidoId)
+    .maybeSingle();
+  if (!reporte) throw new Error("Ese reporte no existe.");
+  if (reporte.estado !== "pendiente") throw new Error("Ese reporte ya se revisó.");
+
+  const { error } = await supabase.from("pagos").insert({
+    pedido_id: reporte.pedido_id,
+    monto: Number(reporte.monto),
+    tipo: "pago",
+    metodo: "transferencia",
+    referencia: reporte.referencia,
+    comprobante_ruta: reporte.comprobante_ruta,
+    usuario_id: quien.id,
+    usuario_email: quien.email,
+    clave_idempotencia: `reporte:${reporte.id}`,
+  });
+  // 23505 = la idempotencia chocó: el pago YA se registró en un intento
+  // anterior; solo falta cerrar el reporte.
+  if (error && error.code !== "23505") {
+    throw new Error(`No se pudo registrar el pago: ${error.message}`);
+  }
+
+  const { error: errorReporte } = await supabase
+    .from("pagos_reportados")
+    .update({
+      estado: "confirmado",
+      revisado_en: new Date().toISOString(),
+      revisado_por_email: quien.email,
+    })
+    .eq("id", reporte.id)
+    .eq("estado", "pendiente");
+  if (errorReporte) registrarError("cobro", errorReporte, { nota: "pago registrado, reporte sin cerrar" });
+
+  await registrarAccion(supabase, quien, "pago:confirmar_reporte", "pedido", reporte.pedido_id, {
+    monto: Number(reporte.monto), referencia: reporte.referencia,
+  });
+  revalidatePath(`/panel/pedidos/${reporte.pedido_id}`);
+}
+
+/** Rechaza un reporte que no cuadra con el banco, con el motivo a la cara. */
+export async function rechazarPagoReportado(reporteId: string, pedidoId: string, motivo: string) {
+  const supabase = await crearClienteServidor();
+  const quien = await exigirPermiso(supabase, "registrar_pagos");
+
+  const limpio = motivo.trim().slice(0, 200);
+  if (!limpio) throw new Error("Escribe el motivo: el cliente lo va a leer.");
+
+  const { data: filas, error } = await supabase
+    .from("pagos_reportados")
+    .update({
+      estado: "rechazado",
+      motivo_rechazo: limpio,
+      revisado_en: new Date().toISOString(),
+      revisado_por_email: quien.email,
+    })
+    .eq("id", reporteId)
+    .eq("pedido_id", pedidoId)
+    .eq("estado", "pendiente")
+    .select("id");
+  if (error) throw new Error(`No se pudo rechazar: ${error.message}`);
+  if (!filas?.length) throw new Error("Ese reporte no existe o ya se revisó.");
+
+  await registrarAccion(supabase, quien, "pago:rechazar_reporte", "pedido", pedidoId, {
+    motivo: limpio,
+  });
+  revalidatePath(`/panel/pedidos/${pedidoId}`);
+}
+
 /** Cierra la sesión del panel. */
 export async function cerrarSesion() {
   const supabase = await crearClienteServidor();

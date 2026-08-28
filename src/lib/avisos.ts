@@ -36,7 +36,8 @@ export type TipoAviso =
   | "portal_activado"
   | "portal_colaborador"
   | "portal_textos"
-  | "portal_password";
+  | "portal_password"
+  | "pago_reportado";
 
 export interface ContextoAviso {
   /** Nombre del cliente o del evento; se escapa aquí, no en quien llama. */
@@ -104,6 +105,12 @@ export function construirAviso(
       titulo: "📝 Textos editados",
       texto: `<strong>${nombre}</strong> ajustó los textos de su invitación desde el portal${detalle ? ` (${detalle})` : ""}. Échales un vistazo antes del próximo envío.`,
       boton: "Ver invitación →",
+    },
+    pago_reportado: {
+      asunto: `💰 ${ctx.nombre} reportó un pago${detalle ? ` de ${ctx.detalle}` : ""}`,
+      titulo: "💰 Pago reportado",
+      texto: `<strong>${nombre}</strong> dice haber transferido${detalle ? ` <strong>${detalle}</strong>` : ""}. Revisa el comprobante contra el banco y confírmalo o recházalo — el balance no se mueve hasta entonces.`,
+      boton: "Revisar en la ficha →",
     },
     portal_password: {
       asunto: `🔐 ${ctx.nombre} usó su enlace de recuperación`,

@@ -7,6 +7,8 @@ import type { HogarDeLista } from "@/components/lista/Hogares";
 import type { EntradaDeLista } from "@/components/lista/Recepcion";
 import type { DatosInvitacion } from "@/lib/tipos";
 import { tieneGaleria } from "@/lib/galeria";
+import { tieneRecordatorios } from "@/lib/recordatorios";
+import { tieneMesaRegalos } from "@/lib/regalos";
 import { contratoDePedido } from "@/lib/capacidades";
 
 /**
@@ -140,10 +142,68 @@ export default async function PaginaLista({
       tieneGaleria(pedidoDeLista, contratoDePedido(pedidoDeLista))
   );
 
+  // Recordatorios: qué hogares YA respondieron (sí o no) — a esos no se
+  // les insiste. La capacidad viene del contrato del pedido.
+  const recordatoriosIncluidos = Boolean(
+    pedidoDeLista && tieneRecordatorios(contratoDePedido(pedidoDeLista))
+  );
+
+  // Mesa de regalos: la incluye el contrato, y la columna de cuentas
+  // existe (consulta aparte, a prueba de migración sin correr).
+  const { data: cuentasRegaloProbe } = await supabase
+    .from("invitaciones")
+    .select("cuentas_regalo")
+    .eq("id", invitacion.id)
+    .maybeSingle();
+  const regalosIncluidos = Boolean(
+    pedidoDeLista &&
+      cuentasRegaloProbe &&
+      tieneMesaRegalos(contratoDePedido(pedidoDeLista))
+  );
+  const hogaresQueRespondieron = [
+    ...new Set(
+      ((confirmacionesConHogar ?? []) as { hogar_id: string }[]).map((c) => c.hogar_id)
+    ),
+  ];
+
+  // Mesas (seating): consultas APARTE y a prueba de migración sin correr —
+  // si fallan, la sección no sale y el panel clásico sigue completo.
+  const [{ data: mesasData }, { data: asignacionesData }] = await Promise.all([
+    supabase
+      .from("mesas")
+      .select("id, nombre, capacidad")
+      .eq("invitacion_id", invitacion.id)
+      .order("creado_en"),
+    supabase.from("hogares").select("id, mesa_id").eq("invitacion_id", invitacion.id),
+  ]);
+  const asignaciones = Object.fromEntries(
+    ((asignacionesData ?? []) as { id: string; mesa_id: string | null }[]).map((h) => [
+      h.id,
+      h.mesa_id,
+    ])
+  );
+
   return (
     <PanelInvitados
       token={token}
       galeria={galeriaIncluida ? { abierta: Boolean(invitacion.galeria_abierta) } : null}
+      mesaRegalos={regalosIncluidos}
+      mesas={
+        mesasData
+          ? {
+              lista: mesasData as { id: string; nombre: string; capacidad: number }[],
+              asignaciones,
+            }
+          : null
+      }
+      recordatorios={
+        recordatoriosIncluidos
+          ? {
+              fechaLimite: datos.rsvp?.fechaLimite || null,
+              hogaresQueRespondieron,
+            }
+          : null
+      }
       titulo={datos.titulo || "Tu evento"}
       fechaEvento={datos.fechaEvento ?? null}
       publicada={invitacion.estado === "publicada"}

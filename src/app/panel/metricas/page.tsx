@@ -92,11 +92,31 @@ export default async function PaginaMetricas() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="font-serif text-3xl text-gray-900 flex items-center gap-2">
-          <BarChart3 className="w-6 h-6 text-[#D4AF37]" /> Métricas
-        </h1>
-        <p className="text-sm text-gray-500 mt-1 capitalize">{nombreMes}</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-serif text-3xl text-gray-900 flex items-center gap-2">
+            <BarChart3 className="w-6 h-6 text-[#D4AF37]" /> Métricas
+          </h1>
+          <p className="text-sm text-gray-500 mt-1 capitalize">{nombreMes}</p>
+        </div>
+        {/* Para la contabilidad: descarga directa, Excel lo abre sin pelear. */}
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ["pedidos", "Pedidos"],
+              ["pagos", "Pagos"],
+              ["clientes", "Clientes"],
+            ] as const
+          ).map(([tipo, etiqueta]) => (
+            <a
+              key={tipo}
+              href={`/api/panel/exportar?tipo=${tipo}`}
+              className="text-xs font-semibold text-gray-700 border border-gray-200 hover:border-gray-400 rounded-xl px-3 py-2 bg-white"
+            >
+              ⬇ {etiqueta} (Excel)
+            </a>
+          ))}
+        </div>
       </div>
 
       {/* Tarjetas del mes */}
