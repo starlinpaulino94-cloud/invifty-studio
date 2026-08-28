@@ -579,6 +579,26 @@ create policy "equipo acceso total comentarios" on public.comentarios
 
 -- ---------- HOGARES (cupo agrupado por familia) ----------
 
+-- ---------- MESAS (seating) ----------
+-- El anfitrión asigna HOGARES completos a mesas: las familias se
+-- sientan juntas. Borrar una mesa deja a sus hogares sin mesa.
+
+create table public.mesas (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,
+  capacidad     integer not null default 10 check (capacidad between 1 and 100),
+  creado_en     timestamptz not null default now()
+);
+
+create index mesas_invitacion_idx on public.mesas (invitacion_id, creado_en);
+
+alter table public.mesas enable row level security;
+
+create policy "equipo acceso total mesas" on public.mesas
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
 create table public.hogares (
   id            uuid primary key default gen_random_uuid(),
   invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
@@ -587,6 +607,8 @@ create table public.hogares (
   -- Token opaco: va en el enlace personal (/i/<slug>?h=<token>) y en el
   -- QR de la puerta. NUNCA lleva nombre, teléfono ni dirección.
   token         text not null unique,
+  -- A qué mesa va este hogar (seating). Sin mesa = null.
+  mesa_id       uuid references public.mesas(id) on delete set null,
   creado_en     timestamptz not null default now()
 );
 
@@ -983,6 +1005,9 @@ create policy "equipo acceso total galeria" on public.fotos_galeria
   using (public.es_del_equipo()) with check (public.es_del_equipo());
 
 create policy "cliente ve su galeria" on public.fotos_galeria
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus mesas" on public.mesas
   for select to authenticated using (public.es_mi_invitacion(invitacion_id));
 
 -- ---------- RLS: el cliente LEE lo suyo ----------

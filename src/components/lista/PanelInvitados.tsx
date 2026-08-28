@@ -12,6 +12,8 @@ import Hogares, { type HogarDeLista } from "./Hogares";
 import Recepcion, { type EntradaDeLista } from "./Recepcion";
 import GaleriaAnfitrion from "./GaleriaAnfitrion";
 import Recordatorios from "./Recordatorios";
+import Mesas from "./Mesas";
+import type { MesaBase } from "@/lib/mesas";
 
 /**
  * EL PANEL DEL ANFITRIÓN
@@ -43,6 +45,7 @@ export default function PanelInvitados({
   etiquetasRsvp = {},
   galeria = null,
   recordatorios = null,
+  mesas = null,
 }: {
   token: string;
   titulo: string;
@@ -62,6 +65,8 @@ export default function PanelInvitados({
   galeria?: { abierta: boolean } | null;
   /** Recordatorios, si el contrato los incluye. null = sin sección. */
   recordatorios?: { fechaLimite: string | null; hogaresQueRespondieron: string[] } | null;
+  /** Mesas (seating). null = migración sin correr: la sección no sale. */
+  mesas?: { lista: MesaBase[]; asignaciones: Record<string, string | null> } | null;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -304,12 +309,36 @@ export default function PanelInvitados({
             hogares={hogares}
             confirmadosPorHogar={confirmadosPorHogar}
           />
+          {mesas && hogares.length > 0 && (
+            <Mesas
+              token={token}
+              titulo={titulo}
+              mesas={mesas.lista}
+              hogares={hogares.map((h) => ({
+                id: h.id,
+                nombre: h.nombre,
+                cupo: h.cupo,
+                mesa_id: mesas.asignaciones[h.id] ?? null,
+              }))}
+              confirmadosPorHogar={confirmadosPorHogar}
+              respondieron={recordatorios?.hogaresQueRespondieron ?? Object.keys(confirmadosPorHogar)}
+            />
+          )}
           {hogares.length + entradas.length > 0 && (
             <Recepcion
               token={token}
               hogares={hogares}
               entradas={entradas}
               confirmadosPorHogar={confirmadosPorHogar}
+              mesaDeHogar={Object.fromEntries(
+                hogares
+                  .map((h) => {
+                    const mesaId = mesas?.asignaciones[h.id];
+                    const mesa = mesaId ? mesas?.lista.find((m) => m.id === mesaId) : null;
+                    return [h.id, mesa?.nombre ?? ""] as const;
+                  })
+                  .filter(([, nombre]) => nombre)
+              )}
             />
           )}
           {recordatorios && publicada && (

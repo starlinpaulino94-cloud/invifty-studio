@@ -51,6 +51,7 @@ de cada migración que toque políticas del portal.
 | `20260825150000_cuenta-visible-para-su-miembro` | Arreglo: la política "cliente ve su cuenta" comparaba `id` sin calificar (siempre falsa) y el cliente no veía su propia cuenta. Lo cazó `probar-aislamiento.sql` |
 | `20260826090000_galeria-evento` | Galería colaborativa: `fotos_galeria` (fotos que suben los invitados, con moderación) e `invitaciones.galeria_abierta` (el interruptor del anfitrión) |
 | `20260827090000_cobro-transferencia` | Cobro guiado: `pedidos.token_cobro` (enlace /pagar) y `pagos_reportados` (lo que el cliente dice que pagó, con comprobante, para confirmar o rechazar) |
+| `20260827150000_mesas` | Organizador de mesas: tabla `mesas` y `hogares.mesa_id` (los hogares se asignan completos: las familias se sientan juntas) |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).

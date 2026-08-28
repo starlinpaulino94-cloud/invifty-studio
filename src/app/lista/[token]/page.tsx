@@ -152,10 +152,35 @@ export default async function PaginaLista({
     ),
   ];
 
+  // Mesas (seating): consultas APARTE y a prueba de migración sin correr —
+  // si fallan, la sección no sale y el panel clásico sigue completo.
+  const [{ data: mesasData }, { data: asignacionesData }] = await Promise.all([
+    supabase
+      .from("mesas")
+      .select("id, nombre, capacidad")
+      .eq("invitacion_id", invitacion.id)
+      .order("creado_en"),
+    supabase.from("hogares").select("id, mesa_id").eq("invitacion_id", invitacion.id),
+  ]);
+  const asignaciones = Object.fromEntries(
+    ((asignacionesData ?? []) as { id: string; mesa_id: string | null }[]).map((h) => [
+      h.id,
+      h.mesa_id,
+    ])
+  );
+
   return (
     <PanelInvitados
       token={token}
       galeria={galeriaIncluida ? { abierta: Boolean(invitacion.galeria_abierta) } : null}
+      mesas={
+        mesasData
+          ? {
+              lista: mesasData as { id: string; nombre: string; capacidad: number }[],
+              asignaciones,
+            }
+          : null
+      }
       recordatorios={
         recordatoriosIncluidos
           ? {

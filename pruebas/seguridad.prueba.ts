@@ -589,6 +589,26 @@ test("la moderación de la galería exige la pertenencia en cada escritura", () 
   );
 });
 
+test("las mesas exigen la pertenencia en cada escritura", () => {
+  // Igual que la galería: una mesa o un hogar de OTRA invitación no se
+  // toca ni sabiendo su id, y asignar valida que la mesa sea de la
+  // invitación del token.
+  const contenido = readFileSync(
+    path.join(raiz, "src/app/api/lista/[token]/mesas/route.ts"),
+    "utf8"
+  );
+  const pertenencias = contenido.match(/\.eq\("invitacion_id", invitacion\.id\)/g) ?? [];
+  assert.ok(
+    pertenencias.length >= 5,
+    "cada lectura y escritura de mesas/hogares debe llevar la invitación del token"
+  );
+  assert.match(
+    contenido,
+    /Esa mesa no existe/,
+    "asignar un hogar a una mesa ajena debe fallar como inexistente"
+  );
+});
+
 test("las rutas de mantenimiento siguen pidiendo sesión", () => {
   // Una de ellas reescribe fechas de vencimiento de todos los pedidos.
   for (const ruta of [

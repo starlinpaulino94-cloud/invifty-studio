@@ -28,11 +28,14 @@ export default function Recepcion({
   hogares,
   entradas,
   confirmadosPorHogar,
+  mesaDeHogar = {},
 }: {
   token: string;
   hogares: HogarDeLista[];
   entradas: EntradaDeLista[];
   confirmadosPorHogar: Record<string, number>;
+  /** Nombre de la mesa de cada hogar (seating): la puerta la anuncia. */
+  mesaDeHogar?: Record<string, string>;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -129,6 +132,11 @@ export default function Recepcion({
                       {confirmadosPorHogar[h.id] ? ` · confirmó ${confirmadosPorHogar[h.id]}` : ""}
                       {estado.dentro > 0 && ` · ya dentro ${estado.dentro}`}
                     </p>
+                    {mesaDeHogar[h.id] && (
+                      <p className="text-[11px] text-[#D4AF37] font-semibold mt-0.5">
+                        🪑 {mesaDeHogar[h.id]}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <input
