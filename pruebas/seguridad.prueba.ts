@@ -527,6 +527,7 @@ test("las rutas MÁS públicas usan el freno compartido entre instancias", () =>
     "src/app/api/invitacion/[slug]/rsvp/route.ts",
     "src/app/api/revision/[token]/comentario/route.ts",
     "src/app/api/revision/[token]/decidir/route.ts",
+    "src/app/api/galeria/[slug]/fotos/route.ts",
   ];
   for (const ruta of compartido) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
@@ -536,14 +537,33 @@ test("las rutas MÁS públicas usan el freno compartido entre instancias", () =>
 
 test("la subida de fotos frena ANTES de leer el archivo", () => {
   // Si el freno fuera después de req.formData(), ya nos habríamos tragado
-  // los 50 MB y el freno no ahorraría lo que más cuesta.
+  // los MB y el freno no ahorraría lo que más cuesta.
+  for (const ruta of [
+    "src/app/api/formulario/[token]/fotos/route.ts",
+    "src/app/api/galeria/[slug]/fotos/route.ts",
+  ]) {
+    const contenido = readFileSync(path.join(raiz, ruta), "utf8");
+    assert.ok(
+      contenido.indexOf("limitar") < contenido.indexOf("req.formData()"),
+      `${ruta}: el freno tiene que ir antes de leer el cuerpo de la petición`
+    );
+  }
+});
+
+test("la moderación de la galería exige la pertenencia en cada escritura", () => {
+  // Ocultar o borrar una foto de OTRA invitación no puede pasar ni
+  // sabiendo su id: el update y el select llevan el invitacion_id del
+  // token que firma, no el que diga el navegador.
   const contenido = readFileSync(
-    path.join(raiz, "src/app/api/formulario/[token]/fotos/route.ts"),
+    path.join(raiz, "src/app/api/lista/[token]/galeria/route.ts"),
     "utf8"
   );
+  const escrituras = contenido.match(/\.eq\("id", fotoId\)/g) ?? [];
+  const pertenencias = contenido.match(/\.eq\("invitacion_id", invitacion\.id\)/g) ?? [];
+  assert.ok(escrituras.length >= 2, "el escaneo dejó de encontrar las escrituras");
   assert.ok(
-    contenido.indexOf("limitar(") < contenido.indexOf("req.formData()"),
-    "el freno tiene que ir antes de leer el cuerpo de la petición"
+    pertenencias.length >= escrituras.length,
+    "hay una escritura sobre fotos sin exigir la invitación del token"
   );
 });
 

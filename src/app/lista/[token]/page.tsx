@@ -6,6 +6,8 @@ import PanelInvitados from "@/components/lista/PanelInvitados";
 import type { HogarDeLista } from "@/components/lista/Hogares";
 import type { EntradaDeLista } from "@/components/lista/Recepcion";
 import type { DatosInvitacion } from "@/lib/tipos";
+import { tieneGaleria } from "@/lib/galeria";
+import { contratoDePedido } from "@/lib/capacidades";
 
 /**
  * EL PANEL DEL ANFITRIÓN
@@ -38,7 +40,7 @@ export default async function PaginaLista({
 
   const { data: invitacion } = await supabase
     .from("invitaciones")
-    .select("id, slug, datos, estado")
+    .select("id, slug, datos, estado, galeria_abierta, pedidos(extras, plan, capacidades_contratadas)")
     .eq("token_lista", token)
     .maybeSingle();
 
@@ -125,9 +127,23 @@ export default async function PaginaLista({
     (datos.rsvp?.preguntas ?? []).map((p) => [p.id, p.texto])
   );
 
+  // La galería: solo si el pedido la incluye (extra o contrato). El
+  // conteo y las fotos las trae la propia pestaña por la API; aquí solo
+  // viaja el estado. `galeria_abierta` llega undefined si la migración
+  // no ha corrido: la sección simplemente no sale.
+  const pedidoDeLista = invitacion.pedidos as unknown as {
+    extras: string[]; plan: string; capacidades_contratadas: unknown;
+  } | null;
+  const galeriaIncluida = Boolean(
+    pedidoDeLista &&
+      invitacion.galeria_abierta !== undefined &&
+      tieneGaleria(pedidoDeLista, contratoDePedido(pedidoDeLista))
+  );
+
   return (
     <PanelInvitados
       token={token}
+      galeria={galeriaIncluida ? { abierta: Boolean(invitacion.galeria_abierta) } : null}
       titulo={datos.titulo || "Tu evento"}
       fechaEvento={datos.fechaEvento ?? null}
       publicada={invitacion.estado === "publicada"}

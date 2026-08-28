@@ -10,6 +10,7 @@ import { normalizarNombre } from "@/lib/nombres";
 import type { Cruce, InvitadoDeLista } from "@/lib/lista";
 import Hogares, { type HogarDeLista } from "./Hogares";
 import Recepcion, { type EntradaDeLista } from "./Recepcion";
+import GaleriaAnfitrion from "./GaleriaAnfitrion";
 
 /**
  * EL PANEL DEL ANFITRIÓN
@@ -39,6 +40,7 @@ export default function PanelInvitados({
   confirmadosPorHogar,
   respuestasPorInvitado = {},
   etiquetasRsvp = {},
+  galeria = null,
 }: {
   token: string;
   titulo: string;
@@ -54,6 +56,8 @@ export default function PanelInvitados({
   respuestasPorInvitado?: Record<string, Record<string, string>>;
   /** Texto de cada pregunta extra, por id. */
   etiquetasRsvp?: Record<string, string>;
+  /** La galería colaborativa, si el pedido la incluye. null = sin sección. */
+  galeria?: { abierta: boolean } | null;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -303,6 +307,9 @@ export default function PanelInvitados({
               entradas={entradas}
               confirmadosPorHogar={confirmadosPorHogar}
             />
+          )}
+          {galeria && (
+            <GaleriaAnfitrion token={token} slug={slug} abiertaInicial={galeria.abierta} />
           )}
         </div>
 
