@@ -13,6 +13,7 @@ import { Cliente, Confirmacion, EstadoPedido, Formulario, Invitacion, Pago, Pedi
 import Confirmaciones from "@/components/panel/Confirmaciones";
 import AccesoPortal from "@/components/panel/AccesoPortal";
 import { EditarCliente, EditarPedido, EliminarPedido } from "@/components/panel/EditarFicha";
+import CobroPedido, { type ReporteParaRevisar } from "@/components/panel/CobroPedido";
 import { queSeLleva } from "@/lib/eliminar";
 import Visitas from "@/components/panel/Visitas";
 import { resumirVisitas } from "@/lib/visitas";
@@ -141,6 +142,35 @@ export default async function FichaPedido({
     token_activacion: string | null;
     activacion_expira: string | null;
   } | null;
+
+  // Cobro guiado: el enlace del pedido y los reportes del cliente por
+  // revisar. Si la migración de cobro no ha corrido, todo queda vacío y
+  // la ficha sigue completa.
+  const tokenCobro = (pedido as unknown as { token_cobro?: string | null }).token_cobro ?? null;
+  const { data: reportesData } = await supabase
+    .from("pagos_reportados")
+    .select("id, monto, referencia, nota, comprobante_ruta, creado_en")
+    .eq("pedido_id", id)
+    .eq("estado", "pendiente")
+    .order("creado_en", { ascending: false });
+  const reportesParaRevisar: ReporteParaRevisar[] = [];
+  for (const r of reportesData ?? []) {
+    let comprobanteUrl: string | null = null;
+    if (r.comprobante_ruta) {
+      const { data: firmada } = await admin.storage
+        .from(BUCKET)
+        .createSignedUrl(r.comprobante_ruta, HORAS_FIRMA * 60 * 60);
+      comprobanteUrl = firmada?.signedUrl ?? null;
+    }
+    reportesParaRevisar.push({
+      id: r.id,
+      monto: Number(r.monto),
+      referencia: r.referencia,
+      nota: r.nota,
+      comprobante_url: comprobanteUrl,
+      creado_en: r.creado_en,
+    });
+  }
 
   const urlBase = resolverUrlBase();
   const urlFormulario = formulario ? `${urlBase}/f/${formulario.token}` : "";
@@ -515,6 +545,18 @@ export default async function FichaPedido({
             Se han reembolsado {formatoDOP(dinero.reembolsado)} (ya descontados del abonado).
           </p>
         )}
+
+        {/* Cobro guiado: el enlace /pagar y los reportes del cliente */}
+        <div className="mb-5">
+          <CobroPedido
+            pedidoId={pedido.id}
+            nombreCliente={cliente.nombre}
+            saldo={Math.max(saldo, 0)}
+            token={tokenCobro}
+            urlBase={urlBase}
+            reportes={reportesParaRevisar}
+          />
+        </div>
 
         {pagos.length > 0 && (
           <ul className="divide-y divide-gray-100 mb-5">

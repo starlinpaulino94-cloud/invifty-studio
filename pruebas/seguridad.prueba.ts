@@ -528,6 +528,7 @@ test("las rutas MÁS públicas usan el freno compartido entre instancias", () =>
     "src/app/api/revision/[token]/comentario/route.ts",
     "src/app/api/revision/[token]/decidir/route.ts",
     "src/app/api/galeria/[slug]/fotos/route.ts",
+    "src/app/api/cobro/[token]/reportar/route.ts",
   ];
   for (const ruta of compartido) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
@@ -548,6 +549,27 @@ test("la subida de fotos frena ANTES de leer el archivo", () => {
       `${ruta}: el freno tiene que ir antes de leer el cuerpo de la petición`
     );
   }
+});
+
+test("un reporte de pago NO es un pago: solo confirmar mueve el balance", () => {
+  const contenido = readFileSync(path.join(raiz, "src/lib/acciones.ts"), "utf8");
+  const cuerpo = /export async function confirmarPagoReportado[\s\S]*?\n\}/.exec(contenido);
+  assert.ok(cuerpo, "no encuentro confirmarPagoReportado");
+  assert.match(cuerpo[0], /exigirPermiso\(supabase, "registrar_pagos"\)/, "confirmar sin permiso");
+  assert.match(
+    cuerpo[0],
+    /clave_idempotencia: `reporte:\$\{reporte\.id\}`/,
+    "sin idempotencia, confirmar dos veces duplica el dinero"
+  );
+  assert.match(cuerpo[0], /estado !== "pendiente"/, "un reporte ya revisado no se reconfirma");
+
+  // Y la API pública jamás toca la tabla `pagos`: solo reporta.
+  const api = readFileSync(
+    path.join(raiz, "src/app/api/cobro/[token]/reportar/route.ts"),
+    "utf8"
+  );
+  assert.ok(!api.includes('from("pagos")'), "la API pública no puede escribir pagos reales");
+  assert.match(api, /pagos_reportados/, "la API debe escribir en pagos_reportados");
 });
 
 test("la moderación de la galería exige la pertenencia en cada escritura", () => {

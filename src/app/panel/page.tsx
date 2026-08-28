@@ -36,6 +36,7 @@ export default async function Tablero() {
     { count: avisosFallidos },
     { data: pagosData },
     { data: actividadData },
+    { count: pagosReportados },
   ] = await Promise.all([
     supabase
       .from("pedidos")
@@ -72,6 +73,11 @@ export default async function Tablero() {
       .in("accion", Object.keys(ACCIONES_PORTAL))
       .order("creado_en", { ascending: false })
       .limit(8),
+    // Dinero que el cliente dice haber transferido, esperando revisión.
+    supabase
+      .from("pagos_reportados")
+      .select("id", { count: "exact", head: true })
+      .eq("estado", "pendiente"),
   ]);
 
   const pedidos = (data ?? []) as PedidoConCliente[];
@@ -141,6 +147,14 @@ export default async function Tablero() {
   // La tira de "hoy te toca": solo tarjetas con destino real, y solo si
   // hay algo. Un cero no es una tarea. El dibujo vive en HoyTeToca.tsx.
   const tareas: TareaDeHoy[] = [
+    {
+      // El dinero primero: un reporte sin revisar es un cliente esperando.
+      cuenta: pagosReportados ?? 0,
+      etiqueta: "pagos reportados por confirmar (en la ficha de cada pedido)",
+      href: null,
+      icono: "cobrar",
+      tono: "text-emerald-700 bg-emerald-50 border-emerald-200",
+    },
     {
       cuenta: leadsNuevos ?? 0,
       etiqueta: "leads nuevos sin contactar",

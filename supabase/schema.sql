@@ -31,6 +31,9 @@ create table public.pedidos (
   fecha_entrega date,                                -- cuándo se entregó (base del vencimiento)
   fecha_vencimiento date,                            -- calculada al entregar según el plan
   aviso_vencimiento_en timestamptz,                  -- cuándo se avisó al equipo de que vence
+  -- Enlace de cobro del pedido (/pagar/<token>): opaco, lo genera el
+  -- equipo desde la ficha y viaja por WhatsApp con el saldo.
+  token_cobro   text unique,
   notas         text,
   creado_en     timestamptz not null default now(),
   actualizado_en timestamptz not null default now()
@@ -917,6 +920,42 @@ create table public.recuperaciones (
 
 create index recuperaciones_usuario_idx
   on public.recuperaciones (usuario_id, creado_en desc);
+
+-- ---------- PAGOS REPORTADOS (cobro por transferencia guiado) ----------
+-- Lo que el CLIENTE dice que pagó (por /pagar/<token>): monto,
+-- referencia y comprobante. NO es un pago: el equipo lo confirma (se
+-- vuelve fila de `pagos`) o lo rechaza con motivo. El balance solo se
+-- mueve con pagos confirmados.
+
+create table public.pagos_reportados (
+  id               uuid primary key default gen_random_uuid(),
+  pedido_id        uuid not null references public.pedidos(id) on delete cascade,
+  monto            numeric(10,2) not null check (monto > 0),
+  referencia       text,
+  comprobante_ruta text,
+  nota             text,
+  estado           text not null default 'pendiente'
+                   check (estado in ('pendiente','confirmado','rechazado')),
+  motivo_rechazo   text,
+  revisado_en      timestamptz,
+  revisado_por_email text,
+  creado_en        timestamptz not null default now()
+);
+
+create index pagos_reportados_pedido_idx
+  on public.pagos_reportados (pedido_id, creado_en desc);
+create index pagos_reportados_pendientes_idx
+  on public.pagos_reportados (creado_en) where estado = 'pendiente';
+
+alter table public.pagos_reportados enable row level security;
+
+create policy "equipo acceso total pagos reportados" on public.pagos_reportados
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+create policy "cliente ve sus pagos reportados" on public.pagos_reportados
+  for select to authenticated
+  using (public.es_mi_pedido(pedido_id) and public.mi_permiso('ver_pagos'));
 
 -- ---------- GALERÍA COLABORATIVA DEL EVENTO ----------
 -- Los invitados suben sus fotos por /galeria/<slug> (validado en el
