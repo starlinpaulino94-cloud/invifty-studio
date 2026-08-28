@@ -529,6 +529,7 @@ test("las rutas MÁS públicas usan el freno compartido entre instancias", () =>
     "src/app/api/revision/[token]/decidir/route.ts",
     "src/app/api/galeria/[slug]/fotos/route.ts",
     "src/app/api/cobro/[token]/reportar/route.ts",
+    "src/app/api/regalos/[slug]/aportar/route.ts",
   ];
   for (const ruta of compartido) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
@@ -587,6 +588,24 @@ test("la moderación de la galería exige la pertenencia en cada escritura", () 
     pertenencias.length >= escrituras.length,
     "hay una escritura sobre fotos sin exigir la invitación del token"
   );
+});
+
+test("los montos de los regalos son privados del anfitrión", () => {
+  // La página pública de la mesa jamás consulta los aportes: quién dio
+  // qué solo lo ve el anfitrión (por su token) y el cliente del portal.
+  const publica = readFileSync(path.join(raiz, "src/app/regalos/[slug]/page.tsx"), "utf8");
+  assert.ok(
+    !publica.includes('from("aportes")'),
+    "la página pública no puede listar aportes ajenos"
+  );
+  // Y el anfitrión guarda sus cuentas SIEMPRE saneadas.
+  const anfitrion = readFileSync(
+    path.join(raiz, "src/app/api/lista/[token]/regalos/route.ts"),
+    "utf8"
+  );
+  assert.match(anfitrion, /sanearCuentasRegalo\(body\.cuentas\)/, "las cuentas entran sin sanear");
+  const pertenencias = anfitrion.match(/\.eq\("invitacion_id", invitacion\.id\)/g) ?? [];
+  assert.ok(pertenencias.length >= 3, "cada consulta de aportes debe llevar la invitación del token");
 });
 
 test("las mesas exigen la pertenencia en cada escritura", () => {

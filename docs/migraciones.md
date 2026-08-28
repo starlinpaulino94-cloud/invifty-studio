@@ -52,6 +52,7 @@ de cada migración que toque políticas del portal.
 | `20260826090000_galeria-evento` | Galería colaborativa: `fotos_galeria` (fotos que suben los invitados, con moderación) e `invitaciones.galeria_abierta` (el interruptor del anfitrión) |
 | `20260827090000_cobro-transferencia` | Cobro guiado: `pedidos.token_cobro` (enlace /pagar) y `pagos_reportados` (lo que el cliente dice que pagó, con comprobante, para confirmar o rechazar) |
 | `20260827150000_mesas` | Organizador de mesas: tabla `mesas` y `hogares.mesa_id` (los hogares se asignan completos: las familias se sientan juntas) |
+| `20260828090000_mesa-regalos` | Mesa de regalos: tabla `aportes` (la lista de agradecimientos del anfitrión) e `invitaciones.cuentas_regalo` (las cuentas del anfitrión, no las de Invifty) |
 
 Los archivos se movieron aquí con `git mv` desde `supabase/migracion-*.sql`:
 el historial de cada uno se conserva completo (`git log --follow`).

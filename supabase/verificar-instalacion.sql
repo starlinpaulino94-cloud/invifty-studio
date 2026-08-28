@@ -12,7 +12,7 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('pedidos',       17, 4, 2),
     ('pagos',         16, 3, 2),
     ('formularios',    8, 3, 2),
-    ('invitaciones',  14, 5, 2),
+    ('invitaciones',  15, 5, 2),
     ('confirmaciones',11, 3, 2),
     ('visitas',        5, 3, 2),
     ('invitados',      6, 3, 2),
@@ -34,7 +34,8 @@ with esperado(tabla, columnas, indices, politicas) as (
     ('invitaciones_cuenta', 11, 3, 2),
     ('recuperaciones',  8, 3, 1),
     ('fotos_galeria',   7, 2, 2),
-    ('pagos_reportados', 11, 3, 2)
+    ('pagos_reportados', 11, 3, 2),
+    ('aportes',         7, 2, 2)
 )
 select
   e.tabla,

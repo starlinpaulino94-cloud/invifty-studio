@@ -197,6 +197,10 @@ create table public.invitaciones (
   -- El interruptor de la galería colaborativa: el anfitrión la abre
   -- (normalmente el día del evento) y la cierra cuando quiera.
   galeria_abierta boolean not null default false,
+  -- Las cuentas bancarias del ANFITRIÓN para la mesa de regalos
+  -- (/regalos/<slug>); las gestiona él desde /lista. Este dinero es
+  -- suyo, no de Invifty.
+  cuentas_regalo jsonb not null default '[]'::jsonb,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
@@ -979,6 +983,31 @@ create policy "cliente ve sus pagos reportados" on public.pagos_reportados
   for select to authenticated
   using (public.es_mi_pedido(pedido_id) and public.mi_permiso('ver_pagos'));
 
+-- ---------- MESA DE REGALOS (aportes) ----------
+-- Lo que cada invitado registró (por /regalos/<slug>): la lista de
+-- agradecimientos del anfitrión. Los montos son privados: la página
+-- pública jamás lista quién dio qué.
+
+create table public.aportes (
+  id            uuid primary key default gen_random_uuid(),
+  invitacion_id uuid not null references public.invitaciones(id) on delete cascade,
+  nombre        text not null,
+  monto         numeric(10,2) check (monto is null or monto > 0),
+  mensaje       text,
+  estado        text not null default 'visible'
+                check (estado in ('visible','oculta')),
+  creado_en     timestamptz not null default now()
+);
+
+create index aportes_invitacion_idx
+  on public.aportes (invitacion_id, creado_en desc);
+
+alter table public.aportes enable row level security;
+
+create policy "equipo acceso total aportes" on public.aportes
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
 -- ---------- GALERÍA COLABORATIVA DEL EVENTO ----------
 -- Los invitados suben sus fotos por /galeria/<slug> (validado en el
 -- servidor con la clave secreta, como el RSVP); el anfitrión modera.
@@ -1008,6 +1037,9 @@ create policy "cliente ve su galeria" on public.fotos_galeria
   for select to authenticated using (public.es_mi_invitacion(invitacion_id));
 
 create policy "cliente ve sus mesas" on public.mesas
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
+
+create policy "cliente ve sus aportes" on public.aportes
   for select to authenticated using (public.es_mi_invitacion(invitacion_id));
 
 -- ---------- RLS: el cliente LEE lo suyo ----------

@@ -13,6 +13,7 @@ import Recepcion, { type EntradaDeLista } from "./Recepcion";
 import GaleriaAnfitrion from "./GaleriaAnfitrion";
 import Recordatorios from "./Recordatorios";
 import Mesas from "./Mesas";
+import MesaRegalosAnfitrion from "./MesaRegalosAnfitrion";
 import type { MesaBase } from "@/lib/mesas";
 
 /**
@@ -46,6 +47,7 @@ export default function PanelInvitados({
   galeria = null,
   recordatorios = null,
   mesas = null,
+  mesaRegalos = false,
 }: {
   token: string;
   titulo: string;
@@ -67,6 +69,8 @@ export default function PanelInvitados({
   recordatorios?: { fechaLimite: string | null; hogaresQueRespondieron: string[] } | null;
   /** Mesas (seating). null = migración sin correr: la sección no sale. */
   mesas?: { lista: MesaBase[]; asignaciones: Record<string, string | null> } | null;
+  /** Mesa de regalos, si el contrato la incluye y la migración corrió. */
+  mesaRegalos?: boolean;
 }) {
   const router = useRouter();
   const [pendiente, empezar] = useTransition();
@@ -350,6 +354,9 @@ export default function PanelInvitados({
               hogares={hogares}
               hogaresQueRespondieron={recordatorios.hogaresQueRespondieron}
             />
+          )}
+          {mesaRegalos && publicada && (
+            <MesaRegalosAnfitrion token={token} slug={slug} />
           )}
           {galeria && (
             <GaleriaAnfitrion token={token} slug={slug} abiertaInicial={galeria.abierta} />

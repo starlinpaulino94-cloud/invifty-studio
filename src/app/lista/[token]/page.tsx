@@ -8,6 +8,7 @@ import type { EntradaDeLista } from "@/components/lista/Recepcion";
 import type { DatosInvitacion } from "@/lib/tipos";
 import { tieneGaleria } from "@/lib/galeria";
 import { tieneRecordatorios } from "@/lib/recordatorios";
+import { tieneMesaRegalos } from "@/lib/regalos";
 import { contratoDePedido } from "@/lib/capacidades";
 
 /**
@@ -146,6 +147,19 @@ export default async function PaginaLista({
   const recordatoriosIncluidos = Boolean(
     pedidoDeLista && tieneRecordatorios(contratoDePedido(pedidoDeLista))
   );
+
+  // Mesa de regalos: la incluye el contrato, y la columna de cuentas
+  // existe (consulta aparte, a prueba de migración sin correr).
+  const { data: cuentasRegaloProbe } = await supabase
+    .from("invitaciones")
+    .select("cuentas_regalo")
+    .eq("id", invitacion.id)
+    .maybeSingle();
+  const regalosIncluidos = Boolean(
+    pedidoDeLista &&
+      cuentasRegaloProbe &&
+      tieneMesaRegalos(contratoDePedido(pedidoDeLista))
+  );
   const hogaresQueRespondieron = [
     ...new Set(
       ((confirmacionesConHogar ?? []) as { hogar_id: string }[]).map((c) => c.hogar_id)
@@ -173,6 +187,7 @@ export default async function PaginaLista({
     <PanelInvitados
       token={token}
       galeria={galeriaIncluida ? { abierta: Boolean(invitacion.galeria_abierta) } : null}
+      mesaRegalos={regalosIncluidos}
       mesas={
         mesasData
           ? {
