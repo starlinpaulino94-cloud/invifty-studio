@@ -191,6 +191,9 @@ create table public.invitaciones (
   -- Cuando el cliente aprueba una versión, la invitación se bloquea contra
   -- ediciones accidentales; desbloquear es explícito y queda en auditoría.
   bloqueada_en  timestamptz,
+  -- El interruptor de la galería colaborativa: el anfitrión la abre
+  -- (normalmente el día del evento) y la cierra cuando quiera.
+  galeria_abierta boolean not null default false,
   estado        text not null default 'borrador' check (estado in ('borrador','publicada')),
   publicada_en  timestamptz,
   creado_en     timestamptz not null default now(),
@@ -914,6 +917,34 @@ create table public.recuperaciones (
 
 create index recuperaciones_usuario_idx
   on public.recuperaciones (usuario_id, creado_en desc);
+
+-- ---------- GALERÍA COLABORATIVA DEL EVENTO ----------
+-- Los invitados suben sus fotos por /galeria/<slug> (validado en el
+-- servidor con la clave secreta, como el RSVP); el anfitrión modera.
+-- "oculta" saca la foto del álbum sin borrarla.
+
+create table public.fotos_galeria (
+  id             uuid primary key default gen_random_uuid(),
+  invitacion_id  uuid not null references public.invitaciones(id) on delete cascade,
+  ruta           text not null,
+  miniatura_ruta text not null,
+  autor          text,
+  estado         text not null default 'visible'
+                 check (estado in ('visible','oculta')),
+  creado_en      timestamptz not null default now()
+);
+
+create index fotos_galeria_invitacion_idx
+  on public.fotos_galeria (invitacion_id, creado_en desc);
+
+alter table public.fotos_galeria enable row level security;
+
+create policy "equipo acceso total galeria" on public.fotos_galeria
+  for all to authenticated
+  using (public.es_del_equipo()) with check (public.es_del_equipo());
+
+create policy "cliente ve su galeria" on public.fotos_galeria
+  for select to authenticated using (public.es_mi_invitacion(invitacion_id));
 
 -- ---------- RLS: el cliente LEE lo suyo ----------
 

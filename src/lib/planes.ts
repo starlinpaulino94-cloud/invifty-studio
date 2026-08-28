@@ -52,7 +52,7 @@ export interface FichaPlan {
 }
 
 /** Cámbiala al editar el catálogo: es la versión que ve la web (ETag). */
-export const CATALOGO_ACTUALIZADO = "2026-08-05";
+export const CATALOGO_ACTUALIZADO = "2026-08-26";
 
 const cap = (id: string, nombre: string, estado: EstadoCapacidad = "activa"): Capacidad =>
   ({ id, nombre, estado });
@@ -127,7 +127,8 @@ export const CATALOGO: Record<Plan, FichaPlan> = {
       cap("video_portada", "Video en bucle de portada"),
       cap("dominio_propio", "Dominio web propio"),
       cap("diseno_personalizado", "Diseño personalizado a medida", "manual"),
-      cap("galeria_post_evento", "Galería post-evento", "vendida_sin_implementar"),
+      // Desde 2026-08-26 el sistema la tiene de verdad: /galeria/<slug>.
+      cap("galeria_post_evento", "Galería colaborativa del evento"),
     ],
   },
 };
@@ -150,7 +151,7 @@ export const LIMITE_FOTOS: Record<Plan, number> = porPlan((p) => p.limiteFotos);
 export const EXTRAS: { id: string; nombre: string; precioDOP: number; estado: EstadoCapacidad }[] = [
   { id: "bilingue", nombre: "Versión Bilingüe / Inglés", precioDOP: 900, estado: "manual" },
   { id: "dominio_propio", nombre: "Dominio Web Propio", precioDOP: 1500, estado: "activa" },
-  { id: "galeria_post_evento", nombre: "Galería Post-Evento", precioDOP: 900, estado: "vendida_sin_implementar" },
+  { id: "galeria_post_evento", nombre: "Galería Post-Evento", precioDOP: 900, estado: "activa" },
   { id: "urgente_24h", nombre: "Entrega Urgente 24h", precioDOP: 800, estado: "manual" },
 ];
 
