@@ -633,6 +633,8 @@ test("las rutas de mantenimiento siguen pidiendo sesión", () => {
   for (const ruta of [
     "src/app/api/panel/mantenimiento/vencimientos/route.ts",
     "src/app/api/panel/mantenimiento/fotos/route.ts",
+    // La exportación entrega la cartera de clientes entera: sin sesión, no.
+    "src/app/api/panel/exportar/route.ts",
   ]) {
     const contenido = readFileSync(path.join(raiz, ruta), "utf8");
     const metodos = contenido.match(/export async function (GET|POST)/g) ?? [];

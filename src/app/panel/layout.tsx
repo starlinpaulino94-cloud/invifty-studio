@@ -6,13 +6,14 @@ import { crearClienteServidor } from "@/lib/supabase/servidor";
 import { esDelEquipo } from "@/lib/sesion";
 import { cerrarSesion } from "@/lib/acciones";
 import {
-  LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut, Palette, Wrench, Inbox, Globe,
+  LayoutDashboard, PlusCircle, Users, CalendarClock, BarChart3, LogOut, Palette, Wrench, Inbox, Globe, Search,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 const NAV = [
   { href: "/panel", etiqueta: "Tablero", Icono: LayoutDashboard },
+  { href: "/panel/buscar", etiqueta: "Buscar", Icono: Search },
   { href: "/panel/pedidos/nuevo", etiqueta: "Crear pedido", Icono: PlusCircle },
   { href: "/panel/plantillas", etiqueta: "Plantillas", Icono: Palette },
   { href: "/panel/clientes", etiqueta: "Clientes", Icono: Users },
