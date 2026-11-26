@@ -20,12 +20,17 @@ import type { BriefCreativo, ProveedorCreativo, ResultadoGeneracion } from "./ti
  */
 
 /** Cambia al editar el prompt: queda registrado en cada generación. */
-export const PROMPT_VERSION = "anthropic-1.0";
+export const PROMPT_VERSION = "anthropic-1.1";
 
-const MODELO = "claude-opus-5";
-/** USD por millón de tokens (entrada, salida) del modelo de arriba. */
-const PRECIO_ENTRADA = 5;
-const PRECIO_SALIDA = 25;
+const MODELO = "claude-opus-5-5";
+/**
+ * USD por millón de tokens (entrada, salida) del modelo de arriba.
+ * Si se cambia el modelo hay que cambiar estos dos números a la vez: el
+ * registro de `generaciones` guarda el coste estimado, y un precio viejo
+ * no da un error — da una contabilidad mentirosa, que es peor.
+ */
+const PRECIO_ENTRADA = 4;
+const PRECIO_SALIDA = 20;
 
 const SISTEMA = `Eres el director creativo de Invifty, un estudio de invitaciones digitales premium en República Dominicana.
 
@@ -104,6 +109,7 @@ export const proveedorAnthropic: ProveedorCreativo = {
       max_tokens: 16000,
       system: SISTEMA,
       output_config: {
+        effort: "high",
         format: { type: "json_schema", schema: esquemaSalida() },
       },
       messages: [

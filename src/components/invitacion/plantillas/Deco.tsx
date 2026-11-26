@@ -4,7 +4,8 @@ import { DatosInvitacion } from "@/lib/tipos";
 import Marco, { fechaLarga, hora12 } from "../base/Marco";
 import { CuerpoEstandar } from "../base/Secciones";
 import { Revelar } from "../base/Efectos";
-import { MarcoDeco, DivisorDeco, inicialesDe } from "../base/Ornamentos";
+import { MarcoDeco, DivisorDeco } from "../base/Ornamentos";
+import { inicialesDe } from "@/lib/iniciales";
 import Texto from "../base/Texto";
 import MedioPortada from "../base/MedioPortada";
 
