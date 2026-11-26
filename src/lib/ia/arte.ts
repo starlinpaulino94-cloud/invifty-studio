@@ -207,6 +207,54 @@ export function quitarPieza(
   return arte;
 }
 
+/**
+ * Vuelve a pasar por la aduana el arte que llega para GUARDARSE.
+ *
+ * Existe porque `datos` viene del navegador: la tarjeta del editor manda
+ * SVG ya validado, pero una acción de servidor se puede llamar con
+ * cualquier cosa, y esto se pinta después en el celular de cada invitado.
+ * Lo que no pasa no se guarda a medias: se descarta la pieza y se dice.
+ *
+ * Nota: aquí NO se exige la paleta. La paleta puede haber cambiado desde
+ * que se dibujó el adorno, y un ornamento que ya estaba puesto no se
+ * borra solo porque el equipo cambiara de color: eso sería una invitación
+ * que se desarma sin que nadie la toque.
+ */
+export function sanearArteGuardado(
+  entrante: unknown
+): { arte: ArteInvitacion | undefined; descartadas: string[] } {
+  if (!entrante || typeof entrante !== "object") return { arte: undefined, descartadas: [] };
+
+  const fuente = entrante as Record<string, unknown>;
+  const arte: ArteInvitacion = { version: 1 };
+  const descartadas: string[] = [];
+
+  for (const id of IDS_PIEZAS) {
+    const pieza = fuente[id];
+    if (!pieza || typeof pieza !== "object") continue;
+    const fila = pieza as Record<string, unknown>;
+
+    const revisada = validarPieza(
+      { pieza: id, svg: String(fila.svg ?? ""), idea: String(fila.idea ?? "—") },
+      []
+    );
+    if (!revisada.ok) {
+      descartadas.push(`${id}: ${revisada.motivo}`);
+      continue;
+    }
+    arte[id] = {
+      svg: revisada.svg,
+      idea: revisada.idea,
+      generadoEn:
+        typeof fila.generadoEn === "string" && fila.generadoEn.length <= 40
+          ? fila.generadoEn
+          : new Date().toISOString(),
+    };
+  }
+
+  return { arte: hayArte(arte) ? arte : undefined, descartadas };
+}
+
 /** ¿Tiene esta invitación arte propio en alguna pieza? */
 export function hayArte(arte: ArteInvitacion | null | undefined): boolean {
   return IDS_PIEZAS.some((id) => Boolean(arte?.[id]?.svg));

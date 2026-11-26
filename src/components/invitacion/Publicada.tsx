@@ -134,7 +134,12 @@ export default async function Publicada({
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       <link rel="stylesheet" href={urlFuentes(datos.tipografia)} />
 
-      <ProveedorInvitacion slug={invitacion.slug} esBorrador={esBorrador} hogar={hogar}>
+      <ProveedorInvitacion
+        slug={invitacion.slug}
+        esBorrador={esBorrador}
+        hogar={hogar}
+        arte={datos.arte}
+      >
         <RegistroVisita />
         {esInvitacionDeCodigo(invitacion.plantilla) ? (
           <CodigoPropio html={invitacion.codigo_html} datos={datos} fotos={medios} />

@@ -1,14 +1,76 @@
+"use client";
+
+// Los ornamentos leen el ARTE PROPIO de la invitación por contexto
+// (useArte), así que son piezas de cliente. La directiva va aquí para que
+// además se puedan renderizar desde un componente de servidor: sin ella,
+// hacerlo revienta con "useArte is on the client" — pasó de verdad, en la
+// primera pantalla de prueba.
+
 /**
  * Ornamentos vectoriales dibujados a mano (SVG puro, sin dependencias).
  * Todos heredan el color del acento vía `currentColor`.
+ *
+ * ARTE PROPIO: si esta invitación tiene una pieza dibujada para ella
+ * (lib/ia/arte.ts), gana sobre el ornamento de la plantilla. El SVG
+ * guardado YA pasó la aduana (lib/ia/svg.ts), que lo reconstruyó desde
+ * una lista blanca; por eso se puede pintar, y por eso no se pinta nada
+ * que no venga de ahí.
  */
 
+import { useArte } from "./Contexto";
+import { prefijarIds } from "@/lib/ia/svg";
+import type { PiezaArteId } from "@/lib/ia/arte";
+
 type Props = { className?: string };
+
+/** El lienzo y el tamaño de pantalla de cada pieza dibujada. */
+const LIENZO: Record<PiezaArteId, { viewBox: string; clases: string }> = {
+  monograma: { viewBox: "0 0 120 120", clases: "w-full h-full" },
+  divisor: { viewBox: "0 0 240 40", clases: "w-52 h-auto" },
+  esquina: { viewBox: "0 0 80 80", clases: "w-16 h-16" },
+};
+
+/**
+ * Saca el interior del SVG guardado para montarlo en NUESTRA etiqueta
+ * <svg>: así el viewBox, el tamaño y las clases los pone la invitación,
+ * no el dibujo. Un adorno no decide cuánto espacio ocupa.
+ */
+function interiorDe(svg: string): string {
+  const abre = svg.indexOf(">");
+  const cierra = svg.lastIndexOf("</svg>");
+  if (abre === -1 || cierra === -1 || cierra <= abre) return "";
+  return svg.slice(abre + 1, cierra);
+}
+
+/**
+ * Pinta la pieza propia, o null si esta invitación no la tiene.
+ * Los ids van con prefijo: dos piezas pueden traer un degradado llamado
+ * igual, y sin prefijo la segunda le roba el color a la primera.
+ */
+function ArtePropio({ pieza, className = "" }: { pieza: PiezaArteId; className?: string }) {
+  const svg = useArte(pieza);
+  if (!svg) return null;
+  const interior = interiorDe(svg);
+  if (!interior) return null;
+  const { viewBox, clases } = LIENZO[pieza];
+  return (
+    <svg
+      viewBox={viewBox}
+      fill="none"
+      className={`${clases} ${className}`}
+      aria-hidden
+      dangerouslySetInnerHTML={{ __html: prefijarIds(interior, `arte-${pieza}`) }}
+    />
+  );
+}
 
 /* ---------- Divisores ---------- */
 
 /** Filigrana clásica: rombo central con volutas. */
 export function DivisorFiligrana({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 240 24" fill="none" className={`w-52 h-6 ${className}`} aria-hidden>
       <path d="M8 12h74" stroke="currentColor" strokeWidth="1" opacity=".55" />
@@ -24,6 +86,9 @@ export function DivisorFiligrana({ className = "" }: Props) {
 
 /** Rama botánica simétrica: dos tallos con hojas y baya central. */
 export function DivisorBotanico({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   const hojas = [0, 1, 2, 3, 4];
   return (
     <svg viewBox="0 0 260 44" fill="none" className={`w-56 h-11 ${className}`} aria-hidden>
@@ -61,6 +126,9 @@ export function DivisorBotanico({ className = "" }: Props) {
 
 /** Línea mínima con punto. */
 export function DivisorMinimo({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 200 8" fill="none" className={`w-40 h-2 ${className}`} aria-hidden>
       <path d="M0 4h88M112 4h88" stroke="currentColor" strokeWidth="1" opacity=".5" />
@@ -71,6 +139,9 @@ export function DivisorMinimo({ className = "" }: Props) {
 
 /** Zigurat Art Déco escalonado con líneas laterales. */
 export function DivisorDeco({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 260 34" fill="none" className={`w-56 h-9 ${className}`} aria-hidden>
       {/* Líneas laterales dobles */}
@@ -94,6 +165,9 @@ export function DivisorDeco({ className = "" }: Props) {
 
 /** Dos frondas de palma enfrentadas con sol central. */
 export function DivisorPalma({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   const ribs = [0, 1, 2, 3, 4, 5];
   return (
     <svg viewBox="0 0 260 46" fill="none" className={`w-60 h-12 ${className}`} aria-hidden>
@@ -130,6 +204,9 @@ export function DivisorPalma({ className = "" }: Props) {
 
 /** Estrella de ocho puntas con línea a cada lado. */
 export function DivisorEstrella({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 240 26" fill="none" className={`w-52 h-7 ${className}`} aria-hidden>
       <path d="M6 13h94M140 13h94" stroke="currentColor" strokeWidth=".9" opacity=".45" />
@@ -143,6 +220,9 @@ export function DivisorEstrella({ className = "" }: Props) {
 
 /** Onda continua de estilo retro. */
 export function DivisorOnda({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 240 20" fill="none" className={`w-52 h-5 ${className}`} aria-hidden>
       <path
@@ -155,6 +235,9 @@ export function DivisorOnda({ className = "" }: Props) {
 
 /** Pincelada de acuarela. */
 export function DivisorPincel({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 240 22" fill="none" className={`w-52 h-6 ${className}`} aria-hidden>
       <path
@@ -172,6 +255,9 @@ export function DivisorPincel({ className = "" }: Props) {
 
 /** Barra sobria para composiciones cinematográficas. */
 export function DivisorBarra({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 200 6" fill="none" className={`w-32 h-1.5 ${className}`} aria-hidden>
       <rect x="0" y="2" width="64" height="2" fill="currentColor" />
@@ -240,6 +326,9 @@ export function Cartucho({ className = "" }: Props) {
 
 /** Divisor barroco: volutas enfrentadas con un rombo al centro. */
 export function DivisorBarroco({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 220 32" className={className} fill="none" aria-hidden>
       <path d="M6 16 C 40 16, 56 8, 76 16 C 62 24, 44 24, 22 20"
@@ -259,6 +348,9 @@ export function DivisorBarroco({ className = "" }: Props) {
 
 /** Divisor de jardín: tallo con hojas a ambos lados. */
 export function DivisorJardin({ className = "" }: Props) {
+  const propio = useArte("divisor");
+  if (propio) return <ArtePropio pieza="divisor" className={className} />;
+
   return (
     <svg viewBox="0 0 200 30" className={className} fill="none" aria-hidden>
       <path d="M14 15 C 60 15, 140 15, 186 15" stroke="currentColor" strokeWidth="1" opacity="0.6" />
@@ -308,6 +400,9 @@ export function Divisor({ variante, className }: { variante: string; className?:
 
 /** Esquina ornamental (se rota para las 4 esquinas). */
 export function EsquinaOrnamental({ className = "" }: Props) {
+  const propio = useArte("esquina");
+  if (propio) return <ArtePropio pieza="esquina" className={className} />;
+
   return (
     <svg viewBox="0 0 80 80" fill="none" className={`w-16 h-16 ${className}`} aria-hidden>
       <path d="M2 2h30M2 2v30" stroke="currentColor" strokeWidth="1" opacity=".8" />
@@ -334,7 +429,13 @@ export function MarcoDeco({ className = "" }: Props) {
 
 /* ---------- Monograma ---------- */
 
-/** Círculo con las iniciales, dibujado con el acento. */
+/**
+ * Las iniciales. Con arte propio son un DIBUJO (trazos, no una fuente);
+ * sin él, el círculo de siempre con las dos letras en la tipografía de la
+ * invitación. Ese círculo igual para todos es justo lo que delataba la
+ * plantilla, así que cuando hay pieza propia se sustituye entero: no se
+ * superpone una cosa sobre la otra.
+ */
 export function Monograma({
   iniciales,
   className = "",
@@ -342,6 +443,15 @@ export function Monograma({
   iniciales: string;
   className?: string;
 }) {
+  const propio = useArte("monograma");
+  if (propio) {
+    return (
+      <div className={`relative inline-flex items-center justify-center ${className}`}>
+        <ArtePropio pieza="monograma" />
+      </div>
+    );
+  }
+
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`}>
       <svg viewBox="0 0 120 120" fill="none" className="w-full h-full" aria-hidden>

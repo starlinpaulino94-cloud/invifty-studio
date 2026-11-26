@@ -6,6 +6,8 @@ import { crearClienteServidor } from "./supabase/servidor";
 import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { derivarDatosInvitacion } from "./invitacion";
 import { sanearPreguntas } from "./rsvp";
+import { sanearArteGuardado } from "./ia/arte";
+import { registrarError } from "./registro";
 import { slugificar, slugConSufijo } from "./slug";
 import { normalizarDominio, dominioValido } from "./dominios";
 import { calcularVencimiento } from "./vencimientos";
@@ -130,6 +132,22 @@ export async function guardarInvitacion(
   // en el navegador.
   if (datos.rsvp?.preguntas !== undefined) {
     datos = { ...datos, rsvp: { ...datos.rsvp, preguntas: sanearPreguntas(datos.rsvp.preguntas) } };
+  }
+
+  // EL ARTE SE VUELVE A SANEAR AQUÍ, y esto no es paranoia duplicada: lo
+  // que llega en `datos` viene del NAVEGADOR. La tarjeta del editor envía
+  // SVG que ya pasó la aduana, pero una acción de servidor se puede
+  // llamar con lo que sea, y un SVG es código que luego se pinta en el
+  // celular de cada invitado. Que el botón solo mande cosas buenas no es
+  // una garantía: la garantía es esta línea.
+  if (datos.arte !== undefined) {
+    const { arte, descartadas } = sanearArteGuardado(datos.arte);
+    if (descartadas.length) {
+      registrarError("arte", `Arte descartado al guardar: ${descartadas.join(" | ")}`, {
+        invitacion: invitacionId,
+      });
+    }
+    datos = { ...datos, arte };
   }
 
   const { error } = await supabase
