@@ -214,6 +214,16 @@ export interface DatosInvitacion {
    * NUNCA se publica: solo se ve en el editor del panel.
    */
   notasEquipo?: { titulo: string; texto: string }[];
+  /**
+   * ARTE A MEDIDA: monograma, divisor y esquina DIBUJADOS para este
+   * evento (ver lib/ia/arte.ts). Cada pieza que exista sustituye al
+   * ornamento de la plantilla; las que falten siguen saliendo como
+   * siempre, así que ninguna invitación existente cambia por esto.
+   *
+   * El SVG que se guarda aquí ya pasó la aduana (lib/ia/svg.ts). Nada
+   * que no haya pasado por ahí puede escribirse en este campo.
+   */
+  arte?: import("./ia/arte").ArteInvitacion;
   /** Efectos de la experiencia */
   efectos?: {
     sobre: boolean;         // apertura tipo sobre lacrado

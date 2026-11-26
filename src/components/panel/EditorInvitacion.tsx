@@ -6,6 +6,7 @@ import type { DatosInvitacion, EstadoInvitacion, FotoInvitacion } from "@/lib/ti
 import GestorFotos from "./GestorFotos";
 import VistaPreviaEnVivo from "./VistaPreviaEnVivo";
 import ConceptosIA from "./ConceptosIA";
+import ArteIA from "./ArteIA";
 import PreguntasRsvp from "./PreguntasRsvp";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
@@ -364,6 +365,24 @@ export default function EditorInvitacion({
               setDatos(nuevosDatos);
               if (nuevaPlantilla) setPlantilla(nuevaPlantilla);
             }}
+          />
+        </Tarjeta>
+      )}
+
+      {/* ---------- ARTE A MEDIDA ----------
+          Los conceptos ELIGEN del catálogo; esto DIBUJA. Monograma trazado,
+          divisor y esquina, hechos para este evento y con su paleta. El SVG
+          pasa por la aduana (lib/ia/svg.ts) antes de pintarse, y se aplica
+          al estado local como todo lo demás. */}
+      {!esCodigo && (
+        <Tarjeta
+          titulo="Arte a medida"
+          subtitulo="Monograma, divisor y esquina dibujados para este evento. Sustituyen al ornamento de la plantilla."
+        >
+          <ArteIA
+            invitacionId={invitacionId}
+            datos={datos}
+            onAplicar={(nuevosDatos) => setDatos(nuevosDatos)}
           />
         </Tarjeta>
       )}

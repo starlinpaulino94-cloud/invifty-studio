@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { paleta } from "@/config/diseno";
-import { inicialesDe } from "@/components/invitacion/base/Ornamentos";
+import { inicialesDe } from "@/lib/iniciales";
 import { fechaSinDiaSemana } from "@/lib/fechas";
 import { DatosInvitacion } from "@/lib/tipos";
 

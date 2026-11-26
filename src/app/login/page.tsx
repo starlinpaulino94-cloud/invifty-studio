@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { crearClienteNavegador } from "@/lib/supabase/cliente";
+import { mensajeErrorAcceso } from "@/lib/acceso";
 import { Loader2, Lock } from "lucide-react";
 
 export default function PaginaLogin() {
@@ -21,7 +22,10 @@ export default function PaginaLogin() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError("Correo o contraseña incorrectos.");
+      // El mensaje separa "tu contraseña está mal" de "el sistema está
+      // mal configurado": culpar a la persona por un fallo de claves ya
+      // costó horas una vez (lib/acceso.ts).
+      setError(mensajeErrorAcceso(error.message));
       setCargando(false);
       return;
     }

@@ -4,7 +4,7 @@ import { ReactNode, useState } from "react";
 import { DatosInvitacion, EFECTOS_POR_DEFECTO } from "@/lib/tipos";
 import { paleta, variablesDeDiseno, densidad } from "@/config/diseno";
 import CapaOrnamental from "./CapaOrnamental";
-import { inicialesDe } from "./Ornamentos";
+import { inicialesDe } from "@/lib/iniciales";
 import { SobreApertura, TexturaPapel, Vineta, Musica, AvisoMusica } from "./Efectos";
 
 /**

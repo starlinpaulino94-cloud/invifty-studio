@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, ReactNode } from "react";
+import type { ArteInvitacion, PiezaArteId } from "@/lib/ia/arte";
 
 /**
  * Datos de la propia invitación que necesitan las piezas interactivas
@@ -32,6 +33,12 @@ interface ContextoInvitacion {
   /** Presente solo si el invitado llegó por su enlace personal. */
   hogar?: HogarInvitado;
   /**
+   * Arte dibujado para ESTA invitación (lib/ia/arte.ts). Cada pieza que
+   * venga sustituye al ornamento de la plantilla; sin arte, todo se ve
+   * como se ha visto siempre.
+   */
+  arte?: ArteInvitacion;
+  /**
    * Solo lo pone la vista previa del panel con el modo editar encendido.
    * Que exista es lo que convierte los textos en editables: en la
    * invitación publicada nunca llega, y `Texto` no dibuja nada extra.
@@ -45,17 +52,19 @@ export function ProveedorInvitacion({
   slug,
   esBorrador = false,
   hogar,
+  arte,
   onEditarTexto,
   children,
 }: {
   slug: string;
   esBorrador?: boolean;
   hogar?: HogarInvitado;
+  arte?: ArteInvitacion;
   onEditarTexto?: (ruta: string, valor: string) => void;
   children: ReactNode;
 }) {
   return (
-    <Contexto.Provider value={{ slug, esBorrador, hogar, onEditarTexto }}>
+    <Contexto.Provider value={{ slug, esBorrador, hogar, arte, onEditarTexto }}>
       {children}
     </Contexto.Provider>
   );
@@ -63,4 +72,18 @@ export function ProveedorInvitacion({
 
 export function useInvitacion(): ContextoInvitacion {
   return useContext(Contexto);
+}
+
+/**
+ * El SVG de una pieza de arte propio, si esta invitación la tiene.
+ *
+ * Va por contexto por el mismo motivo que el resto: para que los
+ * ornamentos lo lean desde donde estén sin hacerlo pasar por las doce
+ * plantillas. Devuelve null cuando no hay arte, y entonces cada
+ * ornamento dibuja el de siempre.
+ */
+export function useArte(pieza: PiezaArteId): string | null {
+  const { arte } = useContext(Contexto);
+  const svg = arte?.[pieza]?.svg;
+  return svg ? svg : null;
 }

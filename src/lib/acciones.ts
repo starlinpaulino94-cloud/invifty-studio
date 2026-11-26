@@ -9,6 +9,7 @@ import { transicionValida } from "./estados";
 import { fechaEfectivaValida, motivoRechazoTransaccion } from "./pagos";
 import { snapshotDeContrato } from "./capacidades";
 import { CONFIRMACION_ELIMINAR, confirmacionCorrecta } from "./eliminar";
+import { errorClienteDistinto, mismaPersona } from "./clientes";
 import { PLANES, TIPOS_EVENTO } from "./planes";
 import { exigirPermiso, registrarAccion, registrarCambioEstado } from "./auditoria";
 import { crearClienteAdmin } from "./supabase/admin";
@@ -35,15 +36,26 @@ export async function crearPedido(formData: FormData) {
 
   if (!nombre || !telefono) throw new Error("Nombre y teléfono son obligatorios");
 
-  // Cliente: buscar por teléfono o crear
+  // Cliente: buscar por teléfono o crear.
+  //
+  // Un WhatsApp = una persona: si el número ya tiene ficha, el pedido se
+  // suma a ESA ficha en vez de duplicar al cliente. Pero reutilizar en
+  // silencio hizo perder una tarde: se creaban pedidos "de Camila" que
+  // salían a nombre de un cliente de prueba porque el número era el de la
+  // prueba. Ahora, si el nombre tecleado no se parece al guardado, hay que
+  // decir a la cara que es la misma persona (lib/clientes.ts).
   let clienteId: string;
   const { data: existente } = await supabase
     .from("clientes")
-    .select("id")
+    .select("id, nombre")
     .eq("telefono", telefono)
     .maybeSingle();
 
   if (existente) {
+    const confirmado = String(formData.get("misma_persona") ?? "") === "si";
+    if (!confirmado && !mismaPersona(nombre, existente.nombre)) {
+      throw new Error(errorClienteDistinto(existente.nombre, telefono));
+    }
     clienteId = existente.id;
   } else {
     const { data: nuevo, error } = await supabase

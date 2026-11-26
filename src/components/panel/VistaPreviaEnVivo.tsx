@@ -203,6 +203,7 @@ export default function VistaPreviaEnVivo({
           <ProveedorInvitacion
             slug=""
             esBorrador
+            arte={datosPrevia.arte}
             onEditarTexto={editando ? onEditarTexto : undefined}
           >
             {esInvitacionDeCodigo(plantilla) ? (

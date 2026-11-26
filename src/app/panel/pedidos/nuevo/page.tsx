@@ -1,4 +1,5 @@
 import { crearPedido } from "@/lib/acciones";
+import CampoCliente from "@/components/panel/CampoCliente";
 import { PLANES, EXTRAS, TIPOS_EVENTO, VIGENCIA_MESES } from "@/lib/planes";
 import { Plan, TipoEvento } from "@/lib/tipos";
 import { Sparkles } from "lucide-react";
@@ -19,35 +20,8 @@ export default function CrearPedido() {
       </p>
 
       <form action={crearPedido} className="space-y-8">
-        {/* Cliente */}
-        <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="font-serif text-lg text-gray-900">El cliente</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="nombre" className={labelBase}>Nombre completo *</label>
-              <input id="nombre" name="nombre" required placeholder="Ej. Camila Rodríguez" className={inputBase} />
-            </div>
-            <div>
-              <label htmlFor="telefono" className={labelBase}>WhatsApp *</label>
-              <input id="telefono" name="telefono" required placeholder="Ej. 809-555-0101" className={inputBase} />
-            </div>
-            <div>
-              <label htmlFor="email" className={labelBase}>Email (opcional)</label>
-              <input id="email" name="email" type="email" className={inputBase} />
-            </div>
-            <div>
-              <label htmlFor="como_nos_conocio" className={labelBase}>¿Cómo nos conoció?</label>
-              <select id="como_nos_conocio" name="como_nos_conocio" className={inputBase}>
-                <option value="">— Seleccionar —</option>
-                <option value="instagram">Instagram</option>
-                <option value="referido">Referido / Recomendación</option>
-                <option value="google">Google / Búsqueda</option>
-                <option value="tiktok">TikTok</option>
-                <option value="otro">Otro</option>
-              </select>
-            </div>
-          </div>
-        </section>
+        {/* Cliente: avisa si el WhatsApp ya tiene ficha (components/panel/CampoCliente) */}
+        <CampoCliente />
 
         {/* Evento y plan */}
         <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
