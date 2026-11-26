@@ -75,8 +75,16 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-dvh bg-gray-50 flex flex-col lg:flex-row">
-      {/* Barra lateral / superior */}
-      <aside className="lg:w-60 bg-[#0D0D0F] text-white flex lg:flex-col shrink-0 lg:min-h-dvh sticky top-0 z-30 print:hidden">
+      {/* Barra lateral / superior
+          En escritorio se queda quieta mientras el contenido pasa por
+          detrás. Lleva `lg:h-dvh` (exactamente el alto de la pantalla) y
+          `lg:self-start` a propósito: con `min-h-dvh` el aside se
+          estiraba al alto de TODO el contenido —un hijo de flex se
+          estira por defecto— y un elemento sticky tan alto como su
+          contenedor no tiene dónde pegarse, así que se iba con el
+          scroll. Pasó de verdad: el menú desaparecía al bajar.
+          En móvil (<lg) sigue siendo la barra horizontal de arriba. */}
+      <aside className="lg:w-60 bg-[#0D0D0F] text-white flex lg:flex-col shrink-0 lg:h-dvh lg:self-start sticky top-0 z-30 print:hidden">
         <div className="hidden lg:block px-6 py-7">
           <span className="font-serif text-xl tracking-[0.25em] uppercase block">Invifty</span>
           <span className="text-[9px] uppercase tracking-[0.35em] text-[#D4AF37] font-semibold">
@@ -84,7 +92,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </span>
         </div>
 
-        <nav className="flex lg:flex-col flex-1 overflow-x-auto lg:overflow-visible items-center lg:items-stretch px-2 lg:px-3 gap-1 py-2 lg:py-0">
+        {/* `lg:overflow-y-auto`: ahora que la barra mide lo que la
+            pantalla, con muchos enlaces (o una pantalla baja) hay que
+            poder llegar al último. Sin esto quedarían fuera y sin forma
+            de alcanzarlos. */}
+        <nav className="flex lg:flex-col flex-1 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto items-center lg:items-stretch px-2 lg:px-3 gap-1 py-2 lg:py-0">
           {NAV.map(({ href, etiqueta, Icono }) => (
             <Link
               key={href}
