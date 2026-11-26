@@ -59,9 +59,19 @@ const LONGITUD = "longitud";
 const TRANSFORMACION = "transformacion";
 
 /** Validadores por tipo de valor. Cada atributo declara el suyo. */
+/**
+ * Un número tal y como lo escribe quien dibuja vectores: con decimales
+ * sin el cero delante (".5"), y a veces en notación científica
+ * ("1.5e0"). Rechazar el exponente costaba una generación entera por un
+ * número inofensivo — lo encontró la prueba de "SVG realista", no un
+ * cliente.
+ */
+const NUM = String.raw`-?(?:\d+|\d*\.\d+)(?:[eE][+-]?\d+)?`;
+
 const TIPOS: Record<string, (v: string) => boolean> = {
-  [NUMERO]: (v) => /^-?(?:\d+|\d*\.\d+)$/.test(v) && Math.abs(Number(v)) <= 100_000,
-  [LONGITUD]: (v) => /^-?(?:\d+|\d*\.\d+)%?$/.test(v),
+  [NUMERO]: (v) => new RegExp(`^${NUM}$`).test(v) && Math.abs(Number(v)) <= 100_000,
+  [LONGITUD]: (v) =>
+    new RegExp(`^${NUM}%?$`).test(v) && Math.abs(Number(v.replace("%", ""))) <= 100_000,
   [COLOR]: esColor,
   [TRANSFORMACION]: esTransformacion,
   trazado: (v) => v.length <= LIMITES_SVG.trazado && /^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\-\s]+$/.test(v),
@@ -130,7 +140,7 @@ function esColor(v: string): boolean {
 function esViewBox(v: string): boolean {
   const partes = v.trim().split(/[\s,]+/);
   if (partes.length !== 4) return false;
-  if (!partes.every((p) => /^-?(?:\d+|\d*\.\d+)$/.test(p))) return false;
+  if (!partes.every((p) => new RegExp(`^${NUM}$`).test(p))) return false;
   const [, , ancho, alto] = partes.map(Number);
   return ancho > 0 && alto > 0 && ancho <= LIMITES_SVG.lado && alto <= LIMITES_SVG.lado;
 }
@@ -142,7 +152,7 @@ function esViewBox(v: string): boolean {
 function esTransformacion(v: string): boolean {
   let resto = v.trim();
   if (!resto || resto.length > 400) return false;
-  const una = /^(?:translate|scale|rotate|matrix|skewX|skewY)\(\s*-?(?:\d+|\d*\.\d+)(?:\s*[,\s]\s*-?(?:\d+|\d*\.\d+))*\s*\)/;
+  const una = new RegExp(`^(?:translate|scale|rotate|matrix|skewX|skewY)\\(\\s*${NUM}(?:\\s*[,\\s]\\s*${NUM})*\\s*\\)`);
   while (resto) {
     const encaja = resto.match(una);
     if (!encaja) return false;

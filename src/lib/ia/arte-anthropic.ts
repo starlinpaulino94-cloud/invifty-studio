@@ -101,8 +101,12 @@ export async function generarArte(
   const inicio = Date.now();
   const client = new Anthropic({
     apiKey: claveIA() ?? undefined,
-    timeout: 300_000,
-    maxRetries: 2,
+    // Menos que el maxDuration de la página que la invoca (300 s): si
+    // algo se eterniza, el que contesta es nuestro mensaje y no el corte
+    // seco de la plataforma. Un reintento, no dos: cada uno vuelve a
+    // gastar el dibujo entero.
+    timeout: 240_000,
+    maxRetries: 1,
   });
 
   const flujo = client.messages.stream({

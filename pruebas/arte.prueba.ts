@@ -227,3 +227,72 @@ test("una fecha de generación inventada se reemplaza, no se guarda", () => {
   });
   assert.ok((arte?.divisor?.generadoEn ?? "").length < 40);
 });
+
+/* ---------- ¿aceptaría lo que un modelo escribe de verdad? ---------- */
+
+/**
+ * El riesgo opuesto al del ataque: una aduana tan estricta que rechace
+ * TODO lo que el modelo escribe deja la función muerta al nacer, y cada
+ * rechazo cuesta una generación entera. Estos tres son SVG escritos con
+ * las costumbres reales de un modelo: xmlns, width/height de sobra,
+ * decimales sin el cero delante, grupos, degradados con id, transform
+ * con coma, notación científica en un trazado.
+ */
+
+const MONOGRAMA_REALISTA = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="oro" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0" stop-color="#d4af37" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#f2d06b"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#oro)" stroke-width="1.2" opacity=".85"/>
+  <g transform="translate(60,60) rotate(-4)" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-24 18 L-24 -16 L-10 8 L4 -16 L4 18"/>
+    <path d="M10 -16 L10 18 L26 18"/>
+  </g>
+  <path d="M60 4 C 67 12 67 20 60 26 C 53 20 53 12 60 4 Z" fill="currentColor" opacity=".7"/>
+</svg>`;
+
+const DIVISOR_REALISTA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 40" fill="none">
+  <path d="M8 20 H92" stroke="currentColor" stroke-width=".8" opacity=".6"/>
+  <path d="M148 20 H232" stroke="currentColor" stroke-width=".8" opacity=".6"/>
+  <path d="M98 20 C 106 9, 114 9, 120 20 C 126 31, 134 31, 142 20" stroke="currentColor" stroke-width="1.4"/>
+  <path d="M120 14.5 l3.5 5.5 -3.5 5.5 -3.5 -5.5 z" fill="#d4af37"/>
+  <circle cx="94" cy="20" r="1.5e0" fill="currentColor"/>
+</svg>`;
+
+const ESQUINA_REALISTA = `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <g stroke="currentColor" fill="none" stroke-linecap="round">
+    <path d="M3 3 H36" stroke-width="1.3"/>
+    <path d="M3 3 V36" stroke-width="1.3"/>
+    <path d="M3 52 C 30 52, 52 30, 52 3" stroke-width=".9" opacity=".65" stroke-dasharray="3 2"/>
+  </g>
+  <path d="M18 22 C 28 14, 38 19, 35 30 C 26 34, 18 30, 18 22 Z" fill="currentColor" opacity=".5"/>
+</svg>`;
+
+test("el SVG que un modelo escribe de verdad PASA la aduana", () => {
+  const reales = [
+    { pieza: "monograma", svg: MONOGRAMA_REALISTA, idea: "Las iniciales entrelazadas bajo una hoja." },
+    { pieza: "divisor", svg: DIVISOR_REALISTA, idea: "Dos trazos que se cruzan en un rombo." },
+    { pieza: "esquina", svg: ESQUINA_REALISTA, idea: "Escuadra con hoja hacia dentro." },
+  ];
+  const resultados = validarPropuestas(reales, ["#d4af37", "#f2d06b", "#0b0b0c"]);
+  for (const r of resultados) {
+    assert.equal(r.ok, true, r.ok ? "" : `${r.pieza} rechazada: ${r.motivo}`);
+  }
+});
+
+test("del SVG realista sobrevive el dibujo y se cae lo que sobra", () => {
+  const r = validarPieza(
+    { pieza: "monograma", svg: MONOGRAMA_REALISTA, idea: "x" },
+    ["#d4af37", "#f2d06b"]
+  );
+  assert.equal(r.ok, true, r.ok ? "" : r.motivo);
+  if (r.ok) {
+    assert.ok(!/width="240"/.test(r.svg), "el tamaño de sobra se tira");
+    assert.ok(r.svg.includes("url(#oro)"), "el degradado sobrevive");
+    assert.ok(r.svg.includes("transform=\"translate(60,60) rotate(-4)\""), "la transformación sobrevive");
+    assert.ok(r.svg.includes('stroke-width="2.2"'), "los decimales sobreviven");
+  }
+});

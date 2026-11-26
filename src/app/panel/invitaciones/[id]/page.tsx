@@ -14,6 +14,27 @@ import { ArrowLeft, Link2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * EL RELOJ DE LA PLATAFORMA
+ * ==========================
+ * Esta página hospeda dos acciones de servidor que llaman a un modelo:
+ * los conceptos y el arte a medida. Dibujar tres SVG con esfuerzo alto
+ * tarda minutos, no segundos, y en Vercel una función se corta sola al
+ * llegar a su tope — con un error genérico, justo cuando el dibujo iba
+ * a salir bien.
+ *
+ * Para Server Actions el tope se pone AQUÍ, en la página, no en la
+ * acción (ver la guía de maxDuration de esta versión de Next). 300 s es
+ * el máximo de los planes de pago de Vercel; en Hobby la plataforma
+ * aplicará el suyo, más bajo, y entonces conviene pedir las piezas de
+ * una en una desde la tarjeta.
+ *
+ * El cliente del SDK espera MENOS que esto a propósito
+ * (lib/ia/arte-anthropic.ts): así, cuando algo se eterniza, quien
+ * responde es nuestro mensaje y no el corte seco de la plataforma.
+ */
+export const maxDuration = 300;
+
 export default async function PaginaEditorInvitacion({
   params,
 }: {
