@@ -13,6 +13,7 @@ import { normalizarDominio, dominioValido } from "./dominios";
 import { calcularVencimiento } from "./vencimientos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
+import { errorDePesoCodigo } from "./codigo";
 
 /**
  * FASE 2 — Acciones del generador de invitaciones (solo panel).
@@ -101,6 +102,11 @@ export async function guardarInvitacion(
 
   // El dominio se guarda normalizado (sin https://, sin www, en
   // minúsculas) para que la petición que llegue por él lo encuentre.
+  // El peso se comprueba también aquí: lo que llega viene del navegador, y
+  // el tope de next.config.ts solo corta de golpe, sin decir por qué.
+  const errorPeso = codigoHtml ? errorDePesoCodigo(codigoHtml) : null;
+  if (errorPeso) return { ok: false, error: errorPeso };
+
   const dominioLimpio = normalizarDominio(dominio ?? "");
   if (dominioLimpio && !dominioValido(dominioLimpio)) {
     return { ok: false, error: `"${dominioLimpio}" no tiene forma de dominio (ej. bodacamila.com).` };
