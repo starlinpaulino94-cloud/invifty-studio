@@ -162,8 +162,7 @@ test("un código normal cabe; uno pasado de tope se rechaza diciendo por qué", 
   const grande = "<html><body>" + "a".repeat(LIMITE_CODIGO_BYTES) + "</body></html>";
   const motivo = errorDePesoCodigo(grande);
   assert.ok(motivo, "pasado el tope debe haber motivo");
-  assert.match(motivo!, /base64/, "dice la causa habitual");
-  assert.match(motivo!, /\{\{PORTADA\}\}/, "dice qué hacer en vez");
+  assert.match(motivo!, /sin contar imágenes/, "aclara que las imágenes embebidas no cuentan");
 });
 
 test("el peso cuenta bytes, no caracteres", () => {

@@ -445,7 +445,7 @@ export async function eliminarPedido(pedidoId: string, confirmacion: string) {
   try {
     const rutas: string[] = [];
     for (const carpeta of [
-      pedidoId, `${pedidoId}/derivados`, `comprobantes/${pedidoId}`,
+      pedidoId, `${pedidoId}/derivados`, `${pedidoId}/codigo`, `comprobantes/${pedidoId}`,
       ...(invitacion ? [`referencias/${invitacion.id}`] : []),
     ]) {
       const { data: archivos } = await admin.storage.from(BUCKET).list(carpeta, { limit: 1000 });

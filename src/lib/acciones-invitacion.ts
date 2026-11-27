@@ -14,6 +14,7 @@ import { calcularVencimiento } from "./vencimientos";
 import type { DatosInvitacion, Plan, TipoEvento } from "./tipos";
 import { urlBase as resolverUrlBase } from "./url";
 import { errorDePesoCodigo } from "./codigo";
+import { tieneMediosEmbebidos } from "./codigo-medios";
 
 /**
  * FASE 2 — Acciones del generador de invitaciones (solo panel).
@@ -104,7 +105,18 @@ async function guardarInvitacionInterno(
 
   // El peso se comprueba también aquí: lo que llega viene del navegador, y
   // el tope de next.config.ts solo corta de golpe, sin decir por qué.
-  const errorPeso = codigoHtml ? errorDePesoCodigo(codigoHtml) : null;
+  // Aquí se mide lo que de verdad llegó (contandoMedios): el editor ya debió
+  // sacar los archivos embebidos, y un código que los trae sin sacar es de
+  // un editor desactualizado o de alguien llamando a la acción a mano.
+  if (codigoHtml && tieneMediosEmbebidos(codigoHtml)) {
+    return {
+      ok: false,
+      error:
+        "El código trae imágenes o videos pegados dentro que no se alojaron aparte. " +
+        "Recarga el editor (puede que tengas una versión vieja abierta) y guarda otra vez.",
+    };
+  }
+  const errorPeso = codigoHtml ? errorDePesoCodigo(codigoHtml, { contandoMedios: true }) : null;
   if (errorPeso) return { ok: false, error: errorPeso };
 
   // El dominio se guarda normalizado (sin https://, sin www, en

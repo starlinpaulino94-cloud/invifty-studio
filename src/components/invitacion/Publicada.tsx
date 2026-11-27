@@ -5,6 +5,7 @@ import { ProveedorInvitacion, type HogarInvitado } from "@/components/invitacion
 import RegistroVisita from "@/components/invitacion/base/RegistroVisita";
 import CodigoPropio from "@/components/invitacion/CodigoPropio";
 import { esInvitacionDeCodigo } from "@/lib/codigo";
+import { urlsDeMedios } from "@/lib/codigo-medios-servidor";
 import { urlFuentes } from "@/config/diseno";
 import { fechaLarga, fechaSinDiaSemana } from "@/lib/fechas";
 import { conVideoDePortada, listarArchivos, ordenarFotos, urlsDeFoto } from "@/lib/fotos";
@@ -127,6 +128,12 @@ export default async function Publicada({
     datos.efectos?.videoPortada !== false
   );
 
+  // Imágenes, videos y tipografías que el HTML de código propio lleva
+  // alojados aparte (marcadores {{MEDIO_…}}), con dirección fresca.
+  const archivosCodigo = esInvitacionDeCodigo(invitacion.plantilla)
+    ? await urlsDeMedios(admin, invitacion.pedido_id, invitacion.codigo_html)
+    : {};
+
   return (
     <>
       {/* Solo se cargan las familias tipográficas que esta invitación usa */}
@@ -142,7 +149,12 @@ export default async function Publicada({
       >
         <RegistroVisita />
         {esInvitacionDeCodigo(invitacion.plantilla) ? (
-          <CodigoPropio html={invitacion.codigo_html} datos={datos} fotos={medios} />
+          <CodigoPropio
+            html={invitacion.codigo_html}
+            datos={datos}
+            fotos={medios}
+            archivos={archivosCodigo}
+          />
         ) : (
           <Renderizador
             plantilla={invitacion.plantilla}

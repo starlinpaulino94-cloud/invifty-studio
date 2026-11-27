@@ -42,6 +42,7 @@ export default function VistaPreviaEnVivo({
   fotos,
   video,
   codigoHtml,
+  archivosCodigo,
   onSenalarCampo,
   onEditarTexto,
 }: {
@@ -53,6 +54,8 @@ export default function VistaPreviaEnVivo({
   video?: FotoInvitacion;
   /** HTML pegado, cuando la invitación se hizo fuera del sistema. */
   codigoHtml?: string | null;
+  /** Archivos del código alojados aparte (id → dirección firmada). */
+  archivosCodigo?: Record<string, string>;
   /** Se llama al señalar un bloque, con el campo del editor que lo controla. */
   onSenalarCampo?: (campo: string) => void;
   /** Se llama al cambiar un texto encima del diseño, con su ruta en los datos. */
@@ -207,7 +210,12 @@ export default function VistaPreviaEnVivo({
             onEditarTexto={editando ? onEditarTexto : undefined}
           >
             {esInvitacionDeCodigo(plantilla) ? (
-              <CodigoPropio html={codigoHtml ?? ""} datos={datosPrevia} fotos={medios} />
+              <CodigoPropio
+                html={codigoHtml ?? ""}
+                datos={datosPrevia}
+                fotos={medios}
+                archivos={archivosCodigo}
+              />
             ) : (
               <Renderizador plantilla={plantilla} datos={datosPrevia} fotos={medios} />
             )}

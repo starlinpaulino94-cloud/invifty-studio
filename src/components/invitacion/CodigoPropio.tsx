@@ -30,10 +30,13 @@ export default function CodigoPropio({
   html,
   datos,
   fotos,
+  archivos,
 }: {
   html: string | null;
   datos: DatosInvitacion;
   fotos: FotoInvitacion[];
+  /** Archivos alojados aparte (id → dirección firmada); ver lib/codigo-medios.ts. */
+  archivos?: Record<string, string>;
 }) {
   const { slug, esBorrador } = useInvitacion();
   const marco = useRef<HTMLIFrameElement>(null);
@@ -41,6 +44,7 @@ export default function CodigoPropio({
   const contenido = inyectarPuente(
     aplicarMarcadores(html ?? "", {
       fotos,
+      archivos,
       titulo: datos.titulo,
       fecha: datos.fechaEvento ? fechaLarga(datos.fechaEvento) : "",
     })
