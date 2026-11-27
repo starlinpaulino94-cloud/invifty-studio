@@ -120,12 +120,16 @@ export default function EditorInvitacion({
     if (errorPeso) return { ok: false, error: errorPeso };
     try {
       return await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
-    } catch {
+    } catch (e) {
+      // La acción ya no lanza, así que llegar aquí es un fallo de TRANSPORTE
+      // (petición cortada, demasiado grande para la plataforma, 5xx). El
+      // texto del error ayuda a distinguirlo.
+      const detalle = (e instanceof Error ? e.message : String(e)).slice(0, 160);
       return {
         ok: false,
         error:
-          "No se pudo guardar y el servidor no dio detalle. Tu código sigue aquí en el editor: " +
-          "cópialo por si acaso y reintenta. Si se repite, revisa el peso del HTML.",
+          "La petición no llegó al servidor o se cortó por el camino" +
+          ` («${detalle}»). Tu código sigue aquí en el editor: cópialo por si acaso y reintenta.`,
       };
     }
   };
