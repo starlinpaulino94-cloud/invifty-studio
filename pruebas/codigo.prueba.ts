@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   PLANTILLA_CODIGO, ATRIBUTOS_SANDBOX, CANAL, esInvitacionDeCodigo,
   aplicarMarcadores, revisarCodigo, inyectarPuente, esMensajeRsvp,
+  LIMITE_CODIGO_BYTES, pesoCodigo, errorDePesoCodigo,
 } from "@/lib/codigo";
 
 /**
@@ -146,4 +147,33 @@ test("un código correcto no genera ruido", () => {
 test("algo que no es HTML se detecta", () => {
   const avisos = revisarCodigo("esto es solo texto suelto");
   assert.ok(avisos.some((a) => a.tipo === "error"));
+});
+
+/**
+ * EL TOPE DE PESO
+ * ================
+ * Un HTML pegado con imágenes en base64 pasaba de 1 MB, la acción de
+ * servidor moría con «Body exceeded 1 MB limit» y el panel enseñaba una
+ * pantalla de error sin explicación. El peso se valida con mensaje claro.
+ */
+test("un código normal cabe; uno pasado de tope se rechaza diciendo por qué", () => {
+  assert.equal(errorDePesoCodigo("<html><body>hola</body></html>"), null);
+
+  const grande = "<html><body>" + "a".repeat(LIMITE_CODIGO_BYTES) + "</body></html>";
+  const motivo = errorDePesoCodigo(grande);
+  assert.ok(motivo, "pasado el tope debe haber motivo");
+  assert.match(motivo!, /base64/, "dice la causa habitual");
+  assert.match(motivo!, /\{\{PORTADA\}\}/, "dice qué hacer en vez");
+});
+
+test("el peso cuenta bytes, no caracteres", () => {
+  assert.equal(pesoCodigo("é"), 2);
+  // Un millón y medio de «é» son 1,5 M caracteres pero 3 MB: pasan justo.
+  const acentos = "é".repeat(Math.ceil(LIMITE_CODIGO_BYTES / 2) + 1);
+  assert.ok(errorDePesoCodigo(acentos), "los caracteres de 2 bytes no deben colarse");
+});
+
+test("el aviso de peso sale también al pegar, antes de guardar", () => {
+  const avisos = revisarCodigo("<html>" + "a".repeat(LIMITE_CODIGO_BYTES) + "</html>");
+  assert.ok(avisos.some((a) => a.tipo === "error" && a.texto.includes("MB")));
 });

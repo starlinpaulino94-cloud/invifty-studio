@@ -30,6 +30,38 @@ export function esInvitacionDeCodigo(plantilla?: string | null): boolean {
 }
 
 /**
+ * Tope del código pegado, en bytes. Existe por dos razones que no se
+ * arreglan con configuración: el cuerpo de una función de Vercel admite
+ * 4,5 MB, y un HTML más pesado que esto tarda en bajar al celular del
+ * invitado justo cuando abre la invitación. next.config.ts deja 4 MB de
+ * margen para el resto del JSON que viaja con él.
+ */
+export const LIMITE_CODIGO_BYTES = 3 * 1024 * 1024;
+
+/** Peso real en bytes (UTF-8): un «é» pesa dos, y es lo que viaja. */
+export function pesoCodigo(html: string): number {
+  return new TextEncoder().encode(html).length;
+}
+
+/** «1,4 MB» / «820 KB», para los mensajes. */
+export function pesoLegible(bytes: number): string {
+  return bytes >= 1024 * 1024
+    ? `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/** Mensaje de rechazo por tamaño, o null si cabe. */
+export function errorDePesoCodigo(html: string): string | null {
+  const peso = pesoCodigo(html);
+  if (peso <= LIMITE_CODIGO_BYTES) return null;
+  return (
+    `El código pesa ${pesoLegible(peso)} y el máximo es ${pesoLegible(LIMITE_CODIGO_BYTES)}. ` +
+    "Casi siempre es por imágenes o tipografías pegadas dentro del HTML (data:image/…;base64): " +
+    "súbelas como fotos del pedido y usa {{PORTADA}} / {{FOTO_1}}, o enlázalas por https://."
+  );
+}
+
+/**
  * Permisos del iframe. Falta `allow-same-origin` a propósito: es lo que
  * mantiene el código en un origen opaco, sin acceso a la sesión del panel.
  * Los demás permisos son para que la invitación se comporte con
@@ -205,6 +237,9 @@ export function revisarCodigo(html: string): AvisoCodigo[] {
   if (!limpio) {
     return [{ tipo: "error", texto: "Todavía no has pegado el código de la invitación." }];
   }
+
+  const errorPeso = errorDePesoCodigo(limpio);
+  if (errorPeso) avisos.push({ tipo: "error", texto: errorPeso });
 
   if (!/<[a-z][\s\S]*>/i.test(limpio)) {
     avisos.push({ tipo: "error", texto: "Esto no parece HTML: no se encontró ninguna etiqueta." });

@@ -14,7 +14,7 @@ import { escribirEnRuta } from "@/lib/rutas";
 import { slugConSufijo, tieneSufijo } from "@/lib/slug";
 import { normalizarDominio } from "@/lib/dominios";
 import {
-  PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, MARCADORES_DISPONIBLES,
+  PLANTILLA_CODIGO, esInvitacionDeCodigo, revisarCodigo, errorDePesoCodigo, MARCADORES_DISPONIBLES,
 } from "@/lib/codigo";
 import {
   guardarInvitacion, publicarInvitacion, despublicarInvitacion,
@@ -108,20 +108,42 @@ export default function EditorInvitacion({
     }
   };
 
+  /**
+   * Guardar nunca debe tumbar el editor. Si la acción de servidor lanza
+   * (cuerpo demasiado grande, corte de red, un 500), la promesa rechazada
+   * dentro de una transición sube al límite de error de Next y el equipo
+   * ve «This page couldn't load», con el trabajo sin guardar y sin saber
+   * por qué. Aquí se atrapa y se dice en el propio editor.
+   */
+  const guardarSeguro = async (): Promise<{ ok: boolean; error?: string }> => {
+    const errorPeso = errorDePesoCodigo(codigoHtml);
+    if (errorPeso) return { ok: false, error: errorPeso };
+    try {
+      return await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
+    } catch {
+      return {
+        ok: false,
+        error:
+          "No se pudo guardar y el servidor no dio detalle. Tu código sigue aquí en el editor: " +
+          "cópialo por si acaso y reintenta. Si se repite, revisa el peso del HTML.",
+      };
+    }
+  };
+
   const guardar = () =>
     startGuardar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
+      const res = await guardarSeguro();
       setMensaje(
         res.ok
           ? { tipo: "ok", texto: "Cambios guardados. Abre la vista previa para verlos." }
           : { tipo: "error", texto: res.error ?? "Error al guardar" }
       );
-      setTimeout(() => setMensaje(null), 4000);
+      setTimeout(() => setMensaje(null), res.ok ? 4000 : 12000);
     });
 
   const publicar = () =>
     startPublicar(async () => {
-      const res = await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
+      const res = await guardarSeguro();
       if (!res.ok) {
         setMensaje({ tipo: "error", texto: res.error ?? "Error al guardar" });
         return;

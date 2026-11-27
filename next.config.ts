@@ -72,6 +72,22 @@ const PRIVADAS = [
 ];
 
 const nextConfig: NextConfig = {
+  /**
+   * El HTML de una invitación de código propio viaja en el cuerpo de la
+   * acción de servidor que guarda el editor. El tope por defecto de Next
+   * es 1 MB, y una invitación con imágenes o tipografías embebidas lo
+   * pasa de sobra: la acción moría con «Body exceeded 1 MB limit» y el
+   * navegador enseñaba «This page couldn't load», sin decir nada útil.
+   *
+   * 4 MB deja margen sobre LIMITE_CODIGO_BYTES (lib/codigo.ts: 3 MB de
+   * código + el JSON del resto) y queda por debajo de los 4,5 MB que
+   * Vercel permite en el cuerpo de una función. Más allá de eso ya no es
+   * cuestión de configurar: se rechaza con un mensaje claro.
+   */
+  experimental: {
+    serverActions: { bodySizeLimit: "4mb" },
+  },
+
   async headers() {
     return [
       { source: "/:path*", headers: BASICAS },
