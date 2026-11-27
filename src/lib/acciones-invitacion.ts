@@ -87,7 +87,8 @@ export async function generarInvitacion(pedidoId: string) {
 }
 
 /** Guarda los cambios del editor. */
-export async function guardarInvitacion(
+async function guardarInvitacionInterno(
+  fase: { actual: string },
   invitacionId: string,
   datos: DatosInvitacion,
   slug: string,
@@ -97,16 +98,17 @@ export async function guardarInvitacion(
   /** Dominio propio del cliente, si compró el extra. */
   dominio?: string | null
 ): Promise<{ ok: boolean; error?: string }> {
+  fase.actual = "comprobar permisos";
   const supabase = await crearClienteServidor();
   const quien = await exigirPermiso(supabase, "editar_invitaciones");
 
-  // El dominio se guarda normalizado (sin https://, sin www, en
-  // minúsculas) para que la petición que llegue por él lo encuentre.
   // El peso se comprueba también aquí: lo que llega viene del navegador, y
   // el tope de next.config.ts solo corta de golpe, sin decir por qué.
   const errorPeso = codigoHtml ? errorDePesoCodigo(codigoHtml) : null;
   if (errorPeso) return { ok: false, error: errorPeso };
 
+  // El dominio se guarda normalizado (sin https://, sin www, en
+  // minúsculas) para que la petición que llegue por él lo encuentre.
   const dominioLimpio = normalizarDominio(dominio ?? "");
   if (dominioLimpio && !dominioValido(dominioLimpio)) {
     return { ok: false, error: `"${dominioLimpio}" no tiene forma de dominio (ej. bodacamila.com).` };
@@ -117,6 +119,7 @@ export async function guardarInvitacion(
   // El slug y el dominio son la DIRECCIÓN pública: cambiarlos rompe
   // enlaces ya repartidos, así que su cambio queda firmado. Se mira ANTES
   // de escribir — después ya no habría contra qué comparar.
+  fase.actual = "leer la invitación";
   const { data: previa } = await supabase
     .from("invitaciones")
     .select("slug, dominio, bloqueada_en")
@@ -156,6 +159,7 @@ export async function guardarInvitacion(
     datos = { ...datos, arte };
   }
 
+  fase.actual = "escribir en la base de datos";
   const { error } = await supabase
     .from("invitaciones")
     .update({
@@ -176,14 +180,48 @@ export async function guardarInvitacion(
     return { ok: false, error: mensaje };
   }
 
+  fase.actual = "registrar el cambio de dirección";
   if (previa && (previa.slug !== slugLimpio || (previa.dominio ?? "") !== (dominioLimpio || ""))) {
     await registrarAccion(supabase, quien, "invitacion:direccion", "invitacion", invitacionId, {
       slug: slugLimpio, dominio: dominioLimpio || null,
     });
   }
 
-  revalidatePath(`/panel/invitaciones/${invitacionId}`);
+  // Los datos YA están guardados. Si refrescar la página fallara, no debe
+  // leerse como que el guardado falló.
+  try {
+    revalidatePath(`/panel/invitaciones/${invitacionId}`);
+  } catch (e) {
+    registrarError("invitacion", e, { invitacion: invitacionId, fase: "revalidar" });
+  }
   return { ok: true };
+}
+
+/**
+ * Guarda los cambios del editor.
+ *
+ * Nunca lanza: en producción Next esconde el mensaje de un error de
+ * servidor y el navegador solo recibe «An error occurred…», lo que dejó al
+ * equipo sin saber qué falló (ni dónde) al guardar un HTML pegado. Aquí se
+ * atrapa, se registra con su fase y se devuelve el motivo para que salga
+ * en el editor. Es un panel interno: el mensaje es para el equipo.
+ */
+export async function guardarInvitacion(
+  invitacionId: string,
+  datos: DatosInvitacion,
+  slug: string,
+  plantilla: string,
+  codigoHtml?: string | null,
+  dominio?: string | null
+): Promise<{ ok: boolean; error?: string }> {
+  const fase = { actual: "empezar" };
+  try {
+    return await guardarInvitacionInterno(fase, invitacionId, datos, slug, plantilla, codigoHtml, dominio);
+  } catch (e) {
+    registrarError("invitacion", e, { invitacion: invitacionId, fase: fase.actual });
+    const motivo = (e instanceof Error ? e.message : String(e)).slice(0, 300);
+    return { ok: false, error: `No se pudo guardar (al ${fase.actual}): ${motivo}` };
+  }
 }
 
 /**
