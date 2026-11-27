@@ -11,6 +11,7 @@ import PreguntasRsvp from "./PreguntasRsvp";
 import { PALETAS, TIPOGRAFIAS, DENSIDADES, DENSIDAD_POR_DEFECTO } from "@/config/diseno";
 import { PLANTILLAS } from "@/config/plantillas";
 import { escribirEnRuta } from "@/lib/rutas";
+import { alojarMediosDelCodigo } from "./alojarMediosCodigo";
 import { slugConSufijo, tieneSufijo } from "@/lib/slug";
 import { normalizarDominio } from "@/lib/dominios";
 import {
@@ -39,6 +40,7 @@ export default function EditorInvitacion({
   fotos,
   video,
   codigoInicial,
+  archivosCodigoIniciales,
 }: {
   invitacionId: string;
   slugInicial: string;
@@ -54,6 +56,8 @@ export default function EditorInvitacion({
   video?: FotoInvitacion;
   /** HTML guardado si la invitación se hizo fuera del sistema. */
   codigoInicial: string | null;
+  /** Archivos del código alojados aparte (id → dirección firmada), para la vista previa. */
+  archivosCodigoIniciales?: Record<string, string>;
 }) {
   const [datos, setDatos] = useState<DatosInvitacion>({
     ...datosIniciales,
@@ -82,6 +86,9 @@ export default function EditorInvitacion({
     plantillaInicial === "clasica" ? "editorial" : plantillaInicial
   );
   const [codigoHtml, setCodigoHtml] = useState(codigoInicial ?? "");
+  const [archivosCodigo, setArchivosCodigo] = useState<Record<string, string>>(
+    archivosCodigoIniciales ?? {}
+  );
   const [mensaje, setMensaje] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
   const [guardando, startGuardar] = useTransition();
   const [publicando, startPublicar] = useTransition();
@@ -116,10 +123,38 @@ export default function EditorInvitacion({
    * por qué. Aquí se atrapa y se dice en el propio editor.
    */
   const guardarSeguro = async (): Promise<{ ok: boolean; error?: string }> => {
-    const errorPeso = errorDePesoCodigo(codigoHtml);
+    let html = codigoHtml;
+
+    // Imágenes, videos, música y tipografías pegados dentro del HTML: se
+    // sacan y se suben directo al almacenamiento ANTES de enviar nada, y el
+    // HTML viaja ya liviano (lib/codigo-medios.ts).
+    if (esInvitacionDeCodigo(plantilla)) {
+      let alojado: Awaited<ReturnType<typeof alojarMediosDelCodigo>>;
+      try {
+        alojado = await alojarMediosDelCodigo(invitacionId, html, (texto) =>
+          setMensaje({ tipo: "ok", texto })
+        );
+      } catch (e) {
+        return {
+          ok: false,
+          error:
+            "No se pudieron mover las imágenes y videos del código: " +
+            `${(e instanceof Error ? e.message : String(e)).slice(0, 160)}. ` +
+            "Tu código sigue aquí en el editor.",
+        };
+      }
+      if (!alojado.ok) return { ok: false, error: alojado.error };
+      if (alojado.html !== html) {
+        html = alojado.html;
+        setCodigoHtml(html);
+        setArchivosCodigo((previos) => ({ ...previos, ...alojado.archivos }));
+      }
+    }
+
+    const errorPeso = errorDePesoCodigo(html, { contandoMedios: true });
     if (errorPeso) return { ok: false, error: errorPeso };
     try {
-      return await guardarInvitacion(invitacionId, datos, slug, plantilla, codigoHtml, dominio);
+      return await guardarInvitacion(invitacionId, datos, slug, plantilla, html, dominio);
     } catch (e) {
       // La acción ya no lanza, así que llegar aquí es un fallo de TRANSPORTE
       // (petición cortada, demasiado grande para la plataforma, 5xx). El
@@ -450,6 +485,12 @@ export default function EditorInvitacion({
               ))}
             </ul>
           )}
+
+          <p className="text-[11px] text-gray-500 mt-3 leading-relaxed">
+            Puedes pegar el HTML con sus imágenes, videos, música y tipografías metidos dentro
+            (<code className="font-mono">data:…;base64</code>): al guardar se suben aparte solos
+            y el código queda liviano. Máximo por archivo: imagen 15 MB, video 50 MB, música 20 MB.
+          </p>
 
           <div className="mt-4 rounded-xl bg-gray-50 p-4">
             <p className="text-xs font-semibold text-gray-700 mb-2">
@@ -929,6 +970,7 @@ export default function EditorInvitacion({
           fotos={fotos}
           video={video}
           codigoHtml={codigoHtml}
+          archivosCodigo={archivosCodigo}
           onSenalarCampo={irACampo}
           onEditarTexto={editarTexto}
         />

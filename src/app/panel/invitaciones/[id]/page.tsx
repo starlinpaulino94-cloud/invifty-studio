@@ -10,6 +10,7 @@ import type { Cliente, DatosInvitacion, Invitacion, Pedido, Plan, TipoEvento } f
 import { crearClienteAdmin } from "@/lib/supabase/admin";
 import { BUCKET, HORAS_FIRMA, listarArchivos, urlsDeFoto } from "@/lib/fotos";
 import { urlBase as resolverUrlBase } from "@/lib/url";
+import { urlsDeMedios } from "@/lib/codigo-medios-servidor";
 import { ArrowLeft, Link2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,9 @@ export default async function PaginaEditorInvitacion({
   // se enciende o se apaga con su interruptor.
   const archivoVideo = archivos.find((a) => a.esVideo);
   const video = archivoVideo ? await urlsDeFoto(admin, pedido.id, archivoVideo) : undefined;
+
+  // Archivos que el código propio lleva alojados aparte ({{MEDIO_…}}), para la vista previa.
+  const archivosCodigo = await urlsDeMedios(admin, pedido.id, invitacion.codigo_html);
 
   // El ciclo de revisión con el cliente: versiones enviadas, su estado y
   // los comentarios de cada una. Si las tablas aún no están migradas, la
@@ -173,6 +177,7 @@ export default async function PaginaEditorInvitacion({
         fotos={fotos}
         video={video}
         codigoInicial={invitacion.codigo_html}
+        archivosCodigoIniciales={archivosCodigo}
       />
     </div>
   );

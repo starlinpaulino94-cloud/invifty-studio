@@ -1,4 +1,5 @@
 import type { FotoInvitacion } from "./tipos";
+import { htmlSinMedios } from "./codigo-medios";
 
 /**
  * INVITACIONES CON CÓDIGO PROPIO
@@ -50,14 +51,27 @@ export function pesoLegible(bytes: number): string {
     : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-/** Mensaje de rechazo por tamaño, o null si cabe. */
-export function errorDePesoCodigo(html: string): string | null {
-  const peso = pesoCodigo(html);
+/**
+ * Mensaje de rechazo por tamaño, o null si cabe.
+ *
+ * `contandoMedios`:
+ *  - false (el editor, al pegar y al guardar): las imágenes y videos
+ *    embebidos NO cuentan, porque el guardado los saca a parte antes de
+ *    enviar nada (lib/codigo-medios.ts). Lo que pesa es el HTML que queda.
+ *  - true (el servidor): se mide lo que de verdad llegó. Si trae archivos
+ *    sin sacar, el cliente que lo mandó no hizo su trabajo.
+ */
+export function errorDePesoCodigo(
+  html: string,
+  { contandoMedios = false }: { contandoMedios?: boolean } = {}
+): string | null {
+  const peso = pesoCodigo(contandoMedios ? html : htmlSinMedios(html));
   if (peso <= LIMITE_CODIGO_BYTES) return null;
   return (
-    `El código pesa ${pesoLegible(peso)} y el máximo es ${pesoLegible(LIMITE_CODIGO_BYTES)}. ` +
-    "Casi siempre es por imágenes o tipografías pegadas dentro del HTML (data:image/…;base64): " +
-    "súbelas como fotos del pedido y usa {{PORTADA}} / {{FOTO_1}}, o enlázalas por https://."
+    `El código pesa ${pesoLegible(peso)} sin contar imágenes ni videos, y el máximo es ` +
+    `${pesoLegible(LIMITE_CODIGO_BYTES)}. Las imágenes, videos, música y tipografías pegados ` +
+    "como base64 se alojan aparte solos al guardar; lo que pesa aquí es otra cosa " +
+    "(SVG, CSS o JavaScript enormes, o datos en otro formato)."
   );
 }
 
@@ -95,11 +109,22 @@ export const MARCADORES_DISPONIBLES = [
  */
 export function aplicarMarcadores(
   html: string,
-  datos: { fotos: FotoInvitacion[]; titulo?: string; fecha?: string }
+  datos: {
+    fotos: FotoInvitacion[];
+    titulo?: string;
+    fecha?: string;
+    /** Archivos sacados del HTML al guardar: id → dirección firmada (codigo-medios.ts). */
+    archivos?: Record<string, string>;
+  }
 ): string {
-  const { fotos, titulo = "", fecha = "" } = datos;
+  const { fotos, titulo = "", fecha = "", archivos = {} } = datos;
 
-  return html.replace(/\{\{\s*([A-Z_]+[0-9]*)\s*\}\}/g, (_todo, nombre: string) => {
+  return html.replace(/\{\{\s*([A-Z][A-Z0-9_]*)\s*\}\}/g, (_todo, nombre: string) => {
+    const medio = /^MEDIO_([0-9A-F]{16})$/.exec(nombre);
+    // Un archivo que ya no está en el almacenamiento queda vacío, como una
+    // foto que no existe: mejor un hueco que «{{MEDIO_…}}» a la vista.
+    if (medio) return archivos[medio[1]] ?? "";
+
     if (nombre === "TITULO") return titulo;
     if (nombre === "FECHA") return fecha;
     if (nombre === "PORTADA") return fotos[0]?.url ?? "";
@@ -268,7 +293,10 @@ export function revisarCodigo(html: string): AvisoCodigo[] {
     });
   }
 
-  if (!/\{\{\s*(PORTADA|FOTO_\d+)\s*\}\}/.test(limpio) && /<img/i.test(limpio)) {
+  // Una imagen embebida (data:) o ya alojada (MEDIO_) es una decisión de
+  // diseño, no un olvido: el aviso es para las que apuntan a otra parte.
+  const hayImagenAjena = /<img[^>]*\ssrc\s*=\s*["'](?!data:|\{\{)/i.test(limpio);
+  if (!/\{\{\s*(PORTADA|FOTO_\d+|MEDIO_[0-9A-F]{16})\s*\}\}/.test(limpio) && hayImagenAjena) {
     avisos.push({
       tipo: "aviso",
       texto:
