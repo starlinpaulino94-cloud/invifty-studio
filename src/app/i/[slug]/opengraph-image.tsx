@@ -1,26 +1,45 @@
 import { ImageResponse } from "next/og";
+import sharp from "sharp";
 import { crearClienteAdmin } from "@/lib/supabase/admin";
+import { imagenPrincipalDeVista, type InvitacionParaVista } from "@/lib/vista-previa-servidor";
 import { paleta } from "@/config/diseno";
 import { inicialesDe } from "@/lib/iniciales";
 import { fechaSinDiaSemana } from "@/lib/fechas";
 import { DatosInvitacion } from "@/lib/tipos";
 
 /**
- * Tarjeta de vista previa de la invitación.
+ * Imagen de vista previa de la invitación.
  * Es lo que ven los invitados cuando el cliente comparte su enlace por
  * WhatsApp, Instagram o Facebook — la primera impresión del producto.
  *
- * Se dibuja con la paleta real de cada invitación, así que cada una llega
- * con sus propios colores en lugar de un enlace gris sin imagen.
+ *  1. Si la invitación tiene una imagen principal (la portada que eligió el
+ *     equipo, o la primera imagen de un diseño de código propio), esa es la
+ *     imagen: el enlace llega con la invitación a la vista, sin abrirlo.
+ *  2. Si no tiene ninguna, o no se pudo leer a tiempo, se dibuja una tarjeta
+ *     con la paleta real de la invitación, en lugar de un enlace gris.
  *
- * PRIVACIDAD: solo las invitaciones PUBLICADAS muestran sus datos. Los
- * borradores y los slugs inexistentes devuelven una tarjeta neutra de
+ * Siempre sale como JPEG de 1200 × 630 y ligero: WhatsApp descarta las
+ * imágenes pesadas y se cansa de esperar a las lentas.
+ *
+ * PRIVACIDAD: solo las invitaciones PUBLICADAS muestran sus datos o su foto.
+ * Los borradores y los slugs inexistentes devuelven una tarjeta neutra de
  * Invifty, porque este endpoint lo consultan robots sin sesión iniciada.
  */
 
 export const alt = "Invitación digital";
 export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+export const contentType = "image/jpeg";
+
+/** Pasado esto se renuncia a la foto y se dibuja la tarjeta: es mejor un
+ *  enlace con tarjeta que uno que el robot de WhatsApp abandonó esperando. */
+const MS_MAXIMOS_FOTO = 6000;
+
+const CABECERAS = {
+  "Content-Type": "image/jpeg",
+  // Una foto de portada cambiada se ve en minutos, no en días; y el CDN
+  // aguanta a los robots sin ir cada vez a Storage.
+  "Cache-Control": "public, max-age=300, s-maxage=600, stale-while-revalidate=3600",
+};
 
 /**
  * El título encoge cuando es largo, para que nunca se desborde ni empuje
@@ -34,16 +53,28 @@ function tamanoTitulo(titulo: string): number {
   return 100;
 }
 
-async function buscarPublicada(slug: string) {
+async function buscarPublicada(slug: string): Promise<InvitacionParaVista | null> {
   try {
     const admin = crearClienteAdmin();
     const { data } = await admin
       .from("invitaciones")
-      .select("datos, estado")
+      .select("datos, estado, plantilla, codigo_html, pedido_id")
       .eq("slug", slug)
       .single();
     if (!data || data.estado !== "publicada") return null;
-    return data.datos as DatosInvitacion;
+    return data as InvitacionParaVista;
+  } catch {
+    return null;
+  }
+}
+
+/** La foto de la invitación como JPEG, o null si no hay o tardó demasiado. */
+async function fotoPrincipal(inv: InvitacionParaVista): Promise<Buffer | null> {
+  try {
+    return await Promise.race([
+      imagenPrincipalDeVista(crearClienteAdmin(), inv),
+      new Promise<null>((resolver) => setTimeout(() => resolver(null), MS_MAXIMOS_FOTO)),
+    ]);
   } catch {
     return null;
   }
@@ -55,7 +86,14 @@ export default async function Image({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const datos = await buscarPublicada(slug);
+  const invitacion = await buscarPublicada(slug);
+
+  if (invitacion) {
+    const foto = await fotoPrincipal(invitacion);
+    if (foto) return new Response(new Uint8Array(foto), { headers: CABECERAS });
+  }
+
+  const datos: DatosInvitacion | null = invitacion?.datos ?? null;
 
   // Tarjeta neutra para borradores y enlaces inexistentes: nunca filtra datos.
   const p = paleta(datos?.paleta);
@@ -64,7 +102,7 @@ export default async function Image({
   const iniciales = (datos?.monograma?.trim() || inicialesDe(titulo)).slice(0, 7);
   const fecha = datos?.fechaEvento ? fechaSinDiaSemana(datos.fechaEvento) : "";
 
-  return new ImageResponse(
+  const tarjeta = new ImageResponse(
     (
       <div
         style={{
@@ -197,4 +235,10 @@ export default async function Image({
     ),
     size
   );
+
+  // La tarjeta nace como PNG; se pasa a JPEG para que todo lo que sirve
+  // esta ruta sea del mismo tipo (el que declara `contentType`) y pese poco.
+  const png = Buffer.from(await tarjeta.arrayBuffer());
+  const jpeg = await sharp(png).flatten({ background: p.fondo }).jpeg({ quality: 90 }).toBuffer();
+  return new Response(new Uint8Array(jpeg), { headers: CABECERAS });
 }

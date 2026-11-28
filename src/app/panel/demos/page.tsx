@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
+import MiniaturaInvitacion from "@/components/MiniaturaInvitacion";
 import DemoControl from "@/components/panel/DemoControl";
 import { plantillaMeta } from "@/config/plantillas";
 import { urlBase } from "@/lib/url";
@@ -68,7 +69,11 @@ export default async function PaginaDemos() {
             return (
               <div key={inv.id} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex items-center gap-4">
+                    <Link href={`${urlBase()}/i/${inv.slug}`} target="_blank" className="shrink-0">
+                      <MiniaturaInvitacion slug={inv.slug} className="w-28 sm:w-36" />
+                    </Link>
+                    <div className="min-w-0">
                     <p className="font-semibold text-gray-900 flex items-center gap-2">
                       {inv.datos?.titulo || "Sin título"}
                       {demo?.destacada && <Star className="w-3.5 h-3.5 text-[#D4AF37]" />}
@@ -88,6 +93,7 @@ export default async function PaginaDemos() {
                         /i/{inv.slug} <ExternalLink className="w-3 h-3" />
                       </Link>
                     </p>
+                    </div>
                   </div>
                   <DemoControl
                     invitacionId={inv.id}

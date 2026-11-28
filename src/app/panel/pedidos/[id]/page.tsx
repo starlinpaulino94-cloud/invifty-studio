@@ -18,6 +18,7 @@ import { queSeLleva } from "@/lib/eliminar";
 import Visitas from "@/components/panel/Visitas";
 import { resumirVisitas } from "@/lib/visitas";
 import { urlBase as resolverUrlBase } from "@/lib/url";
+import MiniaturaInvitacion from "@/components/MiniaturaInvitacion";
 import { desglosePagos, estadoPago, pagoActivo, NOMBRE_ESTADO_PAGO } from "@/lib/pagos";
 import { BUCKET, HORAS_FIRMA, listarArchivos, rutaOriginal, urlsDeFoto } from "@/lib/fotos";
 import {
@@ -50,12 +51,12 @@ export default async function FichaPedido({
 
   const { data: invitacionData } = await supabase
     .from("invitaciones")
-    .select("id, slug, estado, token_lista, datos")
+    .select("id, slug, estado, token_lista, datos, actualizado_en")
     .eq("pedido_id", id)
     .maybeSingle();
   const invitacion = invitacionData as Pick<
     Invitacion,
-    "id" | "slug" | "estado" | "token_lista" | "datos"
+    "id" | "slug" | "estado" | "token_lista" | "datos" | "actualizado_en"
   > | null;
 
   // Texto de cada pregunta extra del RSVP, para enseñar las respuestas
@@ -358,6 +359,22 @@ export default async function FichaPedido({
       {/* Invitación (Fase 2) */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-start gap-4">
+            {invitacion && (
+              <a
+                href={`${urlBase}/i/${invitacion.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0"
+              >
+                <MiniaturaInvitacion
+                  slug={invitacion.slug}
+                  publicada={invitacion.estado === "publicada"}
+                  version={invitacion.actualizado_en}
+                  className="w-40 sm:w-52"
+                />
+              </a>
+            )}
           <div>
             <h2 className="font-serif text-lg text-gray-900 flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-[#D4AF37]" /> Invitación
@@ -374,6 +391,7 @@ export default async function FichaPedido({
                 {`${urlBase}/i/${invitacion.slug}`}
               </p>
             )}
+          </div>
           </div>
 
           {invitacion ? (
