@@ -42,7 +42,13 @@ export interface InvitacionPublicable {
  */
 export function metadatosDeInvitacion(
   invitacion: InvitacionPublicable | null,
-  url: string
+  url: string,
+  /**
+   * Dirección ABSOLUTA de la imagen de vista previa. /i/<slug> no la pasa:
+   * su `opengraph-image` se añade solo. Quien entra por un dominio propio
+   * (/d/…) no tiene esa carpeta y la declara aquí.
+   */
+  imagen?: string
 ): Metadata {
   if (!invitacion) return { title: "Invitación — Invifty" };
 
@@ -85,8 +91,14 @@ export function metadatosDeInvitacion(
       title: titulo,
       description: descripcion,
       url,
+      ...(imagen && { images: [{ url: imagen, width: 1200, height: 630, type: "image/jpeg", alt: titulo }] }),
     },
-    twitter: { card: "summary_large_image", title: titulo, description: descripcion },
+    twitter: {
+      card: "summary_large_image",
+      title: titulo,
+      description: descripcion,
+      ...(imagen && { images: [imagen] }),
+    },
   };
 }
 

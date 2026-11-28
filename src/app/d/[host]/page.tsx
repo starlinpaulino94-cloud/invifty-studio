@@ -8,6 +8,7 @@ import Publicada, {
 import { paleta } from "@/config/diseno";
 import { normalizarDominio } from "@/lib/dominios";
 import { hogarDeEnlace } from "@/lib/hogares";
+import { urlBase } from "@/lib/url";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,12 @@ export async function generateMetadata({
   const { host } = await params;
   const invitacion = await resolver(params);
   const dominio = normalizarDominio(decodeURIComponent(host));
-  return metadatosDeInvitacion(invitacion, `https://${dominio}`);
+  // La imagen vive en /i/<slug>/opengraph-image, en el dominio del Studio:
+  // el dominio del cliente no tiene esa carpeta, y WhatsApp pide URLs absolutas.
+  const imagen = invitacion
+    ? `${urlBase()}/i/${invitacion.slug}/opengraph-image`
+    : undefined;
+  return metadatosDeInvitacion(invitacion, `https://${dominio}`, imagen);
 }
 
 export default async function PaginaDominioPropio({
