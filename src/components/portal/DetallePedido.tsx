@@ -1,3 +1,4 @@
+import MiniaturaInvitacion from "@/components/MiniaturaInvitacion";
 import Link from "next/link";
 import { contratoDePedido } from "@/lib/capacidades";
 import { capacidadesDelCliente, NOTA_ESTADO_CAPACIDAD, resumenRsvp } from "@/lib/portal";
@@ -131,6 +132,7 @@ export default function DetallePedido({
             {invitacion.estado === "publicada" && (
               <EnlacePortal
                 href={`/i/${invitacion.slug}`}
+                imagenDe={invitacion.slug}
                 Icono={ExternalLink}
                 titulo="Ver mi invitación"
                 detalle="Como la ven tus invitados"
@@ -280,18 +282,25 @@ function EnlacePortal({
   Icono,
   titulo,
   detalle,
+  imagenDe,
 }: {
   href: string;
   Icono: typeof FileText;
   titulo: string;
   detalle: string;
+  /** Slug de la invitación: si se pasa, su imagen sustituye al icono. */
+  imagenDe?: string;
 }) {
   return (
     <Link
       href={href}
       className="flex items-center gap-3 bg-black/30 border border-white/10 hover:border-[#D4AF37]/50 rounded-2xl px-4 py-3 transition-colors"
     >
-      <Icono className="w-4 h-4 text-[#D4AF37] shrink-0" />
+      {imagenDe ? (
+        <MiniaturaInvitacion slug={imagenDe} className="w-24 shrink-0" />
+      ) : (
+        <Icono className="w-4 h-4 text-[#D4AF37] shrink-0" />
+      )}
       <span>
         <span className="block text-white text-xs font-medium">{titulo}</span>
         <span className="block text-white/40 text-[11px]">{detalle}</span>

@@ -1,3 +1,4 @@
+import MiniaturaInvitacion from "@/components/MiniaturaInvitacion";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { crearClienteServidor } from "@/lib/supabase/servidor";
@@ -152,9 +153,16 @@ export default async function PaginaEditorInvitacion({
             href={urlPublica}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-[#B08D2A] hover:underline mt-2 break-all"
+            className="mt-3 flex items-start gap-3 w-fit max-w-full group"
           >
-            <Link2 className="w-3.5 h-3.5" /> {urlPublica}
+            <MiniaturaInvitacion
+              slug={invitacion.slug}
+              version={invitacion.actualizado_en}
+              className="w-44 shrink-0"
+            />
+            <span className="inline-flex items-center gap-1.5 text-xs text-[#B08D2A] group-hover:underline break-all">
+              <Link2 className="w-3.5 h-3.5 shrink-0" /> {urlPublica}
+            </span>
           </a>
         )}
       </div>
